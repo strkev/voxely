@@ -18,6 +18,7 @@ export const createLiveKitToken = async (roomName: string, participantName: stri
     const at = new AccessToken(apiKey, apiSecret, {
         identity: participantId,
         name: participantName,
+        ttl: '24h',
     });
 
     at.addGrant({ roomJoin: true, room: roomName, canPublish: true, canSubscribe: true });
