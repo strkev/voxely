@@ -1,0 +1,36 @@
+# ── OS ────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Editors / IDEs ────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Dependencies ──────────────────────────────────
+node_modules/
+
+# ── Environment files ─────────────────────────────
+.env
+.env.local
+.env.*.local
+*.env.backup.*
+# Keep .env.example tracked
+!.env.example
+
+# ── Logs ──────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+backend.log
+frontend.log
+
+# ── PM2 ───────────────────────────────────────────
+ecosystem.config.cjs
+
+# ── Build artifacts ───────────────────────────────
+dist/
+.next/
+out/
+build/
