@@ -58,6 +58,8 @@ const corsOptions: cors.CorsOptions = {
 };
 
 const app = express();
+// Trust first proxy (Nginx) — required for express-rate-limit behind a reverse proxy
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 const io = new Server(server, {
