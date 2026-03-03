@@ -378,30 +378,33 @@ function CustomVideoConference() {
         );
 
         return (
-            <div className="absolute inset-0 flex flex-col sm:flex-row gap-2 p-1.5 sm:p-2 pb-[76px] pt-[52px]" style={{ minHeight: 0 }}>
-                {/* Main pinned tile */}
-                <div className="flex-1 relative min-w-0">
-                    <SpotlightableTile
-                        trackRef={spotlightTrack}
-                        isSpotlit={true}
-                        onSpotlight={handleSpotlight}
-                    />
-                </div>
+            <div className="absolute inset-0 pb-[76px] pt-[52px] flex flex-col">
+                <div className="flex-1 flex flex-col sm:flex-row gap-1.5 sm:gap-2 p-1.5 sm:p-2 min-h-0">
 
-                {/* Sidebar — other participants */}
-                {otherTracks.length > 0 && (
-                    <div className="flex flex-row sm:flex-col gap-1.5 sm:gap-2 w-full sm:w-44 shrink-0 overflow-x-auto sm:overflow-y-auto scrollbar-hide">
-                        {otherTracks.map((track, i) => (
-                            <div key={trackKey(track, i)} className="aspect-video w-28 sm:w-full shrink-0">
-                                <SpotlightableTile
-                                    trackRef={track}
-                                    isSpotlit={false}
-                                    onSpotlight={handleSpotlight}
-                                />
-                            </div>
-                        ))}
+                    {/* Main pinned tile — grid constrains height like grid mode */}
+                    <div className="flex-1 min-w-0 min-h-0 grid grid-cols-1 auto-rows-fr">
+                        <SpotlightableTile
+                            trackRef={spotlightTrack}
+                            isSpotlit={true}
+                            onSpotlight={handleSpotlight}
+                        />
                     </div>
-                )}
+
+                    {/* Sidebar — other participants */}
+                    {otherTracks.length > 0 && (
+                        <div className="flex flex-row sm:flex-col gap-1.5 sm:gap-2 w-full sm:w-44 shrink-0 overflow-x-auto sm:overflow-y-auto scrollbar-hide">
+                            {otherTracks.map((track, i) => (
+                                <div key={trackKey(track, i)} className="aspect-video w-28 sm:w-full shrink-0">
+                                    <SpotlightableTile
+                                        trackRef={track}
+                                        isSpotlit={false}
+                                        onSpotlight={handleSpotlight}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         );
     }
