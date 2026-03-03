@@ -108,7 +108,7 @@ function SpotlightableTile({
                     onClick={() => onSpotlight(isSpotlit ? null : (trackRef ?? null))}
                     title={isSpotlit ? 'Spotlight entfernen' : 'Spotlight'}
                     className={`
-                        absolute top-2 right-2 z-20 p-1.5 rounded-lg backdrop-blur-md
+                        absolute top-2 right-2 z-1 p-1.5 rounded-lg backdrop-blur-md
                         transition-all duration-200
                         ${isSpotlit
                             ? 'bg-amber-400/90 text-white opacity-100 shadow-md'
@@ -203,6 +203,12 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
     } = useSettingsStore();
     const backdropRef = useRef<HTMLDivElement>(null);
 
+    // Lock body scroll while settings modal is open
+    useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = ''; };
+    }, []);
+
     return (
         <div
             ref={backdropRef}
@@ -227,7 +233,7 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
                         <Monitor className="w-4 h-4 text-text-muted" />
                         <span className="text-sm font-semibold text-text-main">Video Quality</span>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                         {QUALITY_OPTIONS.map(q => {
                             const p = VIDEO_PRESETS[q];
                             const mbps = p.maxBitrate >= 1_000_000
@@ -372,9 +378,9 @@ function CustomVideoConference() {
         );
 
         return (
-            <div className="absolute inset-0 flex gap-2 p-2 pb-[76px] pt-[52px]" style={{ minHeight: 0 }}>
+            <div className="absolute inset-0 flex flex-col sm:flex-row gap-2 p-1.5 sm:p-2 pb-[76px] pt-[52px]" style={{ minHeight: 0 }}>
                 {/* Main pinned tile */}
-                <div className="flex-1 relative min-w-0">
+                <div className="flex-1 h-full relative min-w-0">
                     <SpotlightableTile
                         trackRef={spotlightTrack}
                         isSpotlit={true}
@@ -384,9 +390,9 @@ function CustomVideoConference() {
 
                 {/* Sidebar — other participants */}
                 {otherTracks.length > 0 && (
-                    <div className="flex flex-col gap-2 w-44 shrink-0 overflow-y-auto scrollbar-hide">
+                    <div className="flex flex-row sm:flex-col gap-1.5 sm:gap-2 w-full sm:w-44 shrink-0 overflow-x-auto sm:overflow-y-auto scrollbar-hide">
                         {otherTracks.map((track, i) => (
-                            <div key={trackKey(track, i)} className="aspect-video w-full shrink-0">
+                            <div key={trackKey(track, i)} className="aspect-video w-28 sm:w-full shrink-0">
                                 <SpotlightableTile
                                     trackRef={track}
                                     isSpotlit={false}
@@ -402,16 +408,17 @@ function CustomVideoConference() {
 
     // ── GRID MODE ───────────────────────────────────────────────────────────
     const count = tracks.length;
+    // Mobile: 1 col for 1 track, 2 cols otherwise. Desktop: existing logic.
     const gridCols =
         count <= 1 ? 'grid-cols-1' :
-            count <= 4 ? 'grid-cols-2' :
-                count <= 9 ? 'grid-cols-3' :
-                    'grid-cols-4';
+            count <= 4 ? 'grid-cols-1 sm:grid-cols-2' :
+                count <= 9 ? 'grid-cols-1 sm:grid-cols-3' :
+                    'grid-cols-2 sm:grid-cols-4';
 
     return (
         <div className="absolute inset-0 pb-[76px] pt-[52px] flex flex-col">
             <div
-                className={`flex-1 grid ${gridCols} gap-2 p-2 auto-rows-fr`}
+                className={`flex-1 h-full grid ${gridCols} gap-1.5 sm:gap-2 p-1.5 sm:p-2 auto-rows-fr`}
                 style={{ minHeight: 0 }}
             >
                 {tracks.map((track, i) => (
@@ -563,16 +570,16 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     return (
         <div
             className="fixed inset-0 top-16 bg-gray-950 overflow-hidden transition-[padding-right] duration-300"
-            style={{ paddingRight: chatOpen ? '320px' : '0px' }}
+            style={{ paddingRight: chatOpen && typeof window !== 'undefined' && window.innerWidth >= 640 ? '320px' : '0px' }}
         >
             {/* Top bar */}
-            <div className="absolute top-0 left-0 right-0 h-[52px] z-10 flex items-center px-4 gap-3">
-                <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md border border-[rgba(220,220,220,0.85)] rounded-full px-3.5 py-1.5 shadow-sm">
-                    <span className="relative flex h-2 w-2">
+            <div className="absolute top-0 left-0 right-0 h-[52px] z-10 flex items-center px-2 sm:px-4 gap-1.5 sm:gap-3 overflow-x-auto scrollbar-hide">
+                <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md border border-[rgba(220,220,220,0.85)] rounded-full px-2.5 sm:px-3.5 py-1.5 shadow-sm shrink-0">
+                    <span className="relative flex h-2 w-2 shrink-0">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
                     </span>
-                    <span className="text-text-main text-xs font-semibold capitalize select-none">
+                    <span className="text-text-main text-xs font-semibold capitalize select-none truncate max-w-[100px] sm:max-w-none">
                         {decodeURIComponent(roomId)
                             .replace(/-\d{1,5}$/, '')
                             .replace(/-/g, ' ')
@@ -584,22 +591,22 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 <button
                     onClick={handleCopyLink}
                     aria-label="Copy room link"
-                    className="flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
+                    className="shrink-0 flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-full px-2.5 sm:px-3.5 py-1.5 text-xs font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
                 >
                     {copied ? <Check className="w-3 h-3 text-green-500" /> : <Link2 className="w-3 h-3" />}
-                    {copied ? 'Copied!' : 'Share'}
+                    <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share'}</span>
                 </button>
 
-                <div className="flex-1" />
+                <div className="flex-1 min-w-[8px]" />
 
                 {/* Settings gear */}
                 <button
                     onClick={() => setSettingsOpen(true)}
                     aria-label="Settings"
-                    className="flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
+                    className="shrink-0 flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-full px-2.5 sm:px-3.5 py-1.5 text-xs font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
                 >
                     <Settings className="w-3 h-3" />
-                    Settings
+                    <span className="hidden sm:inline">Settings</span>
                 </button>
 
                 {/* Chat toggle button lives inside ChatSidebar */}
@@ -617,10 +624,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
                 <button
                     onClick={() => router.push('/dashboard')}
-                    className="flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
+                    className="shrink-0 flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-full px-2.5 sm:px-3.5 py-1.5 text-xs font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
                 >
                     <X className="w-3 h-3" />
-                    Leave
+                    <span className="hidden sm:inline">Leave</span>
                 </button>
             </div>
 
@@ -658,7 +665,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 {/* Collapsible control bar */}
                 {controlBarVisible ? (
                     <div
-                        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20"
+                        className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-20 transition-opacity duration-200 ${chatOpen ? 'max-sm:opacity-0 max-sm:pointer-events-none' : ''}`}
                         onMouseEnter={() => {
                             if (autoHideControlBar) {
                                 // Reset timer on hover
@@ -683,7 +690,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 ) : (
                     <button
                         onClick={() => setControlBarVisible(true)}
-                        className="fixed bottom-3 left-1/2 -translate-x-1/2 z-20 bg-white/80 hover:bg-white backdrop-blur-md border border-white/60 rounded-full shadow-lg p-2 transition-all duration-200 hover:scale-105"
+                        className={`fixed bottom-3 left-1/2 -translate-x-1/2 z-20 bg-white/80 hover:bg-white backdrop-blur-md border border-white/60 rounded-full shadow-lg p-2 transition-all duration-200 hover:scale-105 ${chatOpen ? 'max-sm:opacity-0 max-sm:pointer-events-none' : ''}`}
                         title="Show controls"
                     >
                         <ChevronUp className="w-4 h-4 text-text-main" />

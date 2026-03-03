@@ -20,7 +20,7 @@ export default function Home() {
     return (
       <div className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center px-4 py-16">
         {/* Greeting card */}
-        <div className="bg-surface border border-gray-100 shadow-flat rounded-2xl p-10 max-w-md w-full text-center flex flex-col items-center gap-6">
+        <div className="bg-surface border border-gray-100 shadow-flat rounded-2xl p-6 sm:p-10 max-w-md w-full text-center flex flex-col items-center gap-5 sm:gap-6">
           {/* Avatar circle */}
           <div className="w-16 h-16 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center">
             <span className="text-primary font-bold text-2xl">
@@ -40,7 +40,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
             <button
               onClick={() => router.push("/dashboard")}
-              className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl bg-surface border border-gray-200 text-text-main font-medium text-sm hover:bg-gray-50 transition-colors shadow-flat"
+              className="sm:flex-1 flex items-center justify-center gap-2 h-14 sm:h-11 rounded-xl bg-surface border border-gray-200 text-text-main font-medium text-base sm:text-sm hover:bg-gray-50 transition-colors shadow-flat"
             >
               <LayoutDashboard className="w-4 h-4" />
               Dashboard
@@ -50,7 +50,7 @@ export default function Home() {
                 const roomId = `room-${Math.random().toString(36).slice(2, 7)}`;
                 router.push(`/room/${roomId}`);
               }}
-              className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl bg-primary text-white font-medium text-sm hover:bg-[#E0484D] transition-colors shadow-active-speaker"
+              className="sm:flex-1 flex items-center justify-center gap-2 h-14 sm:h-11 rounded-xl bg-primary text-white font-medium text-base sm:text-sm hover:bg-[#E0484D] transition-colors shadow-active-speaker"
             >
               <Plus className="w-4 h-4" />
               Create Room
@@ -65,34 +65,34 @@ export default function Home() {
   return (
     <div className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center px-4 py-16">
       {/* Hero */}
-      <div className="max-w-2xl w-full text-center flex flex-col items-center gap-8">
+      <div className="max-w-2xl w-full text-center flex flex-col items-center gap-6 sm:gap-8">
         {/* Badge */}
         <span className="inline-flex items-center gap-1.5 bg-primary/8 border border-primary/15 text-primary text-xs font-semibold px-3 py-1 rounded-full">
           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
           Real-time Voice &amp; Video
         </span>
 
-        <h1 className="text-5xl sm:text-6xl font-bold text-text-main tracking-tight leading-[1.1]">
+        <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-text-main tracking-tight leading-[1.1]">
           Voxely
         </h1>
 
-        <p className="text-lg text-text-muted leading-relaxed max-w-lg">
+        <p className="text-base sm:text-lg text-text-muted leading-relaxed max-w-lg">
           Secure real-time communication, minimally designed. Create
           rooms, invite friends and communicate — without distractions.
         </p>
 
         {/* CTAs */}
-        <div className="flex flex-col sm:flex-row gap-3 mt-2 w-full max-w-sm">
+        <div className="flex flex-col sm:flex-row gap-3 mt-2 w-full sm:max-w-sm">
           <button
             onClick={() => router.push("/register")}
-            className="flex-1 flex items-center justify-center gap-2 h-12 rounded-xl bg-primary text-white font-semibold text-base hover:bg-[#E0484D] transition-colors shadow-active-speaker"
+            className="sm:flex-1 flex items-center justify-center gap-2 h-14 rounded-xl bg-primary text-white font-semibold text-base hover:bg-[#E0484D] transition-colors shadow-active-speaker"
           >
             <UserPlus className="w-4 h-4" />
             Create Account
           </button>
           <button
             onClick={() => router.push("/login")}
-            className="flex-1 flex items-center justify-center gap-2 h-12 rounded-xl bg-surface border border-gray-200 text-text-main font-semibold text-base hover:bg-gray-50 transition-colors shadow-flat"
+            className="sm:flex-1 flex items-center justify-center gap-2 h-14 rounded-xl bg-surface border border-gray-200 text-text-main font-semibold text-base hover:bg-gray-50 transition-colors shadow-flat"
           >
             <LogIn className="w-4 h-4" />
             Sign In
@@ -101,7 +101,7 @@ export default function Home() {
       </div>
 
       {/* Feature cards */}
-      <div className="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-2xl w-full">
+      <div className="mt-12 sm:mt-20 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 max-w-2xl w-full">
         {[
           {
             icon: <Video className="w-5 h-5 text-primary" />,

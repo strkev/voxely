@@ -379,3 +379,60 @@ body {
 .chat-messages::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.22);
 }
+
+/* ── Mobile-specific overrides (≤ 640px) ─────────────────────────────────────── */
+/* These rules ONLY affect small screens. Desktop/tablet layout is untouched.    */
+@media (max-width: 640px) {
+
+  /* Smaller LiveKit buttons */
+  .lk-button {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.8rem;
+    min-height: 38px;
+  }
+
+  /* Tighter button groups */
+  .lk-button-group>.lk-button:first-child {
+    padding: 0.45rem 0.55rem 0.45rem 0.75rem !important;
+  }
+
+  .lk-button-group>.lk-button:last-child {
+    padding: 0.45rem 0.6rem 0.45rem 0.35rem !important;
+    width: 1.75rem !important;
+  }
+
+  /* Tighter spacing between button groups */
+  .lk-control-bar>.lk-button-group+.lk-button-group,
+  .lk-control-bar>.lk-button-group+.lk-button,
+  .lk-control-bar>.lk-button+.lk-button-group {
+    margin-left: 0.35rem;
+  }
+
+  /* Smaller disconnect button */
+  .lk-disconnect-button {
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  /* Smaller participant name badge */
+  .lk-participant-metadata {
+    bottom: 4px;
+    left: 4px;
+    padding: 1px 5px;
+  }
+
+  .lk-participant-metadata-item {
+    font-size: 0.55rem;
+  }
+
+  /* Smaller focus/pin toggle */
+  .lk-focus-toggle-button {
+    padding: 0.35rem !important;
+    top: 6px !important;
+    right: 6px !important;
+  }
+
+  .lk-focus-toggle-button svg {
+    width: 1rem !important;
+    height: 1rem !important;
+  }
+}

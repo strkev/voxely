@@ -148,7 +148,7 @@ export default function AdminPage() {
                         <Users className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-text-main">
+                        <h1 className="text-xl sm:text-2xl font-bold text-text-main">
                             Benutzerverwaltung
                         </h1>
                         <p className="text-text-muted text-sm">
@@ -174,7 +174,7 @@ export default function AdminPage() {
                             {users.map((user) => (
                                 <div
                                     key={user.id}
-                                    className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
+                                    className="flex items-center justify-between px-3 sm:px-5 py-3 sm:py-4 hover:bg-gray-50 transition-colors"
                                 >
                                     <div className="flex items-center gap-3 min-w-0">
                                         <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0">

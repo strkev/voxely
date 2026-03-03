@@ -45,16 +45,16 @@ export default function DashboardPage() {
     };
 
     return (
-        <div className="flex-1 w-full max-w-5xl mx-auto p-6 sm:p-12 lg:p-16">
-            <div className="mb-12">
-                <h1 className="text-3xl font-semibold text-text-main mb-2">Welcome, {user.name}</h1>
+        <div className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-6 md:p-12 lg:p-16">
+            <div className="mb-8 sm:mb-12">
+                <h1 className="text-2xl sm:text-3xl font-semibold text-text-main mb-2">Welcome, {user.name}</h1>
                 <p className="text-text-muted">Create a new space or join an existing one to start chatting.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
                 {/* Create Room Card */}
-                <div className="bg-surface p-8 rounded-video shadow-flat border border-gray-100 flex flex-col h-full">
+                <div className="bg-surface p-5 sm:p-8 rounded-video shadow-flat border border-gray-100 flex flex-col h-full">
                     <div className="mb-6">
                         <h2 className="text-xl font-medium text-text-main mb-2">Create a Space</h2>
                         <p className="text-sm text-text-muted">Start a secure real-time channel for your friends or team.</p>
@@ -71,14 +71,14 @@ export default function DashboardPage() {
                                 required
                             />
                         </div>
-                        <Button type="submit" variant="primary" className="w-full">
+                        <Button type="submit" variant="primary" className="w-full h-14 sm:h-12">
                             Create and Join
                         </Button>
                     </form>
                 </div>
 
                 {/* Join Room Card */}
-                <div className="bg-surface p-8 rounded-video shadow-flat border border-gray-100 flex flex-col h-full">
+                <div className="bg-surface p-5 sm:p-8 rounded-video shadow-flat border border-gray-100 flex flex-col h-full">
                     <div className="mb-6">
                         <h2 className="text-xl font-medium text-text-main mb-2">Join a Space</h2>
                         <p className="text-sm text-text-muted">Have a room code? Enter it below to join the conversation.</p>
@@ -96,7 +96,7 @@ export default function DashboardPage() {
                             />
                             <p className="text-xs text-text-muted mt-1.5 ml-1">Ask the room creator to share the link or code with you.</p>
                         </div>
-                        <Button type="submit" variant="secondary" className="w-full">
+                        <Button type="submit" variant="secondary" className="w-full h-14 sm:h-12">
                             Join Space
                         </Button>
                     </form>

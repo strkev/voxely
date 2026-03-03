@@ -163,9 +163,16 @@ export function ChatSidebar({
             </button>
 
             {/* ── Sidebar panel ─────────────────────────────────────────────── */}
+            {/* Mobile backdrop overlay */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 top-16 z-0 bg-black/40 sm:hidden"
+                    onClick={onToggle}
+                />
+            )}
             <div
                 className={`
-                    fixed top-16 right-0 bottom-0 w-80 z-30
+                    fixed top-16 right-0 bottom-0 w-full sm:w-80 z-30
                     flex flex-col
                     bg-[#F7F7F7] border-l border-gray-200
                     transition-transform duration-300 ease-in-out

@@ -117,8 +117,8 @@ export default function SettingsPage() {
                 </button>
 
                 {/* Profile card */}
-                <div className="bg-surface border border-gray-100 rounded-2xl p-6 shadow-flat mb-6 flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center text-white text-xl font-bold shrink-0">
+                <div className="bg-surface border border-gray-100 rounded-2xl p-4 sm:p-6 shadow-flat mb-6 flex items-center gap-3 sm:gap-4">
+                    <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-primary flex items-center justify-center text-white text-lg sm:text-xl font-bold shrink-0">
                         {initials}
                     </div>
                     <div>
@@ -254,7 +254,7 @@ export default function SettingsPage() {
                     {/* Individual sound previews */}
                     <div className={`divide-y divide-gray-50 transition-opacity ${soundsEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
                         {SOUND_LABELS.map(({ key, label, description }) => (
-                            <div key={key} className="flex items-center justify-between px-6 py-3.5">
+                            <div key={key} className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5">
                                 <div>
                                     <p className="text-sm font-medium text-text-main">{label}</p>
                                     <p className="text-xs text-text-muted mt-0.5">{description}</p>

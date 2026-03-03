@@ -48,7 +48,7 @@ export function Header() {
 
     return (
         <>
-            <header className="w-full h-16 border-b border-gray-100 bg-surface flex items-center justify-between px-6 sm:px-12 z-30 relative">
+            <header className="w-full h-16 border-b border-gray-100 bg-surface flex items-center justify-between px-4 sm:px-6 md:px-12 z-30 relative">
                 <Link href="/" className="text-xl font-semibold text-text-main flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
                         V
@@ -136,16 +136,16 @@ export function Header() {
                             )}
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
                             <Link
                                 href="/login"
-                                className="px-4 py-1.5 rounded-full text-sm font-medium text-text-main hover:bg-gray-100 transition-colors"
+                                className="px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium text-text-main hover:bg-gray-100 transition-colors"
                             >
                                 Log in
                             </Link>
                             <Link
                                 href="/register"
-                                className="px-4 py-1.5 rounded-full text-sm font-medium bg-primary text-white hover:bg-[#E0484D] transition-colors shadow-sm"
+                                className="px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium bg-primary text-white hover:bg-[#E0484D] transition-colors shadow-sm"
                             >
                                 Sign up
                             </Link>
