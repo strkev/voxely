@@ -380,7 +380,7 @@ function CustomVideoConference() {
         return (
             <div className="absolute inset-0 flex flex-col sm:flex-row gap-2 p-1.5 sm:p-2 pb-[76px] pt-[52px]" style={{ minHeight: 0 }}>
                 {/* Main pinned tile */}
-                <div className="flex-1 h-full relative min-w-0">
+                <div className="flex-1 relative min-w-0">
                     <SpotlightableTile
                         trackRef={spotlightTrack}
                         isSpotlit={true}
@@ -418,7 +418,7 @@ function CustomVideoConference() {
     return (
         <div className="absolute inset-0 pb-[76px] pt-[52px] flex flex-col">
             <div
-                className={`flex-1 h-full grid ${gridCols} gap-1.5 sm:gap-2 p-1.5 sm:p-2 auto-rows-fr`}
+                className={`flex-1 grid ${gridCols} gap-1.5 sm:gap-2 p-1.5 sm:p-2 auto-rows-fr`}
                 style={{ minHeight: 0 }}
             >
                 {tracks.map((track, i) => (
