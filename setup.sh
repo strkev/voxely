@@ -237,7 +237,7 @@ if [ "$SETUP_DOCKER_SERVICES" = true ]; then
             -e POSTGRES_USER="${PG_USER}" \
             -e POSTGRES_PASSWORD="${PG_PASSWORD}" \
             -e POSTGRES_DB="${PG_DB}" \
-            -p "${PG_PORT}:5432" \
+            -p "127.0.0.1:${PG_PORT}:5432" \
             --restart unless-stopped \
             postgres:16
         success "PostgreSQL started on port ${PG_PORT}"
@@ -254,7 +254,7 @@ if [ "$SETUP_DOCKER_SERVICES" = true ]; then
         sudo docker start dc-redis 2>/dev/null || true
     else
         sudo docker run -d --name dc-redis \
-            -p "${REDIS_PORT}:6379" \
+            -p "127.0.0.1:${REDIS_PORT}:6379" \
             --restart unless-stopped \
             redis:7-alpine
         success "Redis started on port ${REDIS_PORT}"

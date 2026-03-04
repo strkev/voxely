@@ -59,7 +59,7 @@ docker run -d --name postgres \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=voxely \
-  -p 5432:5432 \
+  -p 127.0.0.1:5432:5432 \
   postgres:16
 ```
 
@@ -67,7 +67,7 @@ docker run -d --name postgres \
 
 ```bash
 # Beispiel mit Docker:
-docker run -d --name redis -p 6379:6379 redis:7-alpine
+docker run -d --name redis -p 127.0.0.1:6379:6379 redis:7-alpine
 ```
 
 > ⚠️ Ohne Redis funktioniert das Logout-Token-Blacklisting nicht. Der Server startet trotzdem, zeigt aber eine Warnung an.
@@ -181,7 +181,7 @@ Bevor die App auf einem Server deployed wird, **müssen** folgende Punkte beacht
 - [ ] **HTTPS aktivieren** – WebRTC (Kamera/Mikrofon) funktioniert nur über HTTPS oder localhost. Verwende einen Reverse-Proxy wie Nginx oder Caddy mit SSL-Zertifikat.
 - [ ] **Redis bereitstellen** – Für JWT-Blacklisting (Logout-Absicherung) ist Redis erforderlich.
 - [ ] **LiveKit über TLS** – In Produktion `wss://` statt `ws://` verwenden.
-- [ ] **Firewall konfigurieren** – Nur benötigte Ports öffnen (443 für HTTPS, LiveKit-Ports).
+- [ ] **Firewall konfigurieren** – Nur benötigte Ports öffnen (22 SSH, 80 HTTP, 443 HTTPS, 7443 LiveKit WSS, 7882/udp LiveKit Media). **PostgreSQL (5432) und Redis (6379) dürfen NICHT von außen erreichbar sein!** Docker-Container immer mit `127.0.0.1:PORT:PORT` starten.
 
 ### Build für Produktion
 
