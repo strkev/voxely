@@ -79,7 +79,7 @@ echo -e "  It will guide you through all configuration steps.\n"
 # ══════════════════════════════════════════════════════════════════════════════
 # 1. PREREQUISITE CHECKS & AUTO-INSTALLATION
 # ══════════════════════════════════════════════════════════════════════════════
-header "1/7 — Checking Prerequisites"
+header "1/8 — Checking Prerequisites"
 
 # ── Detect package manager ────────────────────────────────────────────────────
 PKG_MANAGER=""
@@ -212,7 +212,7 @@ fi
 # ══════════════════════════════════════════════════════════════════════════════
 # 2. INFRASTRUCTURE (Docker Services)
 # ══════════════════════════════════════════════════════════════════════════════
-header "2/7 — Infrastructure Services"
+header "2/8 — Infrastructure Services"
 
 SETUP_DOCKER_SERVICES=false
 if [ "$DOCKER_AVAILABLE" = true ]; then
@@ -298,7 +298,7 @@ fi
 # ══════════════════════════════════════════════════════════════════════════════
 # 3. APPLICATION CONFIGURATION
 # ══════════════════════════════════════════════════════════════════════════════
-header "3/7 — Application Configuration"
+header "3/8 — Application Configuration"
 
 # Server IP / Domain
 info "Determine the address other devices will use to reach this server."
@@ -409,7 +409,7 @@ prompt INVITE_CODES  "Invite codes for registration (comma-separated, empty = op
 # ══════════════════════════════════════════════════════════════════════════════
 # 4. WRITE .env FILES
 # ══════════════════════════════════════════════════════════════════════════════
-header "4/7 — Writing Configuration Files"
+header "4/8 — Writing Configuration Files"
 
 # ── Backend .env ───────────────────────────────────────────────────────────────
 BACKEND_ENV="${SCRIPT_DIR}/backend/.env"
@@ -470,7 +470,7 @@ success "Created frontend/.env.local"
 # ══════════════════════════════════════════════════════════════════════════════
 # 5. INSTALL DEPENDENCIES & BUILD
 # ══════════════════════════════════════════════════════════════════════════════
-header "5/7 — Installing Dependencies & Building"
+header "5/8 — Installing Dependencies & Building"
 
 # ── Backend ────────────────────────────────────────────────────────────────────
 info "Installing backend dependencies..."
@@ -515,7 +515,7 @@ success "Frontend built"
 # 6. NGINX & SSL CONFIGURATION
 # ══════════════════════════════════════════════════════════════════════════════
 if [ "$SETUP_NGINX" = true ]; then
-    header "6/7 — Nginx & SSL Configuration"
+    header "6/8 — Nginx & SSL Configuration"
 
     # Install Nginx if not present
     if ! command -v nginx &>/dev/null; then
@@ -813,9 +813,132 @@ else
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 7. START / PM2 SETUP
+# 7. FIREWALL CONFIGURATION (UFW)
 # ══════════════════════════════════════════════════════════════════════════════
-header "7/7 — Starting the Application"
+header "7/8 — Firewall Configuration"
+
+SETUP_FIREWALL=false
+
+if command -v ufw &>/dev/null; then
+    info "UFW (Uncomplicated Firewall) detected"
+    if prompt_yn "Configure firewall rules now?"; then
+        SETUP_FIREWALL=true
+    fi
+else
+    if [ -n "$PKG_MANAGER" ]; then
+        if prompt_yn "Install and configure UFW firewall? (recommended for security)" "y"; then
+            info "Installing UFW..."
+            install_pkg ufw
+            if command -v ufw &>/dev/null; then
+                success "UFW installed"
+                SETUP_FIREWALL=true
+            else
+                error "UFW installation failed"
+            fi
+        fi
+    else
+        warn "UFW not found and no package manager available — skipping firewall setup"
+    fi
+fi
+
+if [ "$SETUP_FIREWALL" = true ]; then
+    info "Configuring firewall rules..."
+    echo ""
+
+    # ── Default policies ──────────────────────────────────────
+    sudo ufw default deny incoming
+    sudo ufw default allow outgoing
+    info "Default policy: deny incoming, allow outgoing"
+
+    # ── SSH (always needed) ───────────────────────────────────
+    sudo ufw allow 22/tcp comment 'SSH'
+    success "Allowed: 22/tcp (SSH)"
+
+    if [ "$SETUP_NGINX" = true ] || [ "$PROTO_HTTP" = "https" ]; then
+        # ── HTTPS Production Setup ────────────────────────────
+        sudo ufw allow 80/tcp comment 'HTTP (redirect + Lets Encrypt)'
+        success "Allowed: 80/tcp (HTTP — redirect & Let's Encrypt renewal)"
+
+        sudo ufw allow 443/tcp comment 'HTTPS (Frontend + Backend via Nginx)'
+        success "Allowed: 443/tcp (HTTPS — frontend & backend)"
+
+        if [ -n "${LK_PROXY_PORT:-}" ]; then
+            sudo ufw allow "${LK_PROXY_PORT}/tcp" comment 'LiveKit WSS proxy'
+            success "Allowed: ${LK_PROXY_PORT}/tcp (LiveKit WebSocket via Nginx)"
+        fi
+    else
+        # ── HTTP Development / Simple Setup ───────────────────
+        sudo ufw allow "${FRONTEND_PORT}/tcp" comment 'Frontend'
+        success "Allowed: ${FRONTEND_PORT}/tcp (Frontend)"
+
+        sudo ufw allow "${BACKEND_PORT}/tcp" comment 'Backend API'
+        success "Allowed: ${BACKEND_PORT}/tcp (Backend API)"
+
+        sudo ufw allow "${LK_PORT}/tcp" comment 'LiveKit WebSocket'
+        success "Allowed: ${LK_PORT}/tcp (LiveKit WebSocket)"
+    fi
+
+    # ── LiveKit media (always needed, UDP) ────────────────────
+    sudo ufw allow 7882/udp comment 'LiveKit media (WebRTC)'
+    success "Allowed: 7882/udp (LiveKit media / WebRTC)"
+
+    # ── Explicitly deny access to internal-only services ─────
+    # These should only be reachable from localhost (Docker already binds to 127.0.0.1)
+    if [ "$SETUP_DOCKER_SERVICES" = true ]; then
+        sudo ufw deny "${PG_PORT}/tcp" comment 'PostgreSQL (internal only)'
+        info "Denied:  ${PG_PORT}/tcp (PostgreSQL — internal only, bound to 127.0.0.1)"
+
+        sudo ufw deny "${REDIS_PORT}/tcp" comment 'Redis (internal only)'
+        info "Denied:  ${REDIS_PORT}/tcp (Redis — internal only, bound to 127.0.0.1)"
+    fi
+
+    echo ""
+
+    # ── Enable UFW ────────────────────────────────────────────
+    sudo ufw --force enable
+    success "UFW firewall enabled"
+
+    echo ""
+    info "Current firewall status:"
+    sudo ufw status verbose
+    echo ""
+else
+    echo ""
+    warn "Firewall was not configured. We recommend setting up firewall rules."
+    if [ "$SETUP_NGINX" = true ] || [ "$PROTO_HTTP" = "https" ]; then
+        echo -e "  Recommended rules for your HTTPS setup:"
+        echo -e "    ${BOLD}sudo ufw allow 22/tcp${NC}            — SSH"
+        echo -e "    ${BOLD}sudo ufw allow 80/tcp${NC}            — HTTP (Let's Encrypt)"
+        echo -e "    ${BOLD}sudo ufw allow 443/tcp${NC}           — HTTPS"
+        if [ -n "${LK_PROXY_PORT:-}" ]; then
+            echo -e "    ${BOLD}sudo ufw allow ${LK_PROXY_PORT}/tcp${NC}          — LiveKit WSS"
+        fi
+        echo -e "    ${BOLD}sudo ufw allow 7882/udp${NC}          — LiveKit media"
+        echo -e "    ${BOLD}sudo ufw deny ${PG_PORT:-5432}/tcp${NC}           — Block PostgreSQL"
+        echo -e "    ${BOLD}sudo ufw deny ${REDIS_PORT:-6379}/tcp${NC}          — Block Redis"
+        echo -e "    ${BOLD}sudo ufw default deny incoming${NC}"
+        echo -e "    ${BOLD}sudo ufw default allow outgoing${NC}"
+        echo -e "    ${BOLD}sudo ufw --force enable${NC}"
+    else
+        echo -e "  Recommended rules for your HTTP setup:"
+        echo -e "    ${BOLD}sudo ufw allow 22/tcp${NC}            — SSH"
+        echo -e "    ${BOLD}sudo ufw allow ${FRONTEND_PORT}/tcp${NC}          — Frontend"
+        echo -e "    ${BOLD}sudo ufw allow ${BACKEND_PORT}/tcp${NC}          — Backend"
+        echo -e "    ${BOLD}sudo ufw allow ${LK_PORT}/tcp${NC}          — LiveKit WS"
+        echo -e "    ${BOLD}sudo ufw allow 7882/udp${NC}          — LiveKit media"
+        echo -e "    ${BOLD}sudo ufw deny ${PG_PORT:-5432}/tcp${NC}           — Block PostgreSQL"
+        echo -e "    ${BOLD}sudo ufw deny ${REDIS_PORT:-6379}/tcp${NC}          — Block Redis"
+        echo -e "    ${BOLD}sudo ufw default deny incoming${NC}"
+        echo -e "    ${BOLD}sudo ufw default allow outgoing${NC}"
+        echo -e "    ${BOLD}sudo ufw --force enable${NC}"
+    fi
+    echo ""
+fi
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 8. START / PM2 SETUP
+# ══════════════════════════════════════════════════════════════════════════════
+header "8/8 — Starting the Application"
 
 START_METHOD="manual"
 
