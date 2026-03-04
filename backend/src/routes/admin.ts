@@ -61,7 +61,9 @@ router.delete('/users/:id', requireAdminSecret, async (req: Request, res: Respon
     }
 
     try {
-        // Delete chat messages first (userId FK), then rooms, then user
+        // Delete all associated data, then the user
+        await prisma.friendRequest.deleteMany({ where: { OR: [{ senderId: id }, { receiverId: id }] } });
+        await prisma.friendship.deleteMany({ where: { OR: [{ userId: id }, { friendId: id }] } });
         await prisma.chatMessage.deleteMany({ where: { userId: id } });
         await prisma.room.deleteMany({ where: { createdById: id } });
         await prisma.user.delete({ where: { id } });
@@ -118,6 +120,27 @@ router.get('/users/:id/export', requireAdminSecret, async (req: Request, res: Re
                     },
                     orderBy: { createdAt: 'asc' },
                 },
+                friendships: {
+                    select: {
+                        friendId: true,
+                        friend: { select: { name: true } },
+                        createdAt: true,
+                    },
+                },
+                sentRequests: {
+                    select: {
+                        id: true,
+                        receiver: { select: { id: true, name: true } },
+                        createdAt: true,
+                    },
+                },
+                receivedRequests: {
+                    select: {
+                        id: true,
+                        sender: { select: { id: true, name: true } },
+                        createdAt: true,
+                    },
+                },
             },
         });
 
@@ -138,6 +161,23 @@ router.get('/users/:id/export', requireAdminSecret, async (req: Request, res: Re
             },
             roomsCreated: user.roomsCreated,
             chatMessages: user.chatMessages,
+            friendships: user.friendships.map(f => ({
+                friendId: f.friendId,
+                friendName: f.friend.name,
+                since: f.createdAt,
+            })),
+            friendRequests: {
+                sent: user.sentRequests.map(r => ({
+                    requestId: r.id,
+                    to: r.receiver,
+                    createdAt: r.createdAt,
+                })),
+                received: user.receivedRequests.map(r => ({
+                    requestId: r.id,
+                    from: r.sender,
+                    createdAt: r.createdAt,
+                })),
+            },
         };
 
         res.setHeader('Content-Type', 'application/json');

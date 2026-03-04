@@ -16,12 +16,16 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track } from 'livekit-client';
-import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, Mic } from 'lucide-react';
+import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, Mic, Users } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
 import { playSound } from '@/lib/sounds';
 import { NoiseSuppressionProcessor } from '@/lib/rnnoise-processor';
+import { FriendsSidebar } from '@/components/FriendsSidebar';
+import { FriendRequestsModal } from '@/components/FriendRequestsModal';
+import { RoomInviteBanner } from '@/components/RoomInviteBanner';
+import { useFriendsSocket } from '@/hooks/useFriendsSocket';
 
 // ─── Auto-start audio ─────────────────────────────────────────────────────────
 function AutoStartAudio() {
@@ -537,7 +541,23 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const { videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression } = useSettingsStore();
     const noiseProcessorRef = useRef<NoiseSuppressionProcessor | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [showFriendsModal, setShowFriendsModal] = useState(false);
+    const [friendsSidebarOpen, setFriendsSidebarOpen] = useState(false);
     const qPreset = VIDEO_PRESETS[videoQuality];
+
+    // Friends socket
+    const friendsSocketRef = useFriendsSocket(authToken);
+
+    const handleInviteFriend = useCallback((friendId: string) => {
+        const socket = friendsSocketRef.current;
+        if (!socket) return;
+        // Get human-readable room name from slug
+        const roomName = decodeURIComponent(roomId)
+            .replace(/-\d{1,5}$/, '')
+            .replace(/-/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase());
+        socket.emit('friend:invite', { friendId, roomId, roomName });
+    }, [friendsSocketRef, roomId]);
 
     // Ensure control bar is always visible on mount
     useEffect(() => {
@@ -674,18 +694,31 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         >
             {/* Top bar */}
             <div className="absolute top-0 left-0 right-0 h-[52px] z-10 flex items-center px-2 sm:px-4 gap-1.5 sm:gap-3 overflow-x-auto scrollbar-hide">
-                <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md border border-[rgba(220,220,220,0.85)] rounded-full px-2.5 sm:px-3.5 py-1.5 shadow-sm shrink-0">
+                <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md border border-[rgba(220,220,220,0.85)] rounded-xl px-2.5 sm:px-3.5 py-1.5 shadow-sm shrink-0 whitespace-nowrap">
                     <span className="relative flex h-2 w-2 shrink-0">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
                     </span>
-                    <span className="text-text-main text-xs font-semibold capitalize select-none truncate max-w-[100px] sm:max-w-none">
+                    <span className="text-text-main text-xs font-semibold capitalize select-none truncate hidden sm:inline sm:max-w-[180px]">
                         {decodeURIComponent(roomId)
                             .replace(/-\d{1,5}$/, '')
                             .replace(/-/g, ' ')
                             .replace(/\b\w/g, c => c.toUpperCase())}
                     </span>
                 </div>
+
+                {/* Friends toggle button */}
+                <button
+                    onClick={() => setFriendsSidebarOpen(o => !o)}
+                    aria-label="Friends"
+                    className={`shrink-0 flex items-center gap-1.5 backdrop-blur-md border rounded-full px-2.5 sm:px-3.5 py-1.5 text-xs font-medium transition-all duration-150 shadow-sm ${friendsSidebarOpen
+                        ? 'bg-primary/90 hover:bg-primary border-primary/60 text-white'
+                        : 'bg-white/90 hover:bg-white border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary'
+                        }`}
+                >
+                    <Users className="w-3 h-3" />
+                    <span className="hidden sm:inline">Friends</span>
+                </button>
 
                 {/* Copy link button */}
                 <button
@@ -800,6 +833,26 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             </LiveKitRoom>
 
             {settingsOpen && <InRoomSettings onClose={() => setSettingsOpen(false)} />}
+
+            {/* Friends Sidebar — toggle overlay */}
+            {friendsSidebarOpen && (
+                <div className="fixed top-16 left-0 bottom-0 z-30">
+                    <FriendsSidebar
+                        currentRoomId={roomId}
+                        onInvite={handleInviteFriend}
+                        onOpenRequests={() => setShowFriendsModal(true)}
+                        onClose={() => setFriendsSidebarOpen(false)}
+                    />
+                </div>
+            )}
+
+            {/* Room Invite Banner */}
+            <RoomInviteBanner />
+
+            {/* Friend Requests Modal */}
+            {showFriendsModal && (
+                <FriendRequestsModal onClose={() => setShowFriendsModal(false)} />
+            )}
         </div>
     );
 }

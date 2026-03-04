@@ -62,7 +62,7 @@ const app = express();
 app.set('trust proxy', 1);
 const server = http.createServer(app);
 
-const io = new Server(server, {
+export const io = new Server(server, {
     cors: {
         origin: allowedOrigins,
         methods: ['GET', 'POST'],
@@ -89,10 +89,37 @@ import { isTokenBlacklisted } from './services/auth';
 import { initRedis } from './services/redis';
 
 import adminRouter from './routes/admin';
+import friendsRouter from './routes/friends';
 
 app.use('/api/auth', authRouter);
 app.use('/api/livekit', livekitRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/friends', friendsRouter);
+
+// ── Online presence tracking (userId → Set<socketId>) ─────────────────────────
+// Supports multiple tabs/windows per user
+export const onlineUsers = new Map<string, Set<string>>();
+
+/** Get all socket IDs for a list of friend user IDs that are currently online */
+const getOnlineFriendSockets = (friendIds: string[]): string[] => {
+    const sockets: string[] = [];
+    for (const fid of friendIds) {
+        const set = onlineUsers.get(fid);
+        if (set) {
+            for (const sid of set) sockets.push(sid);
+        }
+    }
+    return sockets;
+};
+
+/** Get the list of friend IDs for a given user */
+const getFriendIds = async (userId: string): Promise<string[]> => {
+    const friendships = await prisma.friendship.findMany({
+        where: { userId },
+        select: { friendId: true },
+    });
+    return friendships.map(f => f.friendId);
+};
 app.get('/health', async (_req, res) => {
     try {
         await prisma.$queryRaw`SELECT 1`;
@@ -110,6 +137,9 @@ const stripHtml = (text: string): string =>
 
 /** Rooms are public but we validate format to prevent abuse. */
 const ROOM_ID_RE = /^[a-zA-Z0-9_-]{1,100}$/;
+
+/** Validate UUID format to prevent injection in friend-related events. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ── Server-side chat rate limiting (per userId, in memory) ────────────────────
 // Allows max 5 messages per 5 seconds per user
@@ -161,8 +191,64 @@ io.use(async (socket, next) => {
 });
 
 // ── Socket.IO connection handler ──────────────────────────────────────────────
-io.on('connection', (socket) => {
-    console.log(`[WS] connected  ${socket.id}  uid=${socket.data.userId as string}`);
+io.on('connection', async (socket) => {
+    const uid = socket.data.userId as string;
+    console.log(`[WS] connected  ${socket.id}  uid=${uid}`);
+
+    // ── Online presence: track this socket ─────────────────────────────────
+    const isFirstSocket = !onlineUsers.has(uid) || onlineUsers.get(uid)!.size === 0;
+    if (!onlineUsers.has(uid)) onlineUsers.set(uid, new Set());
+    onlineUsers.get(uid)!.add(socket.id);
+
+    // Notify friends that this user came online (only on first socket)
+    if (isFirstSocket) {
+        try {
+            const friendIds = await getFriendIds(uid);
+            const friendSockets = getOnlineFriendSockets(friendIds);
+            for (const sid of friendSockets) {
+                io.to(sid).emit('friend:online', { userId: uid });
+            }
+
+            // Tell the connecting user which of their friends are online
+            const onlineFriendIds = friendIds.filter(fid => onlineUsers.has(fid) && onlineUsers.get(fid)!.size > 0);
+            socket.emit('friend:online-list', { userIds: onlineFriendIds });
+        } catch (err) {
+            console.error('[WS] Failed to notify friends of online status:', err);
+        }
+    }
+
+    // ── Room invitation: forward to friend's sockets ───────────────────────
+    socket.on('friend:invite', async ({ friendId, roomId, roomName }: { friendId: string; roomId: string; roomName: string }) => {
+        // Validate inputs
+        if (typeof friendId !== 'string' || !UUID_RE.test(friendId)) return;
+        if (typeof roomId !== 'string' || !ROOM_ID_RE.test(roomId)) return;
+        const cleanRoomName = stripHtml(typeof roomName === 'string' ? roomName : '').slice(0, 100) || roomId;
+
+        // Verify friendship exists
+        const friendship = await prisma.friendship.findUnique({
+            where: { userId_friendId: { userId: uid, friendId } },
+        });
+        if (!friendship) return;
+
+        // Get sender name
+        const sender = await prisma.user.findUnique({
+            where: { id: uid },
+            select: { name: true },
+        });
+
+        // Forward invitation to all of the friend's sockets
+        const friendSocketIds = onlineUsers.get(friendId);
+        if (friendSocketIds) {
+            for (const sid of friendSocketIds) {
+                io.to(sid).emit('friend:invite-received', {
+                    fromUserId: uid,
+                    fromUserName: sender?.name ?? 'Unknown',
+                    roomId,
+                    roomName: cleanRoomName,
+                });
+            }
+        }
+    });
 
     // ── chat:join — client joins a room channel ────────────────────────────────
     socket.on('chat:join', async ({ roomId, name }: { roomId: string; name?: string }) => {
@@ -265,12 +351,32 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
         console.log(`[WS] disconnected ${socket.id}`);
         // Clean up any room this socket was in
         const roomId = socket.data.roomId as string | undefined;
         if (roomId) {
             cleanupRoomIfEmpty(roomId);
+        }
+
+        // ── Online presence: remove this socket ──────────────────────────
+        const disconnectUid = socket.data.userId as string;
+        const userSockets = onlineUsers.get(disconnectUid);
+        if (userSockets) {
+            userSockets.delete(socket.id);
+            if (userSockets.size === 0) {
+                onlineUsers.delete(disconnectUid);
+                // Notify friends that this user went offline
+                try {
+                    const friendIds = await getFriendIds(disconnectUid);
+                    const friendSockets = getOnlineFriendSockets(friendIds);
+                    for (const sid of friendSockets) {
+                        io.to(sid).emit('friend:offline', { userId: disconnectUid });
+                    }
+                } catch (err) {
+                    console.error('[WS] Failed to notify friends of offline status:', err);
+                }
+            }
         }
     });
 });

@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
-import { ChevronDown, LogOut, Trash2, LayoutDashboard, Settings } from 'lucide-react';
+import { ChevronDown, LogOut, Trash2, LayoutDashboard, Settings, Users } from 'lucide-react';
+import { FriendRequestsModal } from '@/components/FriendRequestsModal';
+import { useFriendsStore } from '@/store/useFriendsStore';
 
 export function Header() {
     const { user, logout, deleteAccount } = useAuthStore();
@@ -14,6 +16,8 @@ export function Header() {
     const [deleting, setDeleting] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
+    const [showFriendsModal, setShowFriendsModal] = useState(false);
+    const { incomingRequests } = useFriendsStore();
 
     useEffect(() => {
         setMounted(true);
@@ -113,6 +117,19 @@ export function Header() {
                                         </Link>
 
                                         <button
+                                            onClick={() => { setOpen(false); setShowFriendsModal(true); }}
+                                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text-main hover:bg-gray-50 transition-colors"
+                                        >
+                                            <Users className="w-4 h-4 text-text-muted" />
+                                            Friends
+                                            {incomingRequests.length > 0 && (
+                                                <span className="ml-auto min-w-[18px] h-[18px] rounded-full bg-primary text-white text-[0.6rem] font-bold flex items-center justify-center px-1">
+                                                    {incomingRequests.length}
+                                                </span>
+                                            )}
+                                        </button>
+
+                                        <button
                                             onClick={() => { setOpen(false); logout(); router.push('/'); }}
                                             className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text-main hover:bg-gray-50 transition-colors"
                                         >
@@ -181,6 +198,11 @@ export function Header() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Friend Requests Modal */}
+            {showFriendsModal && (
+                <FriendRequestsModal onClose={() => setShowFriendsModal(false)} />
             )}
         </>
     );
