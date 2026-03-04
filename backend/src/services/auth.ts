@@ -11,14 +11,14 @@ const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export interface JwtPayload {
     userId: string;
-    email: string;
+    name: string;
     jti: string;   // JWT ID – unique per token, used for blacklisting
 }
 
 export const generateToken = (user: User): string => {
     const payload: JwtPayload = {
         userId: user.id,
-        email: user.email,
+        name: user.name,
         jti: randomUUID(),
     };
     return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });

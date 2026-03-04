@@ -60,6 +60,7 @@ docker run -d --name postgres \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=voxely \
   -p 127.0.0.1:5432:5432 \
+  -v dc-postgres-data:/var/lib/postgresql/data \
   postgres:16
 ```
 

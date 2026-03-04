@@ -88,7 +88,6 @@ export function Header() {
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="text-sm font-semibold text-text-main truncate">{user.name}</p>
-                                                <p className="text-xs text-text-muted truncate">{user.email}</p>
                                             </div>
                                         </div>
                                     </div>

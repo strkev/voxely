@@ -15,7 +15,7 @@ function getSafeRedirect(url: string | null): string {
 }
 
 function LoginForm() {
-    const [email, setEmail] = useState('');
+    const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -35,7 +35,7 @@ function LoginForm() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',  // allows the server to set httpOnly auth_token cookie
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ name, password })
             });
 
             const data = await res.json();
@@ -69,12 +69,12 @@ function LoginForm() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-text-main mb-1.5 ml-1">Email</label>
+                        <label className="block text-sm font-medium text-text-main mb-1.5 ml-1">Username</label>
                         <Input
-                            type="email"
-                            placeholder="name@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            type="text"
+                            placeholder="Your username"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
                             required
                         />
                     </div>
@@ -112,4 +112,3 @@ export default function LoginPage() {
         </Suspense>
     );
 }
-

@@ -24,7 +24,6 @@ export default function RegisterPage() {
 
 function RegisterForm() {
     const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [inviteCode, setInviteCode] = useState('');
@@ -52,7 +51,7 @@ function RegisterForm() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',  // allows the server to set httpOnly auth_token cookie
-                body: JSON.stringify({ name, email, password, inviteCode })
+                body: JSON.stringify({ name, password, inviteCode })
             });
 
             const data = await res.json();
@@ -86,23 +85,14 @@ function RegisterForm() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-text-main mb-1.5 ml-1">Full Name</label>
+                        <label className="block text-sm font-medium text-text-main mb-1.5 ml-1">Username</label>
                         <Input
                             type="text"
-                            placeholder="John Doe"
+                            placeholder="Choose a username"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-text-main mb-1.5 ml-1">Email</label>
-                        <Input
-                            type="email"
-                            placeholder="name@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
+                            maxLength={50}
                         />
                     </div>
                     <div>

@@ -41,6 +41,6 @@ export const authenticate = async (
         return;
     }
 
-    req.user = { userId: payload.userId, email: payload.email };
+    req.user = { userId: payload.userId };
     next();
 };

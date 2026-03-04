@@ -30,7 +30,6 @@ export default function SettingsPage() {
 
     // Edit profile state
     const [editName, setEditName] = useState('');
-    const [editEmail, setEditEmail] = useState('');
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [profileLoading, setProfileLoading] = useState(false);
@@ -41,7 +40,6 @@ export default function SettingsPage() {
     useEffect(() => {
         if (user) {
             setEditName(user.name);
-            setEditEmail(user.email);
         }
     }, [user]);
 
@@ -60,7 +58,6 @@ export default function SettingsPage() {
 
         const body: Record<string, string> = {};
         if (editName !== user.name) body.name = editName;
-        if (editEmail !== user.email) body.email = editEmail;
         if (newPassword) body.newPassword = newPassword;
         if (currentPassword) body.currentPassword = currentPassword;
 
@@ -123,7 +120,6 @@ export default function SettingsPage() {
                     </div>
                     <div>
                         <p className="text-lg font-semibold text-text-main">{user.name}</p>
-                        <p className="text-sm text-text-muted">{user.email}</p>
                     </div>
                 </div>
 
@@ -148,7 +144,7 @@ export default function SettingsPage() {
                         )}
 
                         <div>
-                            <label className="block text-sm font-medium text-text-main mb-1.5 ml-1">Name</label>
+                            <label className="block text-sm font-medium text-text-main mb-1.5 ml-1">Username</label>
                             <input
                                 type="text"
                                 value={editName}
@@ -156,17 +152,6 @@ export default function SettingsPage() {
                                 className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-white text-sm text-text-main placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                                 required
                                 maxLength={50}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-text-main mb-1.5 ml-1">Email</label>
-                            <input
-                                type="email"
-                                value={editEmail}
-                                onChange={(e) => { setEditEmail(e.target.value); setProfileSuccess(''); }}
-                                className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-white text-sm text-text-main placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                                required
                             />
                         </div>
 
@@ -193,7 +178,7 @@ export default function SettingsPage() {
                                     type="password"
                                     value={currentPassword}
                                     onChange={(e) => setCurrentPassword(e.target.value)}
-                                    placeholder="Required to change email or password"
+                                    placeholder="Required to change password"
                                     className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-white text-sm text-text-main placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                                     required
                                 />

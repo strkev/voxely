@@ -238,6 +238,7 @@ if [ "$SETUP_DOCKER_SERVICES" = true ]; then
             -e POSTGRES_PASSWORD="${PG_PASSWORD}" \
             -e POSTGRES_DB="${PG_DB}" \
             -p "127.0.0.1:${PG_PORT}:5432" \
+            -v dc-postgres-data:/var/lib/postgresql/data \
             --restart unless-stopped \
             postgres:16
         success "PostgreSQL started on port ${PG_PORT}"

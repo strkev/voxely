@@ -26,7 +26,7 @@ const requireAdminSecret = (req: Request, res: Response, next: () => void): void
 
 /**
  * GET /api/admin/users
- * Returns all registered users (id, name, email, createdAt).
+ * Returns all registered users (id, name, createdAt).
  */
 router.get('/users', requireAdminSecret, async (_req: Request, res: Response): Promise<void> => {
     try {
@@ -34,7 +34,6 @@ router.get('/users', requireAdminSecret, async (_req: Request, res: Response): P
             select: {
                 id: true,
                 name: true,
-                email: true,
                 createdAt: true,
             },
             orderBy: { createdAt: 'desc' },
@@ -98,7 +97,6 @@ router.get('/users/:id/export', requireAdminSecret, async (req: Request, res: Re
             where: { id },
             select: {
                 id: true,
-                email: true,
                 name: true,
                 avatarUrl: true,
                 createdAt: true,
@@ -133,7 +131,6 @@ router.get('/users/:id/export', requireAdminSecret, async (req: Request, res: Re
             note: 'Datenauskunft gemäß DSGVO Art. 15',
             profile: {
                 id: user.id,
-                email: user.email,
                 name: user.name,
                 avatarUrl: user.avatarUrl,
                 createdAt: user.createdAt,

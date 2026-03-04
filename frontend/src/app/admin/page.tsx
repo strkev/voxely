@@ -6,7 +6,6 @@ import { Trash2, Shield, Users, Loader2, Download } from "lucide-react";
 interface AdminUser {
     id: string;
     name: string;
-    email: string;
     createdAt: string;
 }
 
@@ -190,7 +189,7 @@ export default function AdminPage() {
                                                 {user.name}
                                             </p>
                                             <p className="text-xs text-text-muted truncate">
-                                                {user.email}
+                                                {new Date(user.createdAt).toLocaleDateString("de-DE")}
                                             </p>
                                         </div>
                                     </div>

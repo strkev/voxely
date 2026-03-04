@@ -157,7 +157,6 @@ io.use(async (socket, next) => {
     }
 
     socket.data.userId = payload.userId;
-    socket.data.email = payload.email;
     next();
 });
 

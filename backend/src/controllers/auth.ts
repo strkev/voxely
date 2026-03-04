@@ -5,8 +5,6 @@ import sanitize from 'sanitize-html';
 import { prisma } from '../index';
 import { generateToken, verifyToken, blacklistToken } from '../services/auth';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 /** Constant-time string comparison (prevents timing-based leakage). */
 const safeEquals = (a: string, b: string): boolean => {
     const bufA = Buffer.from(a);
@@ -26,7 +24,7 @@ const COOKIE_OPTS = {
 
 export const register = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { email, password, name, inviteCode } = req.body;
+        const { password, name, inviteCode } = req.body;
 
         // ── Invite-code gate ──────────────────────────────────────────────────
         const validCodes = (process.env.INVITE_CODES ?? '')
@@ -43,13 +41,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             }
         }
 
-        if (!email || !password || !name) {
-            res.status(400).json({ error: 'Email, password, and name are required' });
-            return;
-        }
-
-        if (typeof email !== 'string' || !EMAIL_RE.test(email)) {
-            res.status(400).json({ error: 'A valid email address is required' });
+        if (!password || !name) {
+            res.status(400).json({ error: 'Username and password are required' });
             return;
         }
 
@@ -61,27 +54,27 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         // Sanitise name: strip HTML, trim, limit to 50 characters
         const sanitizedName = sanitize(String(name), { allowedTags: [], allowedAttributes: {} }).trim().slice(0, 50);
         if (!sanitizedName) {
-            res.status(400).json({ error: 'A valid name is required' });
+            res.status(400).json({ error: 'A valid username is required' });
             return;
         }
 
-        const existingUser = await prisma.user.findUnique({ where: { email } });
+        const existingUser = await prisma.user.findUnique({ where: { name: sanitizedName } });
         if (existingUser) {
-            res.status(409).json({ error: 'User already exists' });
+            res.status(409).json({ error: 'Username is already taken' });
             return;
         }
 
         const passwordHash = await bcrypt.hash(password, 10);
 
         const user = await prisma.user.create({
-            data: { email, passwordHash, name: sanitizedName },
+            data: { passwordHash, name: sanitizedName },
         });
 
         const token = generateToken(user);
 
         // Set httpOnly cookie + return token in body (needed by Socket.IO)
         res.cookie('auth_token', token, COOKIE_OPTS);
-        res.status(201).json({ user: { id: user.id, email: user.email, name: user.name }, token });
+        res.status(201).json({ user: { id: user.id, name: user.name }, token });
     } catch (error) {
         console.error('Registration error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -90,14 +83,14 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { email, password } = req.body;
+        const { name, password } = req.body;
 
-        if (!email || !password) {
-            res.status(400).json({ error: 'Email and password are required' });
+        if (!name || !password) {
+            res.status(400).json({ error: 'Username and password are required' });
             return;
         }
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findUnique({ where: { name } });
         if (!user) {
             res.status(401).json({ error: 'Invalid credentials' });
             return;
@@ -113,7 +106,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
         // Set httpOnly cookie + return token in body (needed by Socket.IO)
         res.cookie('auth_token', token, COOKIE_OPTS);
-        res.status(200).json({ user: { id: user.id, email: user.email, name: user.name }, token });
+        res.status(200).json({ user: { id: user.id, name: user.name }, token });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -150,7 +143,7 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
 
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            select: { id: true, email: true, name: true },
+            select: { id: true, name: true },
         });
 
         if (!user) {
@@ -205,7 +198,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
-        const { name, email, currentPassword, newPassword } = req.body;
+        const { name, currentPassword, newPassword } = req.body;
 
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
@@ -226,30 +219,23 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
             }
         }
 
-        const updateData: { name?: string; email?: string; passwordHash?: string } = {};
+        const updateData: { name?: string; passwordHash?: string } = {};
 
         // Update name
         if (name && typeof name === 'string') {
             const sanitizedName = sanitize(name, { allowedTags: [], allowedAttributes: {} }).trim().slice(0, 50);
             if (!sanitizedName) {
-                res.status(400).json({ error: 'A valid name is required' });
+                res.status(400).json({ error: 'A valid username is required' });
                 return;
             }
-            updateData.name = sanitizedName;
-        }
-
-        // Update email
-        if (email && typeof email === 'string' && email !== user.email) {
-            if (!EMAIL_RE.test(email)) {
-                res.status(400).json({ error: 'A valid email address is required' });
-                return;
+            if (sanitizedName !== user.name) {
+                const existing = await prisma.user.findUnique({ where: { name: sanitizedName } });
+                if (existing) {
+                    res.status(409).json({ error: 'Username is already taken' });
+                    return;
+                }
+                updateData.name = sanitizedName;
             }
-            const existing = await prisma.user.findUnique({ where: { email } });
-            if (existing) {
-                res.status(409).json({ error: 'Email is already in use' });
-                return;
-            }
-            updateData.email = email;
         }
 
         // Update password
@@ -269,7 +255,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
         const updated = await prisma.user.update({
             where: { id: userId },
             data: updateData,
-            select: { id: true, email: true, name: true },
+            select: { id: true, name: true },
         });
 
         res.json({ user: updated });
