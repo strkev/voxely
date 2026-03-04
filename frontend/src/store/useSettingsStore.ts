@@ -18,12 +18,14 @@ interface SettingsState {
     showDevInfo: boolean;
     controlBarVisible: boolean;
     autoHideControlBar: boolean;
+    noiseSuppression: boolean;
     setSoundsEnabled: (v: boolean) => void;
     setSoundVolume: (v: number) => void;
     setVideoQuality: (v: VideoQuality) => void;
     setShowDevInfo: (v: boolean) => void;
     setControlBarVisible: (v: boolean) => void;
     setAutoHideControlBar: (v: boolean) => void;
+    setNoiseSuppression: (v: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -35,12 +37,14 @@ export const useSettingsStore = create<SettingsState>()(
             showDevInfo: false,
             controlBarVisible: true,
             autoHideControlBar: false,
+            noiseSuppression: false,
             setSoundsEnabled: (v) => set({ soundsEnabled: v }),
             setSoundVolume: (v) => set({ soundVolume: Math.max(0, Math.min(1, v)) }),
             setVideoQuality: (v) => set({ videoQuality: v }),
             setShowDevInfo: (v) => set({ showDevInfo: v }),
             setControlBarVisible: (v) => set({ controlBarVisible: v }),
             setAutoHideControlBar: (v) => set({ autoHideControlBar: v }),
+            setNoiseSuppression: (v) => set({ noiseSuppression: v }),
         }),
         { name: 'user-settings' }
     )

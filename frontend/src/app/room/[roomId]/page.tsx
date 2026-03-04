@@ -16,11 +16,12 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track } from 'livekit-client';
-import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp } from 'lucide-react';
+import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, Mic } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
 import { playSound } from '@/lib/sounds';
+import { NoiseSuppressionProcessor } from '@/lib/rnnoise-processor';
 
 // ─── Auto-start audio ─────────────────────────────────────────────────────────
 function AutoStartAudio() {
@@ -198,8 +199,8 @@ const QUALITY_OPTIONS: VideoQuality[] = ['360p', '720p', '1080p', '1440p', '4K']
 
 function InRoomSettings({ onClose }: { onClose: () => void }) {
     const {
-        soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, autoHideControlBar,
-        setSoundsEnabled, setSoundVolume, setVideoQuality, setShowDevInfo, setControlBarVisible, setAutoHideControlBar,
+        soundsEnabled, soundVolume, videoQuality, showDevInfo, autoHideControlBar, noiseSuppression,
+        setSoundsEnabled, setSoundVolume, setVideoQuality, setShowDevInfo, setAutoHideControlBar, setNoiseSuppression,
     } = useSettingsStore();
     const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -227,6 +228,23 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
                     </button>
                 </div>
 
+                {/* Noise Suppression */}
+                <div className="px-6 py-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Mic className="w-4 h-4 text-text-muted" />
+                            <span className="text-sm font-medium text-text-main">Noise Suppression</span>
+                        </div>
+                        <button
+                            onClick={() => setNoiseSuppression(!noiseSuppression)}
+                            className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${noiseSuppression ? 'bg-primary' : 'bg-gray-200'}`}
+                        >
+                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${noiseSuppression ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </button>
+                    </div>
+                    <p className="text-[10px] text-text-muted mt-1">AI-powered background noise removal (RNNoise)</p>
+                </div>
+
                 {/* Video Quality */}
                 <div className="px-6 py-4 border-b border-gray-100">
                     <div className="flex items-center gap-2 mb-3">
@@ -236,8 +254,8 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
                     <div className="flex gap-2 flex-wrap">
                         {QUALITY_OPTIONS.map(q => {
                             const p = VIDEO_PRESETS[q];
-                            const mbps = p.maxBitrate >= 1_000_000
-                                ? `${(p.maxBitrate / 1_000_000).toFixed(0)} Mbps`
+                            const bitLabel = p.maxBitrate >= 1_000_000
+                                ? `${(p.maxBitrate / 1_000_000).toFixed(p.maxBitrate % 1_000_000 === 0 ? 0 : 1)} Mbps`
                                 : `${(p.maxBitrate / 1000).toFixed(0)} kbps`;
                             return (
                                 <button
@@ -249,7 +267,7 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
                                         }`}
                                 >
                                     {q}
-                                    <span className="block text-[10px] opacity-70 mt-0.5">{p.frameRate}fps · {mbps}</span>
+                                    <span className="block text-[10px] opacity-70 mt-0.5">{bitLabel}</span>
                                 </button>
                             );
                         })}
@@ -257,19 +275,6 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
                     <p className="text-[10px] text-text-muted mt-2">Higher quality uses more bandwidth. Takes effect when you next toggle camera/screen share.</p>
                 </div>
 
-                {/* Control Bar Visibility */}
-                <div className="px-6 py-4 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-text-main">Show Control Bar</span>
-                        <button
-                            onClick={() => setControlBarVisible(!controlBarVisible)}
-                            className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${controlBarVisible ? 'bg-primary' : 'bg-gray-200'}`}
-                        >
-                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${controlBarVisible ? 'translate-x-5' : 'translate-x-0'}`} />
-                        </button>
-                    </div>
-                    <p className="text-[10px] text-text-muted mt-1">Mic, camera & screen share controls</p>
-                </div>
 
                 {/* Auto-hide Control Bar */}
                 <div className="px-6 py-4 border-b border-gray-100">
@@ -340,6 +345,83 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
             </div>
         </div>
     );
+}
+
+// ─── Noise Suppression Hook ──────────────────────────────────────────────────
+function NoiseSuppressionHook({
+    processorRef,
+    enabled,
+}: {
+    processorRef: React.MutableRefObject<NoiseSuppressionProcessor | null>;
+    enabled: boolean;
+}) {
+    const room = useRoomContext();
+    const appliedRef = useRef(false);
+    const originalTrackRef = useRef<MediaStreamTrack | null>(null);
+
+    useEffect(() => {
+        const localP = room.localParticipant;
+
+        const applyNoiseSuppression = async () => {
+            // Find the published mic track
+            const micPub = Array.from(localP.audioTrackPublications.values()).find(
+                (p) => p.source === Track.Source.Microphone && p.track?.mediaStreamTrack
+            );
+            if (!micPub?.track?.mediaStreamTrack) return;
+
+            if (enabled && !appliedRef.current) {
+                try {
+                    // Store original track for restoration
+                    originalTrackRef.current = micPub.track.mediaStreamTrack;
+
+                    // Create processor and get filtered stream
+                    const processor = new NoiseSuppressionProcessor();
+                    const originalStream = new MediaStream([micPub.track.mediaStreamTrack]);
+                    const filteredStream = await processor.process(originalStream);
+                    const filteredTrack = filteredStream.getAudioTracks()[0];
+
+                    if (filteredTrack) {
+                        // Replace the track's underlying media stream track
+                        await micPub.track.replaceTrack(filteredTrack);
+                        processorRef.current = processor;
+                        appliedRef.current = true;
+                    }
+                } catch (err) {
+                    console.error('[NoiseSuppression] Failed to apply:', err);
+                }
+            } else if (!enabled && appliedRef.current) {
+                // Restore original track
+                if (originalTrackRef.current) {
+                    try {
+                        await micPub.track.replaceTrack(originalTrackRef.current);
+                    } catch {
+                        // Original track might be ended, that's ok
+                    }
+                }
+                processorRef.current?.destroy();
+                processorRef.current = null;
+                originalTrackRef.current = null;
+                appliedRef.current = false;
+            }
+        };
+
+        applyNoiseSuppression();
+
+        // Listen for new mic track publications
+        const handleTrackPublished = () => {
+            if (enabled && !appliedRef.current) {
+                // Small delay to let the track settle
+                setTimeout(applyNoiseSuppression, 500);
+            }
+        };
+
+        localP.on('localTrackPublished', handleTrackPublished);
+        return () => {
+            localP.off('localTrackPublished', handleTrackPublished);
+        };
+    }, [room, enabled, processorRef]);
+
+    return null;
 }
 
 // ─── Video grid ───────────────────────────────────────────────────────────────
@@ -452,9 +534,16 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [chatOpen, setChatOpen] = useState(false);
     const [unread, setUnread] = useState(0);
     const [copied, setCopied] = useState(false);
-    const { videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar } = useSettingsStore();
+    const { videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression } = useSettingsStore();
+    const noiseProcessorRef = useRef<NoiseSuppressionProcessor | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const qPreset = VIDEO_PRESETS[videoQuality];
+
+    // Ensure control bar is always visible on mount
+    useEffect(() => {
+        setControlBarVisible(true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Auto-hide control bar after 4s of inactivity
     useEffect(() => {
@@ -463,6 +552,14 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         (window as unknown as Record<string, unknown>).__controlBarTimer = timer as unknown;
         return () => clearTimeout(timer);
     }, [autoHideControlBar, controlBarVisible, setControlBarVisible]);
+
+    // Clean up noise processor on unmount
+    useEffect(() => {
+        return () => {
+            noiseProcessorRef.current?.destroy();
+            noiseProcessorRef.current = null;
+        };
+    }, []);
 
     const { messages, sendMessage, connected } = useChatSocket({
         roomId,
@@ -661,6 +758,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             >
                 <AutoStartAudio />
                 <ChevronRotationFix />
+                <NoiseSuppressionHook processorRef={noiseProcessorRef} enabled={noiseSuppression} />
                 <CustomVideoConference />
                 <RoomAudioRenderer />
                 {showDevInfo && <DevInfoOverlay />}
