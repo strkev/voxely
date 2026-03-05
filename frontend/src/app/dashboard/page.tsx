@@ -9,14 +9,15 @@ import { FriendsSidebar } from '@/components/FriendsSidebar';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { RoomInviteBanner } from '@/components/RoomInviteBanner';
 import { useFriendsSocket } from '@/hooks/useFriendsSocket';
+import { Users, ShieldCheck, Clock, Video } from 'lucide-react';
 
 export default function DashboardPage() {
-    const [roomName, setRoomName] = useState('');
     const [joinRoomId, setJoinRoomId] = useState('');
     const [mounted, setMounted] = useState(false);
     const [showFriendsModal, setShowFriendsModal] = useState(false);
+    const [mobileFriendsOpen, setMobileFriendsOpen] = useState(false);
 
-    const { user, token } = useAuthStore();
+    const { user, token, isLoading } = useAuthStore();
     const router = useRouter();
 
     // Connect friends socket for online presence & invitations
@@ -28,21 +29,25 @@ export default function DashboardPage() {
     }, []);
 
     useEffect(() => {
-        if (mounted && !user) {
+        if (mounted && !isLoading && !user) {
             router.push('/login?redirect=' + encodeURIComponent(window.location.pathname));
         }
-    }, [user, router, mounted]);
+    }, [user, router, mounted, isLoading]);
 
-    // Don't render until mounted and user is available
-    if (!mounted || !user) return null;
+    // Don't render until mounted and auth check is done
+    if (!mounted || isLoading) return (
+        <div className="flex-1 flex items-center justify-center">
+            <div className="w-8 h-8 border-3 border-gray-200 border-t-primary rounded-full animate-spin" />
+        </div>
+    );
+    if (!user) return null;
 
     const handleCreateRoom = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!roomName.trim()) return;
 
-        // In a real app we would create the room in the DB first and get an ID.
-        // For this MVP, let's use a URL-friendly slug based on the room name (plus a random suffix)
-        const slug = roomName.trim().toLowerCase().replace(/\s+/g, '-') + '-' + Math.floor(Math.random() * 10000);
+        // Generate a random room slug without requiring user input
+        const randomNumbers = Math.floor(10000 + Math.random() * 90000); // 5 digit number
+        const slug = `room-${randomNumbers}`;
         router.push(`/room/${slug}`);
     };
 
@@ -54,11 +59,36 @@ export default function DashboardPage() {
 
     return (
         <div className="flex flex-1 h-[calc(100vh-64px)]">
-            {/* Friends Sidebar */}
-            <FriendsSidebar onOpenRequests={() => setShowFriendsModal(true)} />
+            {/* Friends Sidebar – hidden on mobile by default, toggled via button */}
+            <div className={`hidden sm:block`}>
+                <FriendsSidebar onOpenRequests={() => setShowFriendsModal(true)} />
+            </div>
+
+            {/* Mobile Friends Sidebar Overlay */}
+            {mobileFriendsOpen && (
+                <div className="fixed inset-0 z-40 sm:hidden" onClick={() => setMobileFriendsOpen(false)}>
+                    <div className="absolute inset-0 bg-black/20" />
+                    <div className="absolute top-16 left-0 bottom-0 [&_.friends-sidebar]:!static [&_.friends-sidebar]:!h-full" onClick={e => e.stopPropagation()}>
+                        <FriendsSidebar
+                            onOpenRequests={() => setShowFriendsModal(true)}
+                            onClose={() => setMobileFriendsOpen(false)}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Mobile Friends Toggle */}
+            <button
+                onClick={() => setMobileFriendsOpen(o => !o)}
+                className="fixed bottom-4 left-4 z-30 sm:hidden flex items-center gap-1.5 bg-white/90 backdrop-blur-md border border-gray-200 rounded-full px-3.5 py-2.5 text-xs font-medium text-text-main shadow-lg hover:bg-white transition-all"
+                aria-label="Toggle friends sidebar"
+            >
+                <Users className="w-4 h-4" />
+                Friends
+            </button>
 
             <div className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-6 md:p-12 lg:p-16 overflow-y-auto">
-                <div className="mb-8 sm:mb-12">
+                <div className="mb-8 sm:mb-12 animate-slide-up">
                     <h1 className="text-2xl sm:text-3xl font-semibold text-text-main mb-2">Welcome, {user.name}</h1>
                     <p className="text-text-muted">Create a new space or join an existing one to start chatting.</p>
                 </div>
@@ -66,31 +96,36 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
                     {/* Create Room Card */}
-                    <div className="bg-surface p-5 sm:p-8 rounded-video shadow-flat border border-gray-100 flex flex-col h-full">
+                    <div className="bg-surface p-5 sm:p-8 rounded-video shadow-flat border border-gray-100 flex flex-col h-full animate-slide-up animation-delay-100">
                         <div className="mb-6">
                             <h2 className="text-xl font-medium text-text-main mb-2">Create a Space</h2>
                             <p className="text-sm text-text-muted">Start a secure real-time channel for your friends or team.</p>
                         </div>
 
-                        <form onSubmit={handleCreateRoom} className="mt-auto space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-text-main mb-1.5 ml-1">Room Name</label>
-                                <Input
-                                    type="text"
-                                    placeholder="E.g., Design Sync"
-                                    value={roomName}
-                                    onChange={(e) => setRoomName(e.target.value)}
-                                    required
-                                />
+                        <form onSubmit={handleCreateRoom} className="mt-auto flex flex-col justify-end">
+                            {/* Feature highlights replacing the old input space */}
+                            <div className="hidden sm:flex flex-col gap-2.5 mb-5 mt-2">
+                                <div className="flex items-center gap-2 text-sm text-text-muted">
+                                    <Video className="w-4 h-4 text-primary opacity-80" />
+                                    <span>HD Video & Audio</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-text-muted">
+                                    <ShieldCheck className="w-4 h-4 text-primary opacity-80" />
+                                    <span>End-to-end Encrypted</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-text-muted">
+                                    <Clock className="w-4 h-4 text-primary opacity-80" />
+                                    <span>No Time Limits</span>
+                                </div>
                             </div>
-                            <Button type="submit" variant="primary" className="w-full h-14 sm:h-12">
+                            <Button type="submit" variant="primary" className="w-full h-14 sm:h-12 mt-auto transition-transform hover:scale-[1.02] active:scale-[0.98]">
                                 Create and Join
                             </Button>
                         </form>
                     </div>
 
                     {/* Join Room Card */}
-                    <div className="bg-surface p-5 sm:p-8 rounded-video shadow-flat border border-gray-100 flex flex-col h-full">
+                    <div className="bg-surface p-5 sm:p-8 rounded-video shadow-flat border border-gray-100 flex flex-col h-full animate-slide-up animation-delay-200">
                         <div className="mb-6">
                             <h2 className="text-xl font-medium text-text-main mb-2">Join a Space</h2>
                             <p className="text-sm text-text-muted">Have a room code? Enter it below to join the conversation.</p>
@@ -108,7 +143,7 @@ export default function DashboardPage() {
                                 />
                                 <p className="text-xs text-text-muted mt-1.5 ml-1">Ask the room creator to share the link or code with you.</p>
                             </div>
-                            <Button type="submit" variant="secondary" className="w-full h-14 sm:h-12">
+                            <Button type="submit" variant="outline" className="w-full h-14 sm:h-12 transition-transform hover:scale-[1.02] active:scale-[0.98]">
                                 Join Space
                             </Button>
                         </form>

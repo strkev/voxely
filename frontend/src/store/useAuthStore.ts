@@ -8,6 +8,7 @@ export interface User {
 interface AuthState {
     user: User | null;
     token: string | null;  // In-memory only – NOT persisted to localStorage
+    isLoading: boolean;     // True while checkAuth is in progress
     setAuth: (user: User, token: string) => void;
     checkAuth: () => Promise<void>;
     logout: () => Promise<void>;
@@ -19,6 +20,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 export const useAuthStore = create<AuthState>()((set, get) => ({
     user: null,
     token: null,
+    isLoading: true, // Start as true — assume we need to check
 
     setAuth: (user, token) => set({ user, token }),
 
@@ -27,6 +29,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
      * Called once on app mount by AuthProvider.
      */
     checkAuth: async () => {
+        set({ isLoading: true });
         try {
             const res = await fetch(`${API_URL}/api/auth/me`, {
                 credentials: 'include',
@@ -37,6 +40,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             }
         } catch {
             // Silently fail — user stays logged out
+        } finally {
+            set({ isLoading: false });
         }
     },
 
@@ -75,3 +80,4 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         }
     },
 }));
+

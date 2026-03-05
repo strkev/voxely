@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export type VideoQuality = '360p' | '720p' | '1080p' | '1440p' | '4K';
+export type ScreenShareResolution = '720p' | '1080p' | '1440p' | '4K' | 'Source';
+export type ScreenShareFps = 5 | 15 | 30 | 60;
 
 export const VIDEO_PRESETS: Record<VideoQuality, { width: number; height: number; frameRate: number; maxBitrate: number }> = {
     '360p': { width: 640, height: 360, frameRate: 24, maxBitrate: 600_000 },
@@ -11,10 +13,19 @@ export const VIDEO_PRESETS: Record<VideoQuality, { width: number; height: number
     '4K': { width: 3840, height: 2160, frameRate: 60, maxBitrate: 16_000_000 },
 };
 
+export const SCREEN_SHARE_RESOLUTIONS: Record<Exclude<ScreenShareResolution, 'Source'>, { width: number; height: number }> = {
+    '720p': { width: 1280, height: 720 },
+    '1080p': { width: 1920, height: 1080 },
+    '1440p': { width: 2560, height: 1440 },
+    '4K': { width: 3840, height: 2160 },
+};
+
 interface SettingsState {
     soundsEnabled: boolean;
     soundVolume: number; // 0–1
     videoQuality: VideoQuality;
+    screenShareResolution: ScreenShareResolution;
+    screenShareFps: ScreenShareFps;
     showDevInfo: boolean;
     controlBarVisible: boolean;
     autoHideControlBar: boolean;
@@ -22,6 +33,8 @@ interface SettingsState {
     setSoundsEnabled: (v: boolean) => void;
     setSoundVolume: (v: number) => void;
     setVideoQuality: (v: VideoQuality) => void;
+    setScreenShareResolution: (v: ScreenShareResolution) => void;
+    setScreenShareFps: (v: ScreenShareFps) => void;
     setShowDevInfo: (v: boolean) => void;
     setControlBarVisible: (v: boolean) => void;
     setAutoHideControlBar: (v: boolean) => void;
@@ -34,6 +47,8 @@ export const useSettingsStore = create<SettingsState>()(
             soundsEnabled: true,
             soundVolume: 0.8,
             videoQuality: '1080p',
+            screenShareResolution: 'Source',
+            screenShareFps: 60,
             showDevInfo: false,
             controlBarVisible: true,
             autoHideControlBar: false,
@@ -41,6 +56,8 @@ export const useSettingsStore = create<SettingsState>()(
             setSoundsEnabled: (v) => set({ soundsEnabled: v }),
             setSoundVolume: (v) => set({ soundVolume: Math.max(0, Math.min(1, v)) }),
             setVideoQuality: (v) => set({ videoQuality: v }),
+            setScreenShareResolution: (v) => set({ screenShareResolution: v }),
+            setScreenShareFps: (v) => set({ screenShareFps: v }),
             setShowDevInfo: (v) => set({ showDevInfo: v }),
             setControlBarVisible: (v) => set({ controlBarVisible: v }),
             setAutoHideControlBar: (v) => set({ autoHideControlBar: v }),

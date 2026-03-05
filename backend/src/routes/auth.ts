@@ -7,11 +7,11 @@ const router = Router();
 
 // Strict rate limit for auth endpoints to prevent brute-force attacks
 const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,  // 15 minutes
-    max: 10,
+    windowMs: 5 * 60 * 1000,  // 5 minutes
+    max: 5,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: 'Too many requests, please try again later.' },
+    message: { error: 'Too many login attempts, please try again in 5 minutes.' },
     skipSuccessfulRequests: true,  // Only count failed attempts against the limit
 });
 

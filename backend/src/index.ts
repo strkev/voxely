@@ -10,6 +10,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import sanitize from 'sanitize-html';
+import { rateLimit } from 'express-rate-limit';
 
 dotenv.config();
 
@@ -75,11 +76,27 @@ const adapter = new PrismaPg(pool);
 export const prisma = new PrismaClient({ adapter });
 
 // ── Middleware ─────────────────────────────────────────────────────────────────
-app.use(helmet());
+// Define helmet policies. We must specify a very permissive CSP because LiveKit needs WS connections, 
+// inline scripts, and media from various origins, plus we must allow crossOrigin requests.
+app.use(helmet({
+    contentSecurityPolicy: false, // Disabling default CSP to prevent blocking Next.js dev scripts and LiveKit WebSockets
+    crossOriginEmbedderPolicy: false, // Required for WebRTC/LiveKit
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 app.use(cors(corsOptions));
 app.options('/{*path}', cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
+
+// Global rate limiting to prevent DDoS
+const globalLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 200, // 200 requests per minute per IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please try again later.' },
+});
+app.use('/api/', globalLimiter);
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 import authRouter from './routes/auth';

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback, KeyboardEvent } from 'react';
 import { MessageSquare, X, ChevronRight, ChevronDown, Send } from 'lucide-react';
 import { ChatMessage } from '@/hooks/useChatSocket';
+import DOMPurify from 'isomorphic-dompurify';
 
 // ── URL parser: splits text into plain segments and URL segments ───────────────
 function parseLinks(text: string): React.ReactNode[] {
@@ -54,7 +55,7 @@ function MessageBubble({ msg, isOwn }: { msg: ChatMessage; isOwn: boolean }) {
                     }
                 `}
             >
-                {parseLinks(msg.text)}
+                {parseLinks(DOMPurify.sanitize(msg.text, { ALLOWED_TAGS: [] }))}
             </div>
         </div>
     );
@@ -150,13 +151,13 @@ export function ChatSidebar({
                 onClick={onToggle}
                 aria-label={isOpen ? 'Close chat' : 'Open chat'}
                 title={isOpen ? 'Close chat' : 'Open chat'}
-                className="relative flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
+                className="relative flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
             >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>Chat</span>
+                <MessageSquare className="w-4 h-4" />
+                <span className="hidden sm:inline">Chat</span>
                 {/* Unread badge */}
                 {unreadCount > 0 && !isOpen && (
-                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-sm">
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] min-h-[18px] bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-sm animate-pulse-soft">
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}
@@ -175,8 +176,7 @@ export function ChatSidebar({
                     fixed top-16 right-0 bottom-0 w-full sm:w-80 z-30
                     flex flex-col
                     bg-[#F7F7F7] border-l border-gray-200
-                    transition-transform duration-300 ease-in-out
-                    ${isOpen ? 'translate-x-0' : 'translate-x-full'}
+                    ${isOpen ? 'block' : 'hidden'}
                 `}
             >
                 {/* Header */}

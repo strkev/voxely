@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { ChevronDown, LogOut, Trash2, LayoutDashboard, Settings, Users } from 'lucide-react';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
+import { UserSettingsModal } from '@/components/UserSettingsModal';
 import { useFriendsStore } from '@/store/useFriendsStore';
 
 export function Header() {
@@ -16,8 +18,12 @@ export function Header() {
     const [deleting, setDeleting] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
+    const pathname = usePathname();
+    const isInRoom = pathname?.startsWith('/room/');
     const [showFriendsModal, setShowFriendsModal] = useState(false);
+    const [showUserSettings, setShowUserSettings] = useState(false);
     const { incomingRequests } = useFriendsStore();
+    const { active: leaveGuardActive, requestLeave } = useLeaveGuardStore();
 
     useEffect(() => {
         setMounted(true);
@@ -42,6 +48,15 @@ export function Header() {
         router.push('/');
     };
 
+    /** Navigate or show leave confirmation if in a room */
+    const navigateOrGuard = (target: string) => {
+        if (leaveGuardActive) {
+            requestLeave(target);
+        } else {
+            router.push(target);
+        }
+    };
+
     // Get initials for avatar
     const initials = user?.name
         .split(' ')
@@ -52,13 +67,25 @@ export function Header() {
 
     return (
         <>
-            <header className="w-full h-16 border-b border-gray-100 bg-surface flex items-center justify-between px-4 sm:px-6 md:px-12 z-30 relative">
-                <Link href="/" className="text-xl font-semibold text-text-main flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
-                        V
-                    </div>
-                    Voxely
-                </Link>
+            <header className="w-full h-16 border-b border-gray-100 bg-[var(--color-surface)] flex items-center justify-between px-4 sm:px-6 md:px-12 z-40 sticky top-0 shadow-sm">
+                {isInRoom ? (
+                    <button
+                        onClick={() => navigateOrGuard('/')}
+                        className="text-xl font-semibold text-text-main flex items-center gap-2"
+                    >
+                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
+                            V
+                        </div>
+                        Voxely
+                    </button>
+                ) : (
+                    <Link href="/" className="text-xl font-semibold text-text-main flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
+                            V
+                        </div>
+                        Voxely
+                    </Link>
+                )}
 
                 <div className="flex items-center gap-3">
                     {!mounted ? null : user ? (
@@ -98,23 +125,32 @@ export function Header() {
 
                                     {/* Menu items */}
                                     <div className="py-1.5">
-                                        <Link
-                                            href="/dashboard"
-                                            onClick={() => setOpen(false)}
+                                        <button
+                                            onClick={() => { setOpen(false); navigateOrGuard('/dashboard'); }}
                                             className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text-main hover:bg-gray-50 transition-colors"
                                         >
                                             <LayoutDashboard className="w-4 h-4 text-text-muted" />
                                             Dashboard
-                                        </Link>
+                                        </button>
 
-                                        <Link
-                                            href="/settings"
-                                            onClick={() => setOpen(false)}
-                                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text-main hover:bg-gray-50 transition-colors"
-                                        >
-                                            <Settings className="w-4 h-4 text-text-muted" />
-                                            Settings
-                                        </Link>
+                                        {isInRoom ? (
+                                            <button
+                                                onClick={() => { setOpen(false); setShowUserSettings(true); }}
+                                                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text-main hover:bg-gray-50 transition-colors"
+                                            >
+                                                <Settings className="w-4 h-4 text-text-muted" />
+                                                Settings
+                                            </button>
+                                        ) : (
+                                            <Link
+                                                href="/settings"
+                                                onClick={() => setOpen(false)}
+                                                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text-main hover:bg-gray-50 transition-colors"
+                                            >
+                                                <Settings className="w-4 h-4 text-text-muted" />
+                                                Settings
+                                            </Link>
+                                        )}
 
                                         <button
                                             onClick={() => { setOpen(false); setShowFriendsModal(true); }}
@@ -203,6 +239,11 @@ export function Header() {
             {/* Friend Requests Modal */}
             {showFriendsModal && (
                 <FriendRequestsModal onClose={() => setShowFriendsModal(false)} />
+            )}
+
+            {/* User Settings Modal (in-room) */}
+            {showUserSettings && (
+                <UserSettingsModal onClose={() => setShowUserSettings(false)} />
             )}
         </>
     );

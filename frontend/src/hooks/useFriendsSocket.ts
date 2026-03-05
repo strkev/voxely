@@ -55,6 +55,12 @@ export function useFriendsSocket(token: string | null) {
             fetchRequests(token);
         });
 
+        // Re-fetch data on reconnect to ensure nothing was missed
+        socket.io.on('reconnect', () => {
+            fetchFriends(token);
+            fetchRequests(token);
+        });
+
         // Online presence events
         socket.on('friend:online-list', ({ userIds }: { userIds: string[] }) => {
             setOnlineList(userIds);

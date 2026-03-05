@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useSettingsStore, VIDEO_PRESETS, type VideoQuality } from '@/store/useSettingsStore';
+import { useSettingsStore, VIDEO_PRESETS, type VideoQuality, type ScreenShareResolution, type ScreenShareFps } from '@/store/useSettingsStore';
 import {
     LiveKitRoom,
     RoomAudioRenderer,
@@ -16,7 +16,7 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track } from 'livekit-client';
-import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, Mic, Users } from 'lucide-react';
+import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, Mic, Users, ScreenShare, LogOut } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
@@ -26,6 +26,7 @@ import { FriendsSidebar } from '@/components/FriendsSidebar';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { RoomInviteBanner } from '@/components/RoomInviteBanner';
 import { useFriendsSocket } from '@/hooks/useFriendsSocket';
+import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 
 // ─── Auto-start audio ─────────────────────────────────────────────────────────
 function AutoStartAudio() {
@@ -200,11 +201,15 @@ const SOUND_LABELS: { key: SoundKey; label: string }[] = [
     { key: 'screenShareOff', label: 'Screen Off' },
 ];
 const QUALITY_OPTIONS: VideoQuality[] = ['360p', '720p', '1080p', '1440p', '4K'];
+const SCREEN_RES_OPTIONS: ScreenShareResolution[] = ['720p', '1080p', '1440p', '4K', 'Source'];
+const SCREEN_FPS_OPTIONS: ScreenShareFps[] = [5, 15, 30, 60];
 
 function InRoomSettings({ onClose }: { onClose: () => void }) {
     const {
         soundsEnabled, soundVolume, videoQuality, showDevInfo, autoHideControlBar, noiseSuppression,
+        screenShareResolution, screenShareFps,
         setSoundsEnabled, setSoundVolume, setVideoQuality, setShowDevInfo, setAutoHideControlBar, setNoiseSuppression,
+        setScreenShareResolution, setScreenShareFps,
     } = useSettingsStore();
     const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -225,7 +230,7 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-surface rounded-t-2xl z-10">
                     <div className="flex items-center gap-2">
                         <Settings className="w-4 h-4 text-text-muted" />
-                        <h2 className="text-sm font-semibold text-text-main">Settings</h2>
+                        <h2 className="text-sm font-semibold text-text-main">Room Settings</h2>
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg text-text-muted hover:text-text-main hover:bg-gray-100 transition-colors">
                         <X className="w-4 h-4" />
@@ -249,36 +254,71 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
                     <p className="text-[10px] text-text-muted mt-1">AI-powered background noise removal (RNNoise)</p>
                 </div>
 
-                {/* Video Quality */}
+                {/* Camera Quality */}
                 <div className="px-6 py-4 border-b border-gray-100">
                     <div className="flex items-center gap-2 mb-3">
                         <Monitor className="w-4 h-4 text-text-muted" />
-                        <span className="text-sm font-semibold text-text-main">Video Quality</span>
+                        <span className="text-sm font-semibold text-text-main">Camera Quality</span>
                     </div>
                     <div className="flex gap-2 flex-wrap">
-                        {QUALITY_OPTIONS.map(q => {
-                            const p = VIDEO_PRESETS[q];
-                            const bitLabel = p.maxBitrate >= 1_000_000
-                                ? `${(p.maxBitrate / 1_000_000).toFixed(p.maxBitrate % 1_000_000 === 0 ? 0 : 1)} Mbps`
-                                : `${(p.maxBitrate / 1000).toFixed(0)} kbps`;
-                            return (
-                                <button
-                                    key={q}
-                                    onClick={() => setVideoQuality(q)}
-                                    className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${videoQuality === q
-                                        ? 'bg-primary text-white shadow-sm'
-                                        : 'bg-gray-100 text-text-main hover:bg-gray-200'
-                                        }`}
-                                >
-                                    {q}
-                                    <span className="block text-[10px] opacity-70 mt-0.5">{bitLabel}</span>
-                                </button>
-                            );
-                        })}
+                        {QUALITY_OPTIONS.map(q => (
+                            <button
+                                key={q}
+                                onClick={() => setVideoQuality(q)}
+                                className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${videoQuality === q
+                                    ? 'bg-primary text-white shadow-sm'
+                                    : 'bg-gray-100 text-text-main hover:bg-gray-200'
+                                    }`}
+                            >
+                                {q}
+                            </button>
+                        ))}
                     </div>
-                    <p className="text-[10px] text-text-muted mt-2">Higher quality uses more bandwidth. Takes effect when you next toggle camera/screen share.</p>
+                    <p className="text-[10px] text-text-muted mt-2">Changes apply immediately to your camera stream.</p>
                 </div>
 
+                {/* Screen Share Quality */}
+                <div className="px-6 py-4 border-b border-gray-100">
+                    <div className="flex items-center gap-2 mb-3">
+                        <ScreenShare className="w-4 h-4 text-text-muted" />
+                        <span className="text-sm font-semibold text-text-main">Screen Share Quality</span>
+                    </div>
+
+                    {/* Resolution */}
+                    <p className="text-[10px] font-medium text-text-muted mb-1.5 uppercase tracking-wider">Resolution</p>
+                    <div className="flex gap-1.5 flex-wrap mb-3">
+                        {SCREEN_RES_OPTIONS.map(r => (
+                            <button
+                                key={r}
+                                onClick={() => setScreenShareResolution(r)}
+                                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all ${screenShareResolution === r
+                                    ? 'bg-primary text-white shadow-sm'
+                                    : 'bg-gray-100 text-text-main hover:bg-gray-200'
+                                    }`}
+                            >
+                                {r}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* FPS */}
+                    <p className="text-[10px] font-medium text-text-muted mb-1.5 uppercase tracking-wider">Frame Rate</p>
+                    <div className="flex gap-1.5 flex-wrap">
+                        {SCREEN_FPS_OPTIONS.map(f => (
+                            <button
+                                key={f}
+                                onClick={() => setScreenShareFps(f)}
+                                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all ${screenShareFps === f
+                                    ? 'bg-primary text-white shadow-sm'
+                                    : 'bg-gray-100 text-text-main hover:bg-gray-200'
+                                    }`}
+                            >
+                                {f} fps
+                            </button>
+                        ))}
+                    </div>
+                    <p className="text-[10px] text-text-muted mt-2">&quot;Source&quot; streams at your native screen resolution. Changes apply on next screen share.</p>
+                </div>
 
                 {/* Auto-hide Control Bar */}
                 <div className="px-6 py-4 border-b border-gray-100">
@@ -349,6 +389,51 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
             </div>
         </div>
     );
+}
+
+// ─── Live Video Quality Sync ─────────────────────────────────────────────────
+// Watches the settings store and applies quality changes to the active tracks
+// without requiring a rejoin.
+function LiveVideoQualitySync() {
+    const room = useRoomContext();
+    const { videoQuality, screenShareResolution, screenShareFps } = useSettingsStore();
+    const prevVideoQualityRef = useRef(videoQuality);
+    const prevScreenResRef = useRef(screenShareResolution);
+    const prevScreenFpsRef = useRef(screenShareFps);
+
+    useEffect(() => {
+        if (prevVideoQualityRef.current === videoQuality) return;
+        prevVideoQualityRef.current = videoQuality;
+
+        const localP = room.localParticipant;
+        const qPreset = VIDEO_PRESETS[videoQuality];
+
+        // Update any published camera tracks
+        const cameraPubs = Array.from(localP.videoTrackPublications.values()).filter(
+            p => p.source === Track.Source.Camera && p.track
+        );
+
+        for (const pub of cameraPubs) {
+            if (!pub.track) continue;
+            // Restart the camera track with new constraints
+            pub.track.restartTrack({
+                width: qPreset.width,
+                height: qPreset.height,
+                frameRate: qPreset.frameRate,
+            }).catch(err => console.warn('[LiveQualitySync] Failed to restart camera track:', err));
+        }
+    }, [room, videoQuality]);
+
+    // Track screen share setting changes for next screen share
+    useEffect(() => {
+        prevScreenResRef.current = screenShareResolution;
+    }, [screenShareResolution]);
+
+    useEffect(() => {
+        prevScreenFpsRef.current = screenShareFps;
+    }, [screenShareFps]);
+
+    return null;
 }
 
 // ─── Noise Suppression Hook ──────────────────────────────────────────────────
@@ -526,7 +611,8 @@ function CustomVideoConference() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
     const router = useRouter();
-    const { user, token: authToken } = useAuthStore();
+    const { user, token: authToken, isLoading: authLoading } = useAuthStore();
+    const { activate: activateGuard, deactivate: deactivateGuard, pendingTarget, requestLeave, cancelLeave, confirmLeave: storeConfirmLeave } = useLeaveGuardStore();
     const [livekitToken, setLivekitToken] = useState<string>('');
     const [isSecureContext, setIsSecureContext] = useState<boolean>(true);
     const [mounted, setMounted] = useState(false);
@@ -538,7 +624,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [chatOpen, setChatOpen] = useState(false);
     const [unread, setUnread] = useState(0);
     const [copied, setCopied] = useState(false);
-    const { videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression } = useSettingsStore();
+    const { videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression, screenShareResolution, screenShareFps } = useSettingsStore();
     const noiseProcessorRef = useRef<NoiseSuppressionProcessor | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [showFriendsModal, setShowFriendsModal] = useState(false);
@@ -559,9 +645,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         socket.emit('friend:invite', { friendId, roomId, roomName });
     }, [friendsSocketRef, roomId]);
 
-    // Ensure control bar is always visible on mount
+    // Ensure control bar is always visible on mount + activate leave guard
     useEffect(() => {
         setControlBarVisible(true);
+        activateGuard();
+        return () => { deactivateGuard(); };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -602,8 +690,32 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     useEffect(() => {
         if (typeof window !== 'undefined' && !navigator.mediaDevices) setIsSecureContext(false);
     }, []);
+
+    // Browser tab close / refresh warning
+    useEffect(() => {
+        if (!livekitToken) return; // Only warn if connected to room
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            e.preventDefault();
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [livekitToken]);
+
+    // Confirm leave: navigate to the pending target from the global store
+    const handleConfirmLeave = useCallback(() => {
+        const target = storeConfirmLeave();
+        if (target) {
+            // Delay the actual navigation by 400ms to allow the LiveKit disconnected 
+            // 'leave' sound effect to finish playing before the page unmounts
+            setTimeout(() => {
+                router.push(target);
+            }, 400);
+        }
+    }, [storeConfirmLeave, router]);
+
     useEffect(() => {
         if (!mounted) return;
+        if (authLoading) return; // Wait for auth check to complete
         if (!user) { router.push('/login?redirect=' + encodeURIComponent(window.location.pathname)); return; }
         setTokenError(false);
         const fetchToken = async () => {
@@ -622,7 +734,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             } catch (err) { console.error(err); setTokenError(true); }
         };
         fetchToken();
-    }, [user, roomId, router, mounted, authToken]);
+    }, [user, roomId, router, mounted, authToken, authLoading]);
 
     // Escape key closes chat sidebar
     useEffect(() => {
@@ -634,7 +746,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     }, [chatOpen]);
 
     const handleCopyLink = () => {
-        navigator.clipboard.writeText(window.location.href);
+        navigator.clipboard.writeText(roomId);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
@@ -693,30 +805,17 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             style={{ paddingRight: chatOpen && typeof window !== 'undefined' && window.innerWidth >= 640 ? '320px' : '0px' }}
         >
             {/* Top bar */}
-            <div className="absolute top-0 left-0 right-0 h-[52px] z-10 flex items-center px-2 sm:px-4 gap-1.5 sm:gap-3 overflow-x-auto scrollbar-hide">
-                <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md border border-[rgba(220,220,220,0.85)] rounded-xl px-2.5 sm:px-3.5 py-1.5 shadow-sm shrink-0 whitespace-nowrap">
-                    <span className="relative flex h-2 w-2 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-                    </span>
-                    <span className="text-text-main text-xs font-semibold capitalize select-none truncate hidden sm:inline sm:max-w-[180px]">
-                        {decodeURIComponent(roomId)
-                            .replace(/-\d{1,5}$/, '')
-                            .replace(/-/g, ' ')
-                            .replace(/\b\w/g, c => c.toUpperCase())}
-                    </span>
-                </div>
-
+            <div className="absolute top-3 left-0 right-0 z-10 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-x-auto scrollbar-hide">
                 {/* Friends toggle button */}
                 <button
                     onClick={() => setFriendsSidebarOpen(o => !o)}
                     aria-label="Friends"
-                    className={`shrink-0 flex items-center gap-1.5 backdrop-blur-md border rounded-full px-2.5 sm:px-3.5 py-1.5 text-xs font-medium transition-all duration-150 shadow-sm ${friendsSidebarOpen
+                    className={`shrink-0 flex items-center gap-1.5 backdrop-blur-md border rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm ${friendsSidebarOpen
                         ? 'bg-primary/90 hover:bg-primary border-primary/60 text-white'
                         : 'bg-white/90 hover:bg-white border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary'
                         }`}
                 >
-                    <Users className="w-3 h-3" />
+                    <Users className="w-4 h-4" />
                     <span className="hidden sm:inline">Friends</span>
                 </button>
 
@@ -724,9 +823,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 <button
                     onClick={handleCopyLink}
                     aria-label="Copy room link"
-                    className="shrink-0 flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-full px-2.5 sm:px-3.5 py-1.5 text-xs font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
+                    className="shrink-0 flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white border border-gray-800 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm"
                 >
-                    {copied ? <Check className="w-3 h-3 text-green-500" /> : <Link2 className="w-3 h-3" />}
+                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Link2 className="w-4 h-4" />}
                     <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share'}</span>
                 </button>
 
@@ -736,9 +835,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 <button
                     onClick={() => setSettingsOpen(true)}
                     aria-label="Settings"
-                    className="shrink-0 flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-full px-2.5 sm:px-3.5 py-1.5 text-xs font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
+                    className="shrink-0 flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
                 >
-                    <Settings className="w-3 h-3" />
+                    <Settings className="w-4 h-4" />
                     <span className="hidden sm:inline">Settings</span>
                 </button>
 
@@ -756,10 +855,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 />
 
                 <button
-                    onClick={() => router.push('/dashboard')}
-                    className="shrink-0 flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-full px-2.5 sm:px-3.5 py-1.5 text-xs font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
+                    onClick={() => requestLeave('/dashboard')}
+                    className="shrink-0 flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
                 >
-                    <X className="w-3 h-3" />
+                    <LogOut className="w-4 h-4" />
                     <span className="hidden sm:inline">Leave</span>
                 </button>
             </div>
@@ -783,14 +882,16 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                             maxFramerate: qPreset.frameRate,
                         },
                         screenShareEncoding: {
-                            maxBitrate: 5_000_000,
-                            maxFramerate: 60,
+                            maxBitrate: 50_000_000, // Effectively unlimited
+                            maxFramerate: screenShareFps,
                         },
+                        screenShareSimulcastLayers: [],
                     },
                 }}
             >
                 <AutoStartAudio />
                 <ChevronRotationFix />
+                <LiveVideoQualitySync />
                 <NoiseSuppressionHook processorRef={noiseProcessorRef} enabled={noiseSuppression} />
                 <CustomVideoConference />
                 <RoomAudioRenderer />
@@ -836,18 +937,53 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
             {/* Friends Sidebar — toggle overlay */}
             {friendsSidebarOpen && (
-                <div className="fixed top-16 left-0 bottom-0 z-30">
-                    <FriendsSidebar
-                        currentRoomId={roomId}
-                        onInvite={handleInviteFriend}
-                        onOpenRequests={() => setShowFriendsModal(true)}
-                        onClose={() => setFriendsSidebarOpen(false)}
+                <>
+                    {/* Invisible backdrop to capture outside clicks */}
+                    <div
+                        className="fixed inset-0 z-20 bg-transparent"
+                        onClick={() => setFriendsSidebarOpen(false)}
                     />
-                </div>
+                    {/* Wrapper with !static and !h-full to prevent Mobile Safari from shifting the sticky sidebar upwards and hiding its header */}
+                    <div className="fixed top-16 left-0 bottom-0 z-30 [&_.friends-sidebar]:!static [&_.friends-sidebar]:!h-full">
+                        <FriendsSidebar
+                            currentRoomId={roomId}
+                            onInvite={handleInviteFriend}
+                            onOpenRequests={() => setShowFriendsModal(true)}
+                            onClose={() => setFriendsSidebarOpen(false)}
+                        />
+                    </div>
+                </>
             )}
 
             {/* Room Invite Banner */}
             <RoomInviteBanner />
+
+            {/* Leave confirmation modal overlay */}
+            {pendingTarget && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+                    <div className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6">
+                        <div className="flex items-center gap-3 text-red-500 mb-3">
+                            <LogOut className="w-6 h-6" />
+                            <h2 className="text-xl font-bold text-text-main">Leave Room?</h2>
+                        </div>
+                        <p className="text-text-muted mb-6">Are you sure you want to disconnect and leave this space?</p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={cancelLeave}
+                                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmLeave}
+                                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold shadow-sm hover:bg-red-600 transition-colors"
+                            >
+                                Leave
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Friend Requests Modal */}
             {showFriendsModal && (

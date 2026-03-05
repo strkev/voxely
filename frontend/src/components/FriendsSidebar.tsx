@@ -84,7 +84,7 @@ export function FriendsSidebar({ currentRoomId, onInvite, onOpenRequests, onClos
                     <ChevronLeft className="w-4 h-4 rotate-180" />
                 </button>
                 {incomingRequests.length > 0 && (
-                    <div className="friends-sidebar__badge-collapsed">{incomingRequests.length}</div>
+                    <div className="friends-sidebar__badge-collapsed animate-pulse-soft">{incomingRequests.length}</div>
                 )}
             </div>
         );
@@ -107,7 +107,7 @@ export function FriendsSidebar({ currentRoomId, onInvite, onOpenRequests, onClos
                     >
                         <UserPlus className="w-4 h-4" />
                         {incomingRequests.length > 0 && (
-                            <span className="friends-sidebar__badge">{incomingRequests.length}</span>
+                            <span className="friends-sidebar__badge animate-pulse-soft">{incomingRequests.length}</span>
                         )}
                     </button>
                     <button
