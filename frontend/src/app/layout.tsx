@@ -17,6 +17,16 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
+  icons: {
+    icon: [
+      { url: '/logo_192x192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/logo_167x167.png', sizes: '167x167' },
+      { url: '/logo_180x180.png', sizes: '180x180' },
+    ],
+  },
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({

@@ -72,9 +72,12 @@ export default function Home() {
           Real-time Voice &amp; Video
         </span>
 
-        <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-text-main tracking-tight leading-[1.1]">
-          Voxely
-        </h1>
+        <div className="flex items-center gap-3 sm:gap-6 justify-center">
+          <img src="/logo.png" alt="Voxely Logo" className="w-16 h-16 sm:w-24 sm:h-24 object-contain" />
+          <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold text-text-main tracking-tight leading-[1.1]">
+            Voxely
+          </h1>
+        </div>
 
         <p className="text-base sm:text-lg text-text-muted leading-relaxed max-w-lg">
           Secure real-time communication, minimally designed. Create

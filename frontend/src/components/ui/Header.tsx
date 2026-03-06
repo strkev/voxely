@@ -73,16 +73,12 @@ export function Header() {
                         onClick={() => navigateOrGuard('/')}
                         className="text-xl font-semibold text-text-main flex items-center gap-2"
                     >
-                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
-                            V
-                        </div>
+                        <img src="/logo.png" alt="Voxely Logo" className="w-10 h-10 object-contain" />
                         Voxely
                     </button>
                 ) : (
                     <Link href="/" className="text-xl font-semibold text-text-main flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
-                            V
-                        </div>
+                        <img src="/logo.png" alt="Voxely Logo" className="w-10 h-10 object-contain" />
                         Voxely
                     </Link>
                 )}
