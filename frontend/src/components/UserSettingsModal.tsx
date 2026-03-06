@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { playSound } from '@/lib/sounds';
-import { Volume2, VolumeX, Bell, X, Trash2, Pencil, Loader2, Check } from 'lucide-react';
+import { Volume2, VolumeX, Bell, X, Trash2, Pencil, Loader2, Check, Moon } from 'lucide-react';
 
 type SoundKey = 'join' | 'leave' | 'mute' | 'unmute' | 'cameraOn' | 'cameraOff' | 'screenShareOn' | 'screenShareOff';
 
@@ -26,7 +26,7 @@ interface UserSettingsModalProps {
 
 export function UserSettingsModal({ onClose }: UserSettingsModalProps) {
     const { user, token, setAuth, deleteAccount } = useAuthStore();
-    const { soundsEnabled, soundVolume, setSoundsEnabled, setSoundVolume } = useSettingsStore();
+    const { soundsEnabled, soundVolume, setSoundsEnabled, setSoundVolume, theme, setTheme } = useSettingsStore();
     const backdropRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
 
@@ -253,6 +253,22 @@ export function UserSettingsModal({ onClose }: UserSettingsModalProps) {
                                     </button>
                                 ))}
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Dark Mode */}
+                    <div className="border-b border-gray-100">
+                        <div className="px-6 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Moon className="w-3.5 h-3.5 text-text-muted" />
+                                <h3 className="text-xs font-semibold text-text-main uppercase tracking-wider">Dark Mode</h3>
+                            </div>
+                            <button
+                                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                                className={`relative w-10 h-5.5 rounded-full transition-colors duration-200 ${theme === 'dark' ? 'bg-primary' : 'bg-gray-200'}`}
+                            >
+                                <span className={`absolute top-0.5 left-0.5 w-4.5 h-4.5 rounded-full bg-white shadow transition-transform duration-200 ${theme === 'dark' ? 'translate-x-4.5' : 'translate-x-0'}`} />
+                            </button>
                         </div>
                     </div>
 

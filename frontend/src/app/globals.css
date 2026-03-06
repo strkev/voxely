@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@theme inline {
+@theme {
   --color-background: #F7F7F7;
   --color-surface: #FFFFFF;
   --color-primary: #FF5A5F;
@@ -1159,6 +1159,454 @@ body {
 .room-invite-banner__dismiss:hover {
   background: rgba(0, 0, 0, 0.05);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   DARK MODE
+   All rules scoped under .dark on <html>. Light mode is UNTOUCHED.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Theme Token Overrides ────────────────────────────────────────────────── */
+.dark {
+  --color-background: #121212;
+  --color-surface: #1E1E1E;
+  --color-primary: #FF7597;
+  --color-secondary: #FF0266;
+  --color-text-main: rgba(255, 255, 255, 0.87);
+  --color-text-muted: rgba(255, 255, 255, 0.60);
+  --color-dark-primary: #1E151A;
+  /* #121212 + 8% #FF7597 */
+  --shadow-flat: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-active-speaker: 0 8px 24px rgba(255, 117, 151, 0.20);
+
+  /* Elevation tokens (white overlay on #121212) */
+  --elevation-00: #121212;
+  --elevation-01: #1E1E1E;
+  --elevation-02: #232323;
+  --elevation-03: #252525;
+  --elevation-04: #272727;
+  --elevation-06: #2C2C2C;
+  --elevation-08: #2E2E2E;
+  --elevation-12: #333333;
+  --elevation-16: #363636;
+  --elevation-24: #383838;
+
+  color-scheme: dark;
+}
+
+/* ── 2. Base Element Overrides ───────────────────────────────────────────────── */
+.dark body {
+  background-color: var(--color-background);
+  color: var(--color-text-main);
+}
+
+/* ── 3. Tailwind Utility Class Overrides ─────────────────────────────────────── */
+/* bg-white → elevation-01 */
+.dark .bg-white,
+.dark .bg-white\/90 {
+  background-color: var(--elevation-01) !important;
+}
+
+/* bg-surface already uses var, but some inline uses exist */
+.dark .bg-surface {
+  background-color: var(--elevation-01) !important;
+}
+
+/* bg-gray-50 → elevation-02 */
+.dark .bg-gray-50 {
+  background-color: var(--elevation-02) !important;
+}
+
+/* bg-gray-100 → elevation-04 */
+.dark .bg-gray-100 {
+  background-color: var(--elevation-04) !important;
+}
+
+/* bg-gray-200 → elevation-06 (toggle off state) */
+.dark .bg-gray-200 {
+  background-color: var(--elevation-06) !important;
+}
+
+/* bg-gray-950 — already dark, leave as is */
+
+/* border-gray-100 → dark border */
+.dark .border-gray-100 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* border-gray-200 → dark border */
+.dark .border-gray-200 {
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+/* border-gray-300 → dark border */
+.dark .border-gray-300 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* divide-gray-50 → dark dividers */
+.dark .divide-gray-50> :not(:first-child) {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* hover:bg-gray-50 */
+.dark .hover\:bg-gray-50:hover {
+  background-color: var(--elevation-03) !important;
+}
+
+/* hover:bg-gray-100 */
+.dark .hover\:bg-gray-100:hover {
+  background-color: var(--elevation-04) !important;
+}
+
+/* hover:bg-white */
+.dark .hover\:bg-white:hover {
+  background-color: var(--elevation-02) !important;
+}
+
+/* bg-red-50 (error backgrounds, delete icon bg) */
+.dark .bg-red-50 {
+  background-color: rgba(255, 117, 151, 0.12) !important;
+}
+
+/* bg-green-50 (success backgrounds) */
+.dark .bg-green-50 {
+  background-color: rgba(34, 197, 94, 0.12) !important;
+}
+
+/* text-red-600 */
+.dark .text-red-600 {
+  color: #FF8A8A !important;
+}
+
+/* text-green-600 */
+.dark .text-green-600 {
+  color: #6EE7A0 !important;
+}
+
+/* text-red-500 */
+.dark .text-red-500 {
+  color: #FF7597 !important;
+}
+
+/* bg-red-500 */
+.dark .bg-red-500 {
+  background-color: #FF4D6A !important;
+}
+
+/* hover:bg-red-600 */
+.dark .hover\:bg-red-600:hover {
+  background-color: #E0384E !important;
+}
+
+/* hover:bg-red-50 */
+.dark .hover\:bg-red-50:hover {
+  background-color: rgba(255, 117, 151, 0.15) !important;
+}
+
+/* shadow-sm, shadow-lg with darker tones */
+.dark .shadow-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark .shadow-lg {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .shadow-xl {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* ── 4. Form Inputs ──────────────────────────────────────────────────────────── */
+/* Inputs in settings pages (inline Tailwind classes: bg-white border-gray-200) */
+.dark input[type="text"],
+.dark input[type="password"],
+.dark input[type="email"] {
+  background-color: var(--elevation-02) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: var(--color-text-main) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--color-text-muted) !important;
+  opacity: 0.7 !important;
+}
+
+.dark input:focus,
+.dark textarea:focus {
+  border-color: var(--color-primary) !important;
+}
+
+/* Range slider track */
+.dark input[type="range"] {
+  accent-color: var(--color-primary);
+}
+
+/* ── 5. Toggle Switch ────────────────────────────────────────────────────────── */
+/* The toggle knob is always bg-white — keep it white in dark mode too */
+
+/* ── 6. Header ───────────────────────────────────────────────────────────────── */
+.dark header {
+  background-color: var(--elevation-01) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Header avatar trigger */
+.dark header button[aria-haspopup="true"] {
+  background-color: var(--elevation-02) !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.dark header button[aria-haspopup="true"]:hover {
+  background-color: var(--elevation-04) !important;
+}
+
+/* Header dropdown menu */
+.dark header .animate-in {
+  background-color: var(--elevation-04) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ── 7. LiveKit Control Bar ──────────────────────────────────────────────────── */
+.dark .lk-button {
+  background-color: var(--elevation-04) !important;
+  color: var(--color-text-main) !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.dark .lk-button:hover {
+  background-color: var(--elevation-06) !important;
+}
+
+.dark .lk-button[aria-pressed="true"],
+.dark .lk-button-group .lk-button[aria-pressed="true"],
+.dark .lk-button-group>.lk-button[aria-pressed="true"] {
+  background-color: var(--elevation-04) !important;
+  color: var(--color-text-main) !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.dark .lk-button[aria-pressed="true"]:hover,
+.dark .lk-button-group .lk-button[aria-pressed="true"]:hover {
+  background-color: var(--elevation-06) !important;
+}
+
+.dark .lk-button-group {
+  background-color: var(--elevation-04) !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.dark .lk-button-group>.lk-button {
+  color: var(--color-text-main) !important;
+}
+
+.dark .lk-button-group>.lk-button:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dark .lk-button-group>.lk-button:last-child {
+  border-left-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.dark .lk-button-group>.lk-button:first-child[aria-pressed="true"] {
+  background-color: transparent !important;
+  color: var(--color-text-main) !important;
+}
+
+.dark .lk-button-group>.lk-button:first-child[aria-pressed="true"]:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dark .lk-button-group-menu>.lk-button,
+.dark .lk-button-group-menu>.lk-button:hover,
+.dark .lk-button-group-menu>.lk-button[aria-expanded="true"],
+.dark .lk-button-group-menu>.lk-button[data-state="open"],
+.dark .lk-button-group-menu>.lk-button[data-lk-active="true"],
+.dark .lk-button-group>.lk-button:last-child[aria-pressed="true"] {
+  background-color: transparent !important;
+  color: var(--color-text-main) !important;
+}
+
+.dark .lk-disconnect-button {
+  background-color: var(--color-primary) !important;
+  color: white !important;
+  border-color: var(--color-primary) !important;
+}
+
+.dark .lk-disconnect-button:hover {
+  background-color: #E0607A !important;
+  border-color: #E0607A !important;
+}
+
+/* Speaking border — use dark primary */
+.dark .lk-participant-tile[data-lk-speaking="true"],
+.dark .lk-participant-tile[data-lk-speaking="true"]:not([data-lk-source="screen_share"]) {
+  border-color: var(--color-primary) !important;
+  box-shadow: inset 0 0 20px rgba(255, 117, 151, 0.35) !important;
+}
+
+/* Room control bar pill */
+.dark .bg-white\/90 {
+  background-color: rgba(30, 30, 30, 0.92) !important;
+}
+
+/* Backdrop blur pill in room top bar */
+.dark .backdrop-blur-md {
+  --tw-backdrop-blur: blur(12px);
+}
+
+/* Room top-bar buttons: friends, share, settings, chat, leave */
+/* These use inline bg-white/90 — already handled above */
+/* Border overrides for the room buttons */
+.dark .border-\[rgba\(220\,220\,220\,0\.85\)\] {
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.dark .hover\:border-primary\/40:hover {
+  border-color: rgba(255, 117, 151, 0.4) !important;
+}
+
+.dark .border-white\/60 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Show controls chevron button */
+.dark .bg-white\/80 {
+  background-color: rgba(30, 30, 30, 0.85) !important;
+}
+
+/* ── 8. Chat Sidebar ─────────────────────────────────────────────────────────── */
+/* Panel background — uses hard-coded bg-[#F7F7F7] */
+.dark .bg-\[\#F7F7F7\] {
+  background-color: var(--elevation-00) !important;
+}
+
+/* Chat header — bg-white */
+/* Already handled by .dark .bg-white */
+
+/* Chat message bubble — other person */
+.dark .bg-white.border.border-gray-100 {
+  background-color: var(--elevation-02) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Chat input area wrapper — bg-[#F7F7F7] already handled */
+/* Chat input border */
+.dark .border-gray-200.focus-within\:border-primary\/50 {
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+/* Chat scrollbar */
+.dark .chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dark .chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ── 9. Friends Sidebar ──────────────────────────────────────────────────────── */
+.dark .friends-sidebar {
+  background: var(--elevation-01) !important;
+  border-right-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .friends-sidebar--collapsed {
+  background: var(--elevation-01) !important;
+  border-right-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .friends-sidebar__toggle:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dark .friends-sidebar__header {
+  border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dark .friends-sidebar__search-input {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--color-text-main) !important;
+}
+
+.dark .friends-sidebar__item:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.dark .friends-sidebar__status-dot {
+  border-color: var(--elevation-01) !important;
+}
+
+.dark .friends-sidebar__btn:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dark .friends-sidebar__confirm-no:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* ── 10. Modals (Friend Modal, Invite Banner, etc.) ──────────────────────────── */
+.dark .friend-modal {
+  background: var(--elevation-04) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .friend-modal__tabs {
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .friend-modal__input {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+  color: var(--color-text-main) !important;
+}
+
+.dark .friend-modal__request-item:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.dark .friend-modal__cancel-btn {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dark .friend-modal__cancel-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.10) !important;
+}
+
+.dark .friend-modal__close:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Invite banner */
+.dark .room-invite-banner__content {
+  background: var(--elevation-04) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .room-invite-banner__dismiss:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Primary button hover overrides (bg-[#E0484D] → softer dark primary) */
+.dark .hover\:bg-\[\#E0484D\]:hover {
+  background-color: #E0607A !important;
+}
+
+/* ── 11. Mobile Friends Toggle (dashboard) ───────────────────────────────────── */
+.dark .bg-white\/90.backdrop-blur-md {
+  background-color: rgba(30, 30, 30, 0.92) !important;
+}
+
+/* ── 12. Spinner / Loading ───────────────────────────────────────────────────── */
+.dark .border-gray-200.border-t-primary {
+  border-color: rgba(255, 255, 255, 0.10);
+  border-top-color: var(--color-primary);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   END DARK MODE
+   ═══════════════════════════════════════════════════════════════════════════════ */
 
 /* ── Mobile-specific overrides (≤ 640px) ─────────────────────────────────────── */
 /* These rules ONLY affect small screens. Desktop/tablet layout is untouched.    */

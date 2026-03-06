@@ -16,7 +16,7 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track } from 'livekit-client';
-import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, Mic, Users, ScreenShare, LogOut } from 'lucide-react';
+import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, Mic, Users, ScreenShare, LogOut, Moon } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
@@ -207,7 +207,7 @@ const SCREEN_FPS_OPTIONS: ScreenShareFps[] = [5, 15, 30, 60];
 function InRoomSettings({ onClose }: { onClose: () => void }) {
     const {
         soundsEnabled, soundVolume, videoQuality, showDevInfo, autoHideControlBar, noiseSuppression,
-        screenShareResolution, screenShareFps,
+        screenShareResolution, screenShareFps, theme, setTheme,
         setSoundsEnabled, setSoundVolume, setVideoQuality, setShowDevInfo, setAutoHideControlBar, setNoiseSuppression,
         setScreenShareResolution, setScreenShareFps,
     } = useSettingsStore();
@@ -349,7 +349,7 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
                 </div>
 
                 {/* Sound Settings */}
-                <div className="px-6 py-4">
+                <div className="px-6 py-4 border-b border-gray-100">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                             <Bell className="w-4 h-4 text-text-muted" />
@@ -384,6 +384,22 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
                                 </button>
                             ))}
                         </div>
+                    </div>
+                </div>
+
+                {/* Dark Mode */}
+                <div className="px-6 py-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Moon className="w-4 h-4 text-text-muted" />
+                            <span className="text-sm font-medium text-text-main">Dark Mode</span>
+                        </div>
+                        <button
+                            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                            className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${theme === 'dark' ? 'bg-primary' : 'bg-gray-200'}`}
+                        >
+                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${theme === 'dark' ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </button>
                     </div>
                 </div>
             </div>

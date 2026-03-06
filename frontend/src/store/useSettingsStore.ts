@@ -30,6 +30,7 @@ interface SettingsState {
     controlBarVisible: boolean;
     autoHideControlBar: boolean;
     noiseSuppression: boolean;
+    theme: 'light' | 'dark';
     setSoundsEnabled: (v: boolean) => void;
     setSoundVolume: (v: number) => void;
     setVideoQuality: (v: VideoQuality) => void;
@@ -39,6 +40,7 @@ interface SettingsState {
     setControlBarVisible: (v: boolean) => void;
     setAutoHideControlBar: (v: boolean) => void;
     setNoiseSuppression: (v: boolean) => void;
+    setTheme: (v: 'light' | 'dark') => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -53,6 +55,7 @@ export const useSettingsStore = create<SettingsState>()(
             controlBarVisible: true,
             autoHideControlBar: false,
             noiseSuppression: false,
+            theme: 'light',
             setSoundsEnabled: (v) => set({ soundsEnabled: v }),
             setSoundVolume: (v) => set({ soundVolume: Math.max(0, Math.min(1, v)) }),
             setVideoQuality: (v) => set({ videoQuality: v }),
@@ -62,6 +65,7 @@ export const useSettingsStore = create<SettingsState>()(
             setControlBarVisible: (v) => set({ controlBarVisible: v }),
             setAutoHideControlBar: (v) => set({ autoHideControlBar: v }),
             setNoiseSuppression: (v) => set({ noiseSuppression: v }),
+            setTheme: (v) => set({ theme: v }),
         }),
         { name: 'user-settings' }
     )
