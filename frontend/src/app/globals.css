@@ -1228,6 +1228,11 @@ body {
 
 /* bg-gray-950 — already dark, leave as is */
 
+/* border-gray-50 → dark border */
+.dark .border-gray-50 {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
 /* border-gray-100 → dark border */
 .dark .border-gray-100 {
   border-color: rgba(255, 255, 255, 0.08) !important;
@@ -1244,7 +1249,7 @@ body {
 }
 
 /* divide-gray-50 → dark dividers */
-.dark .divide-gray-50> :not(:first-child) {
+.dark .divide-gray-50>* {
   border-color: rgba(255, 255, 255, 0.06) !important;
 }
 
