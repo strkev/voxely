@@ -153,7 +153,7 @@ export function Header() {
                                             className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text-main hover:bg-gray-50 transition-colors"
                                         >
                                             <Users className="w-4 h-4 text-text-muted" />
-                                            Friends
+                                            Add Friends
                                             {incomingRequests.length > 0 && (
                                                 <span className="ml-auto min-w-[18px] h-[18px] rounded-full bg-primary text-white text-[0.6rem] font-bold flex items-center justify-center px-1">
                                                     {incomingRequests.length}

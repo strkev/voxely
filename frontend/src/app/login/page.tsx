@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuthStore } from '@/store/useAuthStore';
+import { ChevronLeft } from 'lucide-react';
 
 const ALLOWED_PREFIXES = ['/room/', '/dashboard', '/settings'];
 function getSafeRedirect(url: string | null): string {
@@ -54,7 +55,16 @@ function LoginForm() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="min-h-screen flex flex-col items-center justify-center p-4">
+            <div className="w-full max-w-md mb-6">
+                <button
+                    onClick={() => router.back()}
+                    className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-main transition-colors"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                    Back
+                </button>
+            </div>
             <div className="w-full max-w-md bg-surface p-8 rounded-video shadow-flat border border-gray-100">
                 <div className="text-center mb-8">
                     <h1 className="text-2xl font-semibold text-text-main mb-2">Welcome back</h1>
