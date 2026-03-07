@@ -157,8 +157,7 @@ body {
 }
 
 /* Red glow on the tile itself */
-.lk-participant-tile[data-lk-speaking="true"],
-.lk-participant-tile[data-lk-speaking="true"]:not([data-lk-source="screen_share"]) {
+.lk-participant-tile[data-lk-speaking="true"]:not([data-lk-source="screen_share"]):not(.lk-screen-share-tile) {
   border: 3px solid #FF5A5F !important;
   box-shadow: inset 0 0 20px rgba(255, 90, 95, 0.4) !important;
   outline: none !important;
@@ -1455,8 +1454,7 @@ body {
 }
 
 /* Speaking border — use dark primary */
-.dark .lk-participant-tile[data-lk-speaking="true"],
-.dark .lk-participant-tile[data-lk-speaking="true"]:not([data-lk-source="screen_share"]) {
+.dark .lk-participant-tile[data-lk-speaking="true"]:not([data-lk-source="screen_share"]):not(.lk-screen-share-tile) {
   border-color: var(--color-primary) !important;
   box-shadow: inset 0 0 20px rgba(255, 117, 151, 0.35) !important;
 }

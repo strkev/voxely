@@ -97,8 +97,8 @@ function SpotlightableTile({
     const isSpeaking = useIsSpeaking(trackRef?.participant ?? undefined);
     const isScreenShare = trackRef?.source === Track.Source.ScreenShare;
 
-    const glowStyle = isSpeaking ? {
-        boxShadow: '0 0 0 2.5px #FF5A5F, 0 0 18px 4px rgba(255,90,95,0.55), inset 0 0 14px 2px rgba(255,90,95,0.30)',
+    const glowStyle = (isSpeaking && !isScreenShare) ? {
+        //boxShadow: '0 0 0 2.5px #FF5A5F, 0 0 18px 4px rgba(255,90,95,0.55), inset 0 0 14px 2px rgba(255,90,95,0.30)',
     } : undefined;
 
     return (
