@@ -102,7 +102,7 @@ body {
 
 @keyframes avatar-speak-glow {
   0% {
-    box-shadow: 0 0 0 0 rgba(255, 90, 95, 0.7);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--user-color, #FF5A5F) 70%, transparent);
     transform: scale(1);
   }
 
@@ -111,7 +111,7 @@ body {
   }
 
   100% {
-    box-shadow: 0 0 0 15px rgba(255, 90, 95, 0);
+    box-shadow: 0 0 0 15px transparent;
     transform: scale(1);
   }
 }
@@ -186,8 +186,8 @@ body {
 
 /* Red glow on the tile itself */
 .lk-participant-tile[data-lk-speaking="true"]:not([data-lk-source="screen_share"]):not(.lk-screen-share-tile) {
-  border: 3px solid #FF5A5F !important;
-  box-shadow: inset 0 0 20px rgba(255, 90, 95, 0.4) !important;
+  border: 3px solid var(--user-color, #FF5A5F) !important;
+  box-shadow: inset 0 0 20px color-mix(in srgb, var(--user-color, #FF5A5F) 40%, transparent) !important;
   outline: none !important;
 }
 
@@ -1483,8 +1483,8 @@ body {
 
 /* Speaking border — use dark primary */
 .dark .lk-participant-tile[data-lk-speaking="true"]:not([data-lk-source="screen_share"]):not(.lk-screen-share-tile) {
-  border-color: var(--color-primary) !important;
-  box-shadow: inset 0 0 20px rgba(255, 117, 151, 0.35) !important;
+  border-color: var(--user-color, #FF5A5F) !important;
+  box-shadow: inset 0 0 20px color-mix(in srgb, var(--user-color, #FF5A5F) 35%, transparent) !important;
 }
 
 /* Room control bar pill */

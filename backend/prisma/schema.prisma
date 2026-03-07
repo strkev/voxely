@@ -20,6 +20,7 @@ model User {
   friendOf         Friendship[]    @relation("FriendOf")
   friendships      Friendship[]    @relation("UserFriendships")
   roomsCreated     Room[]          @relation("RoomCreator")
+  avatarColor      String?         @default("#FF5A5F")
 }
 
 model Friendship {

@@ -64,7 +64,7 @@ export const sendRequest = async (req: Request, res: Response): Promise<void> =>
         }
 
         // Look up target user
-        const target = await prisma.user.findUnique({ where: { name }, select: { id: true, name: true } });
+        const target = await prisma.user.findUnique({ where: { name }, select: { id: true, name: true, avatarColor: true } });
         if (!target) {
             res.status(404).json({ error: 'User not found' });
             return;
@@ -102,8 +102,8 @@ export const sendRequest = async (req: Request, res: Response): Promise<void> =>
         const request = await prisma.friendRequest.create({
             data: { senderId: userId, receiverId: target.id },
             include: {
-                sender: { select: { id: true, name: true } },
-                receiver: { select: { id: true, name: true } },
+                sender: { select: { id: true, name: true, avatarColor: true } },
+                receiver: { select: { id: true, name: true, avatarColor: true } },
             },
         });
 
@@ -136,12 +136,12 @@ export const getRequests = async (req: Request, res: Response): Promise<void> =>
         const [incoming, outgoing] = await Promise.all([
             prisma.friendRequest.findMany({
                 where: { receiverId: userId },
-                include: { sender: { select: { id: true, name: true } } },
+                include: { sender: { select: { id: true, name: true, avatarColor: true } } },
                 orderBy: { createdAt: 'desc' },
             }),
             prisma.friendRequest.findMany({
                 where: { senderId: userId },
-                include: { receiver: { select: { id: true, name: true } } },
+                include: { receiver: { select: { id: true, name: true, avatarColor: true } } },
                 orderBy: { createdAt: 'desc' },
             }),
         ]);
@@ -191,7 +191,7 @@ export const acceptRequest = async (req: Request, res: Response): Promise<void> 
         // Return the new friend info
         const friend = await prisma.user.findUnique({
             where: { id: request.senderId },
-            select: { id: true, name: true },
+            select: { id: true, name: true, avatarColor: true },
         });
 
         // Real-time: notify the original sender that their request was accepted
@@ -199,7 +199,7 @@ export const acceptRequest = async (req: Request, res: Response): Promise<void> 
         if (senderSockets) {
             const acceptedByUser = await prisma.user.findUnique({
                 where: { id: userId },
-                select: { id: true, name: true },
+                select: { id: true, name: true, avatarColor: true },
             });
             for (const sid of senderSockets) {
                 io.to(sid).emit('friend:request-accepted', {
@@ -277,7 +277,7 @@ export const getFriends = async (req: Request, res: Response): Promise<void> => 
 
         const friendships = await prisma.friendship.findMany({
             where: { userId },
-            include: { friend: { select: { id: true, name: true } } },
+            include: { friend: { select: { id: true, name: true, avatarColor: true } } },
             orderBy: { createdAt: 'desc' },
         });
 

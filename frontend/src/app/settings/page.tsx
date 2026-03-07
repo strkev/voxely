@@ -20,6 +20,8 @@ const SOUND_LABELS: { key: SoundKey; label: string; description: string }[] = [
     { key: 'screenShareOff', label: 'Screen Share Off', description: 'Played when stopping screen share' },
 ];
 
+const PRESET_COLORS = ['#FF5A5F', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
+
 export default function SettingsPage() {
     const { user, token, setAuth, deleteAccount } = useAuthStore();
     const { soundsEnabled, soundVolume, setSoundsEnabled, setSoundVolume, theme, setTheme } = useSettingsStore();
@@ -29,6 +31,7 @@ export default function SettingsPage() {
     const router = useRouter();
 
     // Edit profile state
+    const [editColor, setEditColor] = useState('#FF5A5F');
     const [editName, setEditName] = useState('');
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -40,6 +43,7 @@ export default function SettingsPage() {
     useEffect(() => {
         if (user) {
             setEditName(user.name);
+            setEditColor(user.avatarColor || '#FF5A5F');
         }
     }, [user]);
 
@@ -60,7 +64,7 @@ export default function SettingsPage() {
         if (editName !== user.name) body.name = editName;
         if (newPassword) body.newPassword = newPassword;
         if (currentPassword) body.currentPassword = currentPassword;
-
+        if (editColor !== (user.avatarColor || '#FF5A5F')) body.avatarColor = editColor;
         if (Object.keys(body).length === 0 || (Object.keys(body).length === 1 && body.currentPassword)) {
             setProfileError('No changes to save');
             setProfileLoading(false);
@@ -100,7 +104,7 @@ export default function SettingsPage() {
     };
 
     const needsCurrentPassword = newPassword.length > 0;
-
+    const isCustomColor = !PRESET_COLORS.includes(editColor.toUpperCase());
     return (
         <>
             <div className="flex-1 w-full max-w-2xl mx-auto px-4 py-10 sm:py-16">
@@ -114,12 +118,16 @@ export default function SettingsPage() {
                 </button>
 
                 {/* Profile card */}
-                <div className="bg-surface border border-gray-100 rounded-2xl p-4 sm:p-6 shadow-flat mb-6 flex items-center gap-3 sm:gap-4">
-                    <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-primary flex items-center justify-center text-white text-lg sm:text-xl font-bold shrink-0">
+                <div className="bg-surface border border-gray-100 rounded-2xl p-4 sm:p-6 shadow-flat mb-6 flex items-center gap-3 sm:gap-4 transition-colors">
+                    <div
+                        className="w-11 h-11 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white text-lg sm:text-xl font-bold shrink-0 shadow-sm transition-colors duration-300"
+                        style={{ backgroundColor: editColor }}
+                    >
                         {initials}
                     </div>
                     <div>
-                        <p className="text-lg font-semibold text-text-main">{user.name}</p>
+                        <p className="text-lg font-semibold text-text-main">{editName || user.name}</p>
+                        <p className="text-xs text-text-muted mt-0.5">Personalize your appearance</p>
                     </div>
                 </div>
 
@@ -184,6 +192,19 @@ export default function SettingsPage() {
                                 />
                             </div>
                         )}
+
+                        <div>
+                            <label className="block text-xs font-medium text-text-main mb-1 ml-1">Profile Color</label>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="color"
+                                    value={editColor}
+                                    onChange={(e) => { setEditColor(e.target.value); setProfileSuccess(''); }}
+                                    className="w-10 h-10 p-1 rounded-xl border border-gray-200 bg-white cursor-pointer"
+                                />
+                                <span className="text-sm font-mono text-text-muted uppercase">{editColor}</span>
+                            </div>
+                        </div>
 
                         <button
                             type="submit"

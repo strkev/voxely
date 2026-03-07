@@ -74,7 +74,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
         // Set httpOnly cookie + return token in body (needed by Socket.IO)
         res.cookie('auth_token', token, COOKIE_OPTS);
-        res.status(201).json({ user: { id: user.id, name: user.name }, token });
+        res.status(201).json({ user: { id: user.id, name: user.name, avatarColor: user.avatarColor }, token });
     } catch (error) {
         console.error('Registration error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -106,7 +106,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
         // Set httpOnly cookie + return token in body (needed by Socket.IO)
         res.cookie('auth_token', token, COOKIE_OPTS);
-        res.status(200).json({ user: { id: user.id, name: user.name }, token });
+        res.status(200).json({ user: { id: user.id, name: user.name, avatarColor: user.avatarColor }, token });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -143,7 +143,7 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
 
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            select: { id: true, name: true },
+            select: { id: true, name: true, avatarColor: true },
         });
 
         if (!user) {
@@ -198,7 +198,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
-        const { name, currentPassword, newPassword } = req.body;
+        const { name, currentPassword, newPassword, avatarColor } = req.body;
 
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
@@ -219,7 +219,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
             }
         }
 
-        const updateData: { name?: string; passwordHash?: string } = {};
+        const updateData: { name?: string; passwordHash?: string; avatarColor?: string } = {};
 
         // Update name
         if (name && typeof name === 'string') {
@@ -246,6 +246,14 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
             }
             updateData.passwordHash = await bcrypt.hash(newPassword, 10);
         }
+        if (avatarColor && typeof avatarColor === 'string') {
+            if (/^#[0-9A-Fa-f]{6}$/i.test(avatarColor)) {
+                updateData.avatarColor = avatarColor.toUpperCase();
+            } else {
+                res.status(400).json({ error: 'Ungültiges Farbformat' });
+                return;
+            }
+        }
 
         if (Object.keys(updateData).length === 0) {
             res.status(400).json({ error: 'No valid fields to update' });
@@ -255,7 +263,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
         const updated = await prisma.user.update({
             where: { id: userId },
             data: updateData,
-            select: { id: true, name: true },
+            select: { id: true, name: true, avatarColor: true },
         });
 
         res.json({ user: updated });

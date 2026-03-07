@@ -5,19 +5,20 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 export interface Friend {
     id: string;
     name: string;
+    avatarColor: string;
 }
 
 export interface FriendRequestIncoming {
     id: string;
     senderId: string;
-    sender: { id: string; name: string };
+    sender: { id: string; name: string; avatarColor: string };
     createdAt: string;
 }
 
 export interface FriendRequestOutgoing {
     id: string;
     receiverId: string;
-    receiver: { id: string; name: string };
+    receiver: { id: string; name: string; avatarColor: string };
     createdAt: string;
 }
 

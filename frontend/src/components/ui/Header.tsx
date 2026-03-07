@@ -93,7 +93,10 @@ export function Header() {
                                 aria-haspopup="true"
                                 aria-expanded={open}
                             >
-                                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                <div
+                                    className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                                    style={{ backgroundColor: user?.avatarColor || '#FF5A5F' }}
+                                >
                                     {initials}
                                 </div>
                                 <span className="text-sm font-medium text-text-main hidden sm:block max-w-[120px] truncate">
@@ -110,7 +113,10 @@ export function Header() {
                                     {/* User info header */}
                                     <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
                                         <div className="flex items-center gap-2.5">
-                                            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                            <div
+                                                className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                                                style={{ backgroundColor: user?.avatarColor || '#FF5A5F' }}
+                                            >
                                                 {initials}
                                             </div>
                                             <div className="min-w-0">

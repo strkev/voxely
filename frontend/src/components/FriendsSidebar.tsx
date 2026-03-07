@@ -154,7 +154,11 @@ export function FriendsSidebar({ currentRoomId, onInvite, onOpenRequests, onClos
                             <div key={friend.id} className="friends-sidebar__item">
                                 {/* Avatar + status dot */}
                                 <div className="friends-sidebar__avatar-wrap">
-                                    <div className="friends-sidebar__avatar">
+                                    <div
+                                        className="friends-sidebar__avatar"
+                                        // NEU: Hier die dynamische Farbe aus dem friend-Objekt auslesen
+                                        style={{ backgroundColor: friend.avatarColor || '#FF5A5F' }}
+                                    >
                                         {getInitials(friend.name)}
                                     </div>
                                     <span

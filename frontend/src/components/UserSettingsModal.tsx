@@ -34,12 +34,20 @@ export function UserSettingsModal({ onClose }: UserSettingsModalProps) {
     const [deleting, setDeleting] = useState(false);
 
     // Edit profile state
+    const [editColor, setEditColor] = useState('#FF5A5F');
     const [editName, setEditName] = useState('');
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [profileLoading, setProfileLoading] = useState(false);
     const [profileError, setProfileError] = useState('');
     const [profileSuccess, setProfileSuccess] = useState('');
+
+    useEffect(() => {
+        if (user) {
+            setEditName(user.name);
+            if (user.avatarColor) setEditColor(user.avatarColor); // Initiale Farbe laden
+        }
+    }, [user]);
 
     useEffect(() => {
         if (user) setEditName(user.name);
@@ -77,6 +85,7 @@ export function UserSettingsModal({ onClose }: UserSettingsModalProps) {
         if (editName !== user.name) body.name = editName;
         if (newPassword) body.newPassword = newPassword;
         if (currentPassword) body.currentPassword = currentPassword;
+        if (editColor !== (user.avatarColor || '#FF5A5F')) body.avatarColor = editColor;
 
         if (Object.keys(body).length === 0 || (Object.keys(body).length === 1 && body.currentPassword)) {
             setProfileError('No changes to save');
@@ -137,7 +146,10 @@ export function UserSettingsModal({ onClose }: UserSettingsModalProps) {
 
                     {/* Profile card */}
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white text-lg font-bold shrink-0">
+                        <div
+                            className="w-11 h-11 rounded-full flex items-center justify-center text-white text-lg font-bold shrink-0"
+                            style={{ backgroundColor: user.avatarColor || '#FF5A5F' }}
+                        >
                             {initials}
                         </div>
                         <div>
@@ -207,6 +219,19 @@ export function UserSettingsModal({ onClose }: UserSettingsModalProps) {
                                 </div>
                             )}
 
+                            <div>
+                                <label className="block text-xs font-medium text-text-main mb-1 ml-1">Profile Color</label>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="color"
+                                        value={editColor}
+                                        onChange={(e) => { setEditColor(e.target.value); setProfileSuccess(''); }}
+                                        className="w-10 h-10 p-1 rounded-xl border border-gray-200 bg-white cursor-pointer"
+                                    />
+                                    <span className="text-sm font-mono text-text-muted uppercase">{editColor}</span>
+                                </div>
+                            </div>
+
                             <button
                                 type="submit"
                                 disabled={profileLoading}
@@ -214,6 +239,8 @@ export function UserSettingsModal({ onClose }: UserSettingsModalProps) {
                             >
                                 {profileLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
                             </button>
+
+
                         </form>
                     </div>
 
