@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { useFriendsStore, RoomInvitation, Friend } from '@/store/useFriendsStore';
+import { useFriendsStore, RoomInvitation, Friend, FriendRequestIncoming } from '@/store/useFriendsStore';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -80,12 +80,7 @@ export function useFriendsSocket(token: string | null) {
         });
 
         // New incoming friend request
-        socket.on('friend:request-received', (data: {
-            id: string;
-            senderId: string;
-            sender: { id: string; name: string };
-            createdAt: string;
-        }) => {
+        socket.on('friend:request-received', (data: FriendRequestIncoming) => {
             addIncomingRequest(data);
         });
 
