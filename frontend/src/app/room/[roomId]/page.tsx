@@ -101,20 +101,42 @@ function SpotlightableTile({
         //boxShadow: '0 0 0 2.5px #FF5A5F, 0 0 18px 4px rgba(255,90,95,0.55), inset 0 0 14px 2px rgba(255,90,95,0.30)',
     } : undefined;
 
+    const participantName = trackRef?.participant?.name || trackRef?.participant?.identity || '?';
+    const initial = participantName.charAt(0).toUpperCase();
+    const isCameraTrack = trackRef?.source === Track.Source.Camera;
+
     return (
         <div
             className={`relative w-full h-full group rounded-[16px] transition-shadow duration-200 ${isScreenShare ? 'lk-screen-share-tile' : ''}`}
-            style={glowStyle}
+            // containerType sorgt dafür, dass sich der Avatar dynamisch an die Kachelbreite anpasst
+            style={{ ...glowStyle, containerType: 'inline-size' }}
         >
-            <ParticipantTile trackRef={trackRef} />
+            {/* HINTERGRUND-AVATAR: Liegt unter dem Video (z-0). 
+                Wird sichtbar, sobald LiveKit das Video bei gemuteter Kamera ausblendet. */}
+            {isCameraTrack && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 bg-[#111] rounded-[16px]">
+                    <div
+                        className="w-[32%] max-w-[120px] min-w-[40px] aspect-square rounded-full bg-primary text-white flex items-center justify-center font-bold shadow-md"
+                        // cqw = Container Query Width -> Schriftgröße wächst mit der Karte!
+                        style={{ fontSize: 'clamp(18px, 12cqw, 54px)' }}
+                    >
+                        {initial}
+                    </div>
+                </div>
+            )}
 
-            {/* Spotlight toggle — always faintly visible, full opacity on hover */}
+            {/* LIVEKIT TILE: Wird in z-10 gewrappt, damit das Video immer über dem Avatar liegt */}
+            <div className="relative w-full h-full z-10">
+                <ParticipantTile trackRef={trackRef} />
+            </div>
+
+            {/* Spotlight toggle — auf z-20 erhöht, damit es über dem Video bleibt */}
             {onSpotlight && (
                 <button
                     onClick={() => onSpotlight(isSpotlit ? null : (trackRef ?? null))}
                     title={isSpotlit ? 'Spotlight entfernen' : 'Spotlight'}
                     className={`
-                        absolute top-2 right-2 z-1 p-1.5 rounded-lg backdrop-blur-md
+                        absolute top-2 right-2 z-20 p-1.5 rounded-lg backdrop-blur-md
                         transition-all duration-200
                         ${isSpotlit
                             ? 'bg-amber-400/90 text-white opacity-100 shadow-md'
@@ -128,7 +150,7 @@ function SpotlightableTile({
 
             {/* Spotlight badge when pinned */}
             {isSpotlit && (
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-amber-400/90 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm pointer-events-none">
+                <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-amber-400/90 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm pointer-events-none">
                     <Star className="w-3 h-3 fill-white" />
                     Spotlight
                 </div>
