@@ -161,18 +161,18 @@ router.get('/users/:id/export', requireAdminSecret, async (req: Request, res: Re
             },
             roomsCreated: user.roomsCreated,
             chatMessages: user.chatMessages,
-            friendships: user.friendships.map(f => ({
+            friendships: user.friendships.map((f: any) => ({
                 friendId: f.friendId,
                 friendName: f.friend.name,
                 since: f.createdAt,
             })),
             friendRequests: {
-                sent: user.sentRequests.map(r => ({
+                sent: user.sentRequests.map((r: any) => ({
                     requestId: r.id,
                     to: r.receiver,
                     createdAt: r.createdAt,
                 })),
-                received: user.receivedRequests.map(r => ({
+                received: user.receivedRequests.map((r: any) => ({
                     requestId: r.id,
                     from: r.sender,
                     createdAt: r.createdAt,

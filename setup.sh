@@ -404,6 +404,9 @@ prompt JWT_SECRET    "JWT Secret (auto-generated if empty)" "${DEFAULT_JWT}" tru
 DEFAULT_ADMIN=$(openssl rand -hex 16 2>/dev/null || head -c 16 /dev/urandom | xxd -p)
 prompt ADMIN_SECRET  "Admin API Secret" "${DEFAULT_ADMIN}" true
 
+DEFAULT_PRISMA_KEY="k1.aesgcm256.$(openssl rand -base64 32 | tr -d '\n' | cut -c1-43)="
+prompt PRISMA_ENCRYPTION_KEY "Prisma Field Encryption Key (auto-generated if empty)" "${DEFAULT_PRISMA_KEY}" true
+
 prompt INVITE_CODES  "Invite codes for registration (comma-separated, empty = open registration)" ""
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -442,6 +445,9 @@ INVITE_CODES="${INVITE_CODES}"
 
 # ── Admin ─────────────────────────────────────────
 ADMIN_SECRET="${ADMIN_SECRET}"
+
+# ── Encryption ────────────────────────────────────
+PRISMA_FIELD_ENCRYPTION_KEY="${PRISMA_ENCRYPTION_KEY}"
 
 # ── Redis ─────────────────────────────────────────
 REDIS_URL="${REDIS_URL}"

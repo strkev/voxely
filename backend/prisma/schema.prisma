@@ -1,37 +1,34 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id           String        @id @default(uuid())
-  passwordHash String
-  name         String        @unique
-  avatarUrl    String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-
-  roomsCreated     Room[]          @relation("RoomCreator")
+  id               String          @id @default(uuid())
+  passwordHash     String
+  name             String          @unique
+  avatarUrl        String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
   chatMessages     ChatMessage[]
-  friendships      Friendship[]    @relation("UserFriendships")
-  friendOf         Friendship[]    @relation("FriendOf")
-  sentRequests     FriendRequest[] @relation("SentRequests")
   receivedRequests FriendRequest[] @relation("ReceivedRequests")
+  sentRequests     FriendRequest[] @relation("SentRequests")
+  friendOf         Friendship[]    @relation("FriendOf")
+  friendships      Friendship[]    @relation("UserFriendships")
+  roomsCreated     Room[]          @relation("RoomCreator")
 }
 
 model Friendship {
   id        String   @id @default(uuid())
   userId    String
   friendId  String
-  user      User     @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
-  friend    User     @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+  friend    User     @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, friendId])
   @@index([userId])
@@ -42,9 +39,9 @@ model FriendRequest {
   id         String   @id @default(uuid())
   senderId   String
   receiverId String
-  sender     User     @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver   User     @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
+  receiver   User     @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender     User     @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
   @@index([receiverId])
@@ -55,9 +52,9 @@ model Room {
   name        String
   slug        String   @unique
   createdById String
-  createdBy   User     @relation("RoomCreator", fields: [createdById], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  createdBy   User     @relation("RoomCreator", fields: [createdById], references: [id])
 }
 
 model ChatMessage {
@@ -65,10 +62,10 @@ model ChatMessage {
   roomId    String
   userId    String
   userName  String
+  /// @encrypted
   text      String
   createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([roomId, createdAt])
 }

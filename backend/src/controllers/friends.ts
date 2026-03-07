@@ -281,7 +281,7 @@ export const getFriends = async (req: Request, res: Response): Promise<void> => 
             orderBy: { createdAt: 'desc' },
         });
 
-        const friends = friendships.map(f => f.friend);
+        const friends = friendships.map((f: any) => f.friend);
         res.json({ friends });
     } catch (error) {
         console.error('Get friends error:', error);

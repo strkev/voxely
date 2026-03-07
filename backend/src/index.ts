@@ -8,6 +8,7 @@ import { Server } from 'socket.io';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
+import { fieldEncryptionExtension } from 'prisma-field-encryption';
 import { randomUUID } from 'crypto';
 import sanitize from 'sanitize-html';
 import { rateLimit } from 'express-rate-limit';
@@ -73,7 +74,7 @@ export const io = new Server(server, {
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
-export const prisma = new PrismaClient({ adapter });
+export const prisma = new PrismaClient({ adapter }).$extends(fieldEncryptionExtension());
 
 // ── Middleware ─────────────────────────────────────────────────────────────────
 // Define helmet policies. We must specify a very permissive CSP because LiveKit needs WS connections, 
@@ -135,7 +136,7 @@ const getFriendIds = async (userId: string): Promise<string[]> => {
         where: { userId },
         select: { friendId: true },
     });
-    return friendships.map(f => f.friendId);
+    return friendships.map((f: any) => f.friendId);
 };
 app.get('/health', async (_req, res) => {
     try {
@@ -286,7 +287,7 @@ io.on('connection', async (socket) => {
                 take: 50,
             });
 
-            const formatted = history.map(m => ({
+            const formatted = history.map((m: any) => ({
                 id: m.id,
                 userId: m.userId,
                 name: m.userName,
@@ -335,7 +336,7 @@ io.on('connection', async (socket) => {
                 userName: message.name,
                 text: clean,
             },
-        }).catch(err => console.error('[WS] Failed to persist message:', err));
+        }).catch((err: any) => console.error('[WS] Failed to persist message:', err));
 
         // Broadcast to everyone in the room (including sender)
         io.to(roomId).emit('chat:message', message);
