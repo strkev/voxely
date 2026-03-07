@@ -154,6 +154,7 @@ body {
   position: relative;
   width: 100% !important;
   height: 100% !important;
+  background: transparent !important;
   border: 3px solid transparent !important;
   box-sizing: border-box !important;
 }
@@ -164,6 +165,12 @@ body {
   height: 100% !important;
   object-fit: contain !important;
   background: #111;
+  transition: opacity 0.3s ease;
+}
+
+/* Hide the video element completely when muted so the background avatar shows through */
+.lk-custom-tile-wrapper.is-muted video {
+  opacity: 0 !important;
 }
 
 /* Screen share: same contain behavior with pure black bg */

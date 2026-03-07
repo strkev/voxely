@@ -12,6 +12,7 @@ import {
     useTracks,
     useRoomContext,
     useIsSpeaking,
+    useIsMuted,
     TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
@@ -100,6 +101,7 @@ function SpotlightableTile({
     const participantName = trackRef?.participant?.name || trackRef?.participant?.identity || 'Unknown';
     const initial = participantName.charAt(0).toUpperCase();
     const isCameraTrack = trackRef?.source === Track.Source.Camera;
+    const isMuted = useIsMuted(trackRef as TrackReferenceOrPlaceholder);
 
     const localUser = useAuthStore(s => s.user);
     let userColor = '#FF5A5F';
@@ -125,6 +127,8 @@ function SpotlightableTile({
                 '--user-color': userColor
             } as React.CSSProperties}
         >
+            {/* HINTERGRUND-AVATAR: Liegt unter dem Video (z-0). 
+                Wird als Fallback gerendert. */}
             {isCameraTrack && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 bg-[#111] rounded-[16px]">
                     <div
@@ -136,11 +140,35 @@ function SpotlightableTile({
                 </div>
             )}
 
-            <div className="relative w-full h-full z-10">
+            {/* LIVEKIT TILE: Wird in z-10 gewrappt */}
+            <div className={`relative w-full h-full z-10 lk-custom-tile-wrapper ${isMuted ? 'is-muted' : ''}`}>
                 <ParticipantTile trackRef={trackRef} />
             </div>
 
-            {/* Spotlight Buttons/Badges bleiben gleich ... */}
+            {/* Spotlight toggle — auf z-20 erhöht, damit es über dem Video bleibt */}
+            {onSpotlight && (
+                <button
+                    onClick={() => onSpotlight(isSpotlit ? null : (trackRef ?? null))}
+                    title={isSpotlit ? 'Spotlight entfernen' : 'Spotlight'}
+                    className={`
+                        absolute top-2 right-2 z-20 p-1.5 rounded-lg backdrop-blur-md
+                        transition-all duration-200
+                        ${isSpotlit
+                            ? 'bg-amber-400/90 text-white opacity-100 shadow-md'
+                            : 'bg-black/40 text-white/70 opacity-0 group-hover:opacity-100 hover:bg-black/60'}
+                    `}
+                >
+                    <Star className={`w-4 h-4 ${isSpotlit ? 'fill-white' : ''}`} />
+                </button>
+            )}
+
+            {/* Spotlight badge when pinned */}
+            {isSpotlit && (
+                <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-amber-400/90 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm pointer-events-none">
+                    <Star className="w-3 h-3 fill-white" />
+                    Spotlight
+                </div>
+            )}
         </div>
     );
 }
