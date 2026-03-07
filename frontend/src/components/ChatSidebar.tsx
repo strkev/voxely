@@ -72,6 +72,8 @@ interface ChatSidebarProps {
     onToggle: () => void;
     unreadCount: number;
     onRead: () => void;
+    width?: number;
+    onWidthChange?: (width: number) => void;
 }
 
 // ── ChatSidebar ───────────────────────────────────────────────────────────────
@@ -84,12 +86,43 @@ export function ChatSidebar({
     onToggle,
     unreadCount,
     onRead,
+    width = 320,
+    onWidthChange,
 }: ChatSidebarProps) {
     const [draft, setDraft] = useState('');
     const bottomRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [isAtBottom, setIsAtBottom] = useState(true);
+    const [isResizing, setIsResizing] = useState(false);
+
+    useEffect(() => {
+        if (!isResizing) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!onWidthChange) return;
+            const newWidth = window.innerWidth - e.clientX;
+            // Min 320px, max 80% of window width
+            const clampedWidth = Math.max(320, Math.min(newWidth, window.innerWidth * 0.8));
+            onWidthChange(clampedWidth);
+        };
+
+        const handleMouseUp = () => {
+            setIsResizing(false);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
+        // Prevent body text selection while resizing
+        document.body.style.userSelect = 'none';
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.userSelect = '';
+        };
+    }, [isResizing, onWidthChange]);
 
     // 3 lines × (14px font × 1.625 leading) ≈ 68px
     const MAX_HEIGHT_PX = 68;
@@ -173,12 +206,23 @@ export function ChatSidebar({
             )}
             <div
                 className={`
-                    fixed top-16 right-0 bottom-0 w-full sm:w-80 z-30
+                    fixed top-16 right-0 bottom-0 w-full z-30
                     flex flex-col
                     bg-[#F7F7F7] border-l border-gray-200
                     ${isOpen ? 'block' : 'hidden'}
                 `}
+                style={{
+                    width: isOpen && typeof window !== 'undefined' && window.innerWidth >= 640 ? `${width}px` : undefined
+                }}
             >
+                {/* Drag Handle */}
+                <div
+                    className="hidden sm:block absolute top-0 left-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 z-40 transition-colors -ml-1.5"
+                    onMouseDown={(e) => {
+                        e.preventDefault();
+                        setIsResizing(true);
+                    }}
+                />
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white shrink-0">
                     <div className="flex items-center gap-2">

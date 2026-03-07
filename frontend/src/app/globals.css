@@ -193,6 +193,17 @@ body {
   text-overflow: ellipsis;
   display: flex;
   align-items: center;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Ensure specific LiveKit child elements don't show duplicate background boxes */
+.lk-participant-name,
+.lk-participant-metadata>* {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 
 /* Hide the LiveKit connection quality indicator */

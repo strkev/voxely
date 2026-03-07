@@ -638,6 +638,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     // ── Chat state ────────────────────────────────────────────────────────────
     const [chatOpen, setChatOpen] = useState(false);
+    const [chatSidebarWidth, setChatSidebarWidth] = useState(320);
     const [unread, setUnread] = useState(0);
     const [copied, setCopied] = useState(false);
     const { videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression, screenShareResolution, screenShareFps } = useSettingsStore();
@@ -818,7 +819,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     return (
         <div
             className="fixed inset-0 top-16 bg-gray-950 overflow-hidden transition-[padding-right] duration-300"
-            style={{ paddingRight: chatOpen && typeof window !== 'undefined' && window.innerWidth >= 640 ? '320px' : '0px' }}
+            style={{ paddingRight: chatOpen && typeof window !== 'undefined' && window.innerWidth >= 640 ? `${chatSidebarWidth}px` : '0px' }}
         >
             {/* Top bar */}
             <div className="absolute top-3 left-0 right-0 z-10 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-x-auto scrollbar-hide">
@@ -868,6 +869,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     onToggle={() => setChatOpen(o => !o)}
                     unreadCount={unread}
                     onRead={handleRead}
+                    width={chatSidebarWidth}
+                    onWidthChange={setChatSidebarWidth}
                 />
 
                 <button
