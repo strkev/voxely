@@ -1488,6 +1488,12 @@ body {
   border-color: #E0607A !important;
 }
 
+/* Ensure active device in device selection menu retains its accent color in dark mode */
+.dark .lk-media-device-select [data-lk-active="true"]>.lk-button {
+  background-color: var(--lk-accent-bg) !important;
+  color: var(--lk-accent-fg) !important;
+}
+
 /* Speaking border — use dark primary */
 .dark .lk-participant-tile[data-lk-speaking="true"]:not([data-lk-source="screen_share"]):not(.lk-screen-share-tile) {
   border-color: var(--user-color, #FF5A5F) !important;
