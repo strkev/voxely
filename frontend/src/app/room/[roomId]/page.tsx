@@ -97,7 +97,7 @@ function SpotlightableTile({
     const isSpeaking = useIsSpeaking(trackRef?.participant ?? undefined);
     const isScreenShare = trackRef?.source === Track.Source.ScreenShare;
 
-    const participantName = trackRef?.participant?.name || trackRef?.participant?.identity || '?';
+    const participantName = trackRef?.participant?.name || trackRef?.participant?.identity || 'Unknown';
     const initial = participantName.charAt(0).toUpperCase();
     const isCameraTrack = trackRef?.source === Track.Source.Camera;
 
