@@ -97,11 +97,9 @@ function SpotlightableTile({
     const isSpeaking = useIsSpeaking(trackRef?.participant ?? undefined);
     const isScreenShare = trackRef?.source === Track.Source.ScreenShare;
 
-    const glowStyle = (isSpeaking && !isScreenShare) ? {
-        //boxShadow: '0 0 0 2.5px #FF5A5F, 0 0 18px 4px rgba(255,90,95,0.55), inset 0 0 14px 2px rgba(255,90,95,0.30)',
-    } : undefined;
 
-    const participantName = trackRef?.participant?.name || trackRef?.participant?.identity || '?';
+
+    const participantName = trackRef?.participant?.name || trackRef?.participant?.identity || '';
     const initial = participantName.charAt(0).toUpperCase();
     const isCameraTrack = trackRef?.source === Track.Source.Camera;
 
@@ -109,14 +107,14 @@ function SpotlightableTile({
         <div
             className={`relative w-full h-full group rounded-[16px] transition-shadow duration-200 ${isScreenShare ? 'lk-screen-share-tile' : ''}`}
             // containerType sorgt dafür, dass sich der Avatar dynamisch an die Kachelbreite anpasst
-            style={{ ...glowStyle, containerType: 'inline-size' }}
+            style={{ containerType: 'inline-size' }}
         >
             {/* HINTERGRUND-AVATAR: Liegt unter dem Video (z-0). 
                 Wird sichtbar, sobald LiveKit das Video bei gemuteter Kamera ausblendet. */}
             {isCameraTrack && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 bg-[#111] rounded-[16px]">
                     <div
-                        className="w-[32%] max-w-[120px] min-w-[40px] aspect-square rounded-full bg-primary text-white flex items-center justify-center font-bold shadow-md"
+                        className={`w-[32%] max-w-[120px] min-w-[40px] aspect-square rounded-full bg-primary text-white flex items-center justify-center font-bold shadow-md transition-transform duration-200 ${isSpeaking ? 'avatar-speaking' : ''}`}
                         // cqw = Container Query Width -> Schriftgröße wächst mit der Karte!
                         style={{ fontSize: 'clamp(18px, 12cqw, 54px)' }}
                     >
