@@ -12,13 +12,14 @@ import {
     ParticipantTile,
     useTracks,
     useRoomContext,
+    useLocalParticipant,
     useIsSpeaking,
     useIsMuted,
     TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { Track } from 'livekit-client';
-import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, Mic, Users, ScreenShare, LogOut, Moon, Lock, Unlock } from 'lucide-react';
+import { Track, LocalTrackPublication } from 'livekit-client';
+import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, Mic, Users, ScreenShare, LogOut, Moon, Lock, Unlock, Image as ImageIcon } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
@@ -26,6 +27,7 @@ import { playSound } from '@/lib/sounds';
 import { NoiseSuppressionProcessor } from '@/lib/rnnoise-processor';
 import { FriendsSidebar } from '@/components/FriendsSidebar';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
+import { VirtualBackgroundModal } from '@/components/VirtualBackgroundModal';
 import { RoomInviteBanner } from '@/components/RoomInviteBanner';
 import { useFriendsSocket } from '@/hooks/useFriendsSocket';
 import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
@@ -256,7 +258,7 @@ const QUALITY_OPTIONS: VideoQuality[] = ['360p', '720p', '1080p', '1440p', '4K']
 const SCREEN_RES_OPTIONS: ScreenShareResolution[] = ['720p', '1080p', '1440p', '4K', 'Source'];
 const SCREEN_FPS_OPTIONS: ScreenShareFps[] = [5, 15, 30, 60];
 
-function InRoomSettings({ onClose }: { onClose: () => void }) {
+function InRoomSettings({ onClose, onOpenVirtualBackground }: { onClose: () => void, onOpenVirtualBackground: () => void }) {
     const {
         soundsEnabled, soundVolume, videoQuality, showDevInfo, autoHideControlBar, noiseSuppression,
         screenShareResolution, screenShareFps, theme, setTheme,
@@ -306,6 +308,26 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
                         </button>
                     </div>
                     <p className="text-[10px] text-text-muted mt-1">AI-powered background noise removal (RNNoise)</p>
+                </div>
+
+                {/* Virtual Background */}
+                <div className="px-6 py-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4 text-text-muted" />
+                            <span className="text-sm font-medium text-text-main">Virtual Background</span>
+                        </div>
+                        <button
+                            onClick={() => {
+                                onClose();
+                                onOpenVirtualBackground();
+                            }}
+                            className="bg-gray-100 hover:bg-gray-200 text-text-main px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                        >
+                            Configure
+                        </button>
+                    </div>
+                    <p className="text-[10px] text-text-muted mt-1">Blur your background or use a custom image.</p>
                 </div>
 
                 {/* Camera Quality */}
@@ -584,6 +606,132 @@ function NoiseSuppressionHook({
     return null;
 }
 
+// ─── Background Quick Action Button ───────────────────────────────────────────
+function BackgroundQuickActionButton({ onOpen }: { onOpen: () => void }) {
+    const { isCameraEnabled } = useLocalParticipant();
+    
+    if (!isCameraEnabled) return null;
+
+    return (
+        <button
+            onClick={onOpen}
+            aria-label="Background Settings"
+            title="Quick Background Settings"
+            className="shrink-0 hidden sm:flex items-center justify-center bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 transition-all duration-150 backdrop-blur-md shadow-sm"
+        >
+            <ImageIcon className="w-4 h-4" />
+        </button>
+    );
+}
+
+// ─── Virtual Background Hook ──────────────────────────────────────────────────
+function VirtualBackgroundHook({
+    processorRef,
+    bgOption,
+    bgImage,
+    blurRadius,
+}: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    processorRef: React.MutableRefObject<any>;
+    bgOption: 'none' | 'blur' | 'image';
+    bgImage: string | null;
+    blurRadius: number;
+}) {
+    const room = useRoomContext();
+    const lastTrackSidRef = useRef<string | undefined>(undefined);
+
+    useEffect(() => {
+        const localP = room.localParticipant;
+
+        const applyBackground = async () => {
+            // Find the published camera track
+            const camPub = Array.from(localP.videoTrackPublications.values()).find(
+                (p) => p.source === Track.Source.Camera && p.track
+            );
+            const camTrack = camPub?.videoTrack;
+            
+            if (!camTrack || camTrack.mediaStreamTrack.readyState !== 'live') {
+                lastTrackSidRef.current = undefined;
+                return;
+            }
+
+            // DIMENSION CHECK: Wait for track resolution to be known (means frames are flowing)
+            if (!camTrack.dimensions) {
+                console.log('[VirtualBackground] Waiting for track dimensions...');
+                setTimeout(applyBackground, 300);
+                return;
+            }
+
+            try {
+                // If the track SID changed, we MUST recreate the processor to avoid WebGL context issues
+                if (lastTrackSidRef.current !== camTrack.sid) {
+                    console.log('[VirtualBackground] Track changed. Recreating processor for:', camTrack.sid);
+                    
+                    if (processorRef.current) {
+                        try {
+                            await processorRef.current.destroy();
+                        } catch (e) {
+                            console.warn('[VirtualBackground] Error destroying old processor:', e);
+                        }
+                        processorRef.current = null;
+                    }
+
+                    const { BackgroundProcessor } = await import('@livekit/track-processors');
+                    processorRef.current = BackgroundProcessor({ mode: 'disabled' });
+                    
+                    await camTrack.setProcessor(processorRef.current);
+                    lastTrackSidRef.current = camTrack.sid;
+                }
+
+                if (!processorRef.current) return;
+
+                // Switch to the correct mode
+                if (bgOption === 'none') {
+                    await processorRef.current.switchTo({ mode: 'disabled' });
+                } else if (bgOption === 'blur') {
+                    await processorRef.current.switchTo({ mode: 'background-blur', blurRadius });
+                } else if (bgOption === 'image' && bgImage) {
+                    await processorRef.current.switchTo({ mode: 'virtual-background', imagePath: bgImage });
+                }
+            } catch (err) {
+                console.error('[VirtualBackground] Failed to apply:', err);
+                // Reset on error so we try again next time
+                lastTrackSidRef.current = undefined;
+            }
+        };
+
+        applyBackground();
+
+        const handleTrackPublished = (pub: LocalTrackPublication) => {
+            if (pub.source === Track.Source.Camera) {
+                // Larger delay to let the track fully initialize and avoid "no video frame" error
+                // Especially important during quality switches where the underlying stream changes
+                setTimeout(applyBackground, 1200);
+            }
+        };
+
+        localP.on('localTrackPublished', handleTrackPublished);
+
+        return () => {
+            localP.off('localTrackPublished', handleTrackPublished);
+        };
+    }, [room, bgOption, bgImage, blurRadius, processorRef]);
+
+    // Final cleanup when component unmounts
+    useEffect(() => {
+        return () => {
+            if (processorRef.current) {
+                console.log('[VirtualBackground] Cleaning up processor on unmount');
+                processorRef.current.destroy().catch(() => {});
+                processorRef.current = null;
+                lastTrackSidRef.current = undefined;
+            }
+        };
+    }, [processorRef]);
+
+    return null;
+}
+
 // ─── Video grid ───────────────────────────────────────────────────────────────
 function CustomVideoConference() {
     useRoomSounds();
@@ -696,9 +844,12 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [chatSidebarWidth, setChatSidebarWidth] = useState(320);
     const [unread, setUnread] = useState(0);
     const [copied, setCopied] = useState(false);
-    const { videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression, screenShareFps } = useSettingsStore();
+    const { videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius } = useSettingsStore();
     const noiseProcessorRef = useRef<NoiseSuppressionProcessor | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const bgProcessorRef = useRef<any>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [virtualBackgroundOpen, setVirtualBackgroundOpen] = useState(false);
     const [showFriendsModal, setShowFriendsModal] = useState(false);
     const [friendsSidebarOpen, setFriendsSidebarOpen] = useState(false);
     const [toastMessage, setToastMessage] = useState<{ id: string; name: string; text: string } | null>(null);
@@ -745,11 +896,13 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         return () => clearTimeout(timer);
     }, [autoHideControlBar, controlBarVisible, setControlBarVisible]);
 
-    // Clean up noise processor on unmount
+    // Clean up processors on unmount
     useEffect(() => {
         return () => {
             noiseProcessorRef.current?.destroy();
             noiseProcessorRef.current = null;
+            bgProcessorRef.current?.destroy();
+            bgProcessorRef.current = null;
         };
     }, []);
 
@@ -919,78 +1072,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             className="fixed inset-0 top-16 bg-gray-950 overflow-hidden transition-[padding-right] duration-300"
             style={{ paddingRight: chatOpen && typeof window !== 'undefined' && window.innerWidth >= 640 ? `${chatSidebarWidth}px` : '0px' }}
         >
-            {/* Top bar */}
-            <div className="absolute top-3 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-x-auto scrollbar-hide">
-                {/* Friends toggle button */}
-                <button
-                    onClick={() => setFriendsSidebarOpen(o => !o)}
-                    aria-label="Friends"
-                    className={`shrink-0 flex items-center gap-1.5 backdrop-blur-md border rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm ${friendsSidebarOpen
-                        ? 'bg-primary/90 hover:bg-primary border-primary/60 text-white'
-                        : 'bg-white/90 hover:bg-white border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary'
-                        }`}
-                >
-                    <Users className="w-4 h-4" />
-                    <span className="hidden sm:inline">Friends</span>
-                </button>
-
-                {/* Copy link button */}
-                <button
-                    onClick={handleCopyLink}
-                    aria-label="Copy room link"
-                    className="shrink-0 flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white border border-gray-800 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm"
-                >
-                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Link2 className="w-4 h-4" />}
-                    <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share'}</span>
-                </button>
-
-                <div className="flex-1 min-w-[8px]" />
-
-                {/* Open Room Status Indicator */}
-                <button
-                    onClick={() => handleToggleOpenRoom(!isRoomOpen)}
-                    title={isRoomOpen ? 'Room is open to friends (click to close)' : 'Room is closed (click to open)'}
-                    className={`shrink-0 flex items-center gap-1.5 px-3 py-2.5 sm:px-4 sm:py-2.5 rounded-2xl text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm border ${isRoomOpen ? 'bg-primary/10 hover:bg-primary/20 text-primary border-primary/20 hover:border-primary/40' : 'bg-white/90 hover:bg-white text-text-muted hover:text-primary border-[rgba(220,220,220,0.85)] hover:border-primary/40'}`}
-                >
-                    {isRoomOpen ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                </button>
-
-                {/* Settings gear */}
-                <button
-                    onClick={() => setSettingsOpen(true)}
-                    aria-label="Settings"
-                    className="shrink-0 flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
-                >
-                    <Settings className="w-4 h-4" />
-                    <span className="hidden sm:inline">Settings</span>
-                </button>
-
-                {/* Chat toggle button lives inside ChatSidebar */}
-                <ChatSidebar
-                    roomId={roomId}
-                    currentUserId={user?.id ?? ''}
-                    messages={messages}
-                    typingUsers={typingUsers}
-                    sendMessage={sendMessage}
-                    sendTyping={sendTyping}
-                    connected={chatConnected}
-                    isOpen={chatOpen}
-                    onToggle={() => setChatOpen(o => !o)}
-                    unreadCount={unread}
-                    onRead={handleRead}
-                    width={chatSidebarWidth}
-                    onWidthChange={setChatSidebarWidth}
-                />
-
-                <button
-                    onClick={() => requestLeave('/dashboard')}
-                    className="shrink-0 flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
-                >
-                    <LogOut className="w-4 h-4" />
-                    <span className="hidden sm:inline">Leave</span>
-                </button>
-            </div>
-
             <LiveKitRoom
                 video={false}
                 audio={false}
@@ -1017,10 +1098,87 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     },
                 }}
             >
+                {/* Top bar */}
+                <div className="absolute top-3 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-x-auto scrollbar-hide">
+                    {/* Friends toggle button */}
+                    <button
+                        onClick={() => setFriendsSidebarOpen(o => !o)}
+                        aria-label="Friends"
+                        className={`shrink-0 flex items-center gap-1.5 backdrop-blur-md border rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm ${friendsSidebarOpen
+                            ? 'bg-primary/90 hover:bg-primary border-primary/60 text-white'
+                            : 'bg-white/90 hover:bg-white border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary'
+                            }`}
+                    >
+                        <Users className="w-4 h-4" />
+                        <span className="hidden sm:inline">Friends</span>
+                    </button>
+
+                    {/* Copy link button */}
+                    <button
+                        onClick={handleCopyLink}
+                        aria-label="Copy room link"
+                        className="shrink-0 flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white border border-gray-800 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm"
+                    >
+                        {copied ? <Check className="w-4 h-4 text-green-400" /> : <Link2 className="w-4 h-4" />}
+                        <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share'}</span>
+                    </button>
+
+                    <div className="flex-1 min-w-[8px]" />
+
+                    {/* Open Room Status Indicator */}
+                    <button
+                        onClick={() => handleToggleOpenRoom(!isRoomOpen)}
+                        title={isRoomOpen ? 'Room is open to friends (click to close)' : 'Room is closed (click to open)'}
+                        className={`shrink-0 flex items-center gap-1.5 px-3 py-2.5 sm:px-4 sm:py-2.5 rounded-2xl text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm border ${isRoomOpen ? 'bg-primary/10 hover:bg-primary/20 text-primary border-primary/20 hover:border-primary/40' : 'bg-white/90 hover:bg-white text-text-muted hover:text-primary border-[rgba(220,220,220,0.85)] hover:border-primary/40'}`}
+                    >
+                        {isRoomOpen ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                    </button>
+
+                    {/* Background gear (Quick Action) - Only show if camera is on */}
+                    {typeof window !== 'undefined' && (
+                        <BackgroundQuickActionButton onOpen={() => setVirtualBackgroundOpen(true)} />
+                    )}
+
+                    {/* Settings gear */}
+                    <button
+                        onClick={() => setSettingsOpen(true)}
+                        aria-label="Settings"
+                        className="shrink-0 flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
+                    >
+                        <Settings className="w-4 h-4" />
+                        <span className="hidden sm:inline">Settings</span>
+                    </button>
+
+                    {/* Chat toggle button lives inside ChatSidebar */}
+                    <ChatSidebar
+                        roomId={roomId}
+                        currentUserId={user?.id ?? ''}
+                        messages={messages}
+                        typingUsers={typingUsers}
+                        sendMessage={sendMessage}
+                        sendTyping={sendTyping}
+                        connected={chatConnected}
+                        isOpen={chatOpen}
+                        onToggle={() => setChatOpen(o => !o)}
+                        unreadCount={unread}
+                        onRead={handleRead}
+                        width={chatSidebarWidth}
+                        onWidthChange={setChatSidebarWidth}
+                    />
+
+                    <button
+                        onClick={() => requestLeave('/dashboard')}
+                        className="shrink-0 flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        <span className="hidden sm:inline">Leave</span>
+                    </button>
+                </div>
                 <AutoStartAudio />
                 <ChevronRotationFix />
                 <LiveVideoQualitySync />
                 <NoiseSuppressionHook processorRef={noiseProcessorRef} enabled={noiseSuppression} />
+                <VirtualBackgroundHook processorRef={bgProcessorRef} bgOption={virtualBackground} bgImage={virtualBackgroundImage} blurRadius={blurRadius} />
                 <CustomVideoConference />
                 <RoomAudioRenderer />
                 {showDevInfo && <DevInfoOverlay />}
@@ -1062,7 +1220,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 )}
             </LiveKitRoom>
 
-            {settingsOpen && <InRoomSettings onClose={() => setSettingsOpen(false)} />}
+            {settingsOpen && <InRoomSettings onClose={() => setSettingsOpen(false)} onOpenVirtualBackground={() => setVirtualBackgroundOpen(true)} />}
+            {virtualBackgroundOpen && <VirtualBackgroundModal onClose={() => setVirtualBackgroundOpen(false)} />}
 
             {/* Friends Sidebar — toggle overlay */}
             {friendsSidebarOpen && (

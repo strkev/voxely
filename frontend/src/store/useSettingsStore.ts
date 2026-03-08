@@ -30,6 +30,9 @@ interface SettingsState {
     controlBarVisible: boolean;
     autoHideControlBar: boolean;
     noiseSuppression: boolean;
+    virtualBackground: 'none' | 'blur' | 'image';
+    virtualBackgroundImage: string | null;
+    blurRadius: number;
     theme: 'light' | 'dark';
     setSoundsEnabled: (v: boolean) => void;
     setSoundVolume: (v: number) => void;
@@ -40,6 +43,9 @@ interface SettingsState {
     setControlBarVisible: (v: boolean) => void;
     setAutoHideControlBar: (v: boolean) => void;
     setNoiseSuppression: (v: boolean) => void;
+    setVirtualBackground: (v: 'none' | 'blur' | 'image') => void;
+    setVirtualBackgroundImage: (v: string | null) => void;
+    setBlurRadius: (v: number) => void;
     setTheme: (v: 'light' | 'dark') => void;
 }
 
@@ -55,6 +61,9 @@ export const useSettingsStore = create<SettingsState>()(
             controlBarVisible: true,
             autoHideControlBar: false,
             noiseSuppression: false,
+            virtualBackground: 'none',
+            virtualBackgroundImage: null,
+            blurRadius: 10,
             theme: 'light',
             setSoundsEnabled: (v) => set({ soundsEnabled: v }),
             setSoundVolume: (v) => set({ soundVolume: Math.max(0, Math.min(1, v)) }),
@@ -65,6 +74,9 @@ export const useSettingsStore = create<SettingsState>()(
             setControlBarVisible: (v) => set({ controlBarVisible: v }),
             setAutoHideControlBar: (v) => set({ autoHideControlBar: v }),
             setNoiseSuppression: (v) => set({ noiseSuppression: v }),
+            setVirtualBackground: (v) => set({ virtualBackground: v }),
+            setVirtualBackgroundImage: (v) => set({ virtualBackgroundImage: v }),
+            setBlurRadius: (v) => set({ blurRadius: v }),
             setTheme: (v) => set({ theme: v }),
         }),
         { name: 'user-settings' }

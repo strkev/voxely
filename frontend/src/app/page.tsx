@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Video, Mic, Users, LogIn, UserPlus, LayoutDashboard, Plus } from "lucide-react";
+import { Video, Mic, Users, LogIn, UserPlus } from "lucide-react";
 
 import Image from "next/image";
 
