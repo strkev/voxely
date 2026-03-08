@@ -170,7 +170,7 @@ function SpotlightableTile({
                         transition-all duration-200
                         ${isSpotlit
                             ? 'bg-amber-400/90 text-white opacity-100 shadow-md'
-                            : 'bg-black/40 text-white/70 opacity-0 group-hover:opacity-100 hover:bg-black/60'}
+                            : 'bg-black/40 text-white/70 opacity-100 hover:bg-black/60 hover:text-white'}
                     `}
                 >
                     <Star className={`w-4 h-4 ${isSpotlit ? 'fill-white' : ''}`} />
@@ -873,7 +873,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             style={{ paddingRight: chatOpen && typeof window !== 'undefined' && window.innerWidth >= 640 ? `${chatSidebarWidth}px` : '0px' }}
         >
             {/* Top bar */}
-            <div className="absolute top-3 left-0 right-0 z-10 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-x-auto scrollbar-hide">
+            <div className="absolute top-3 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-x-auto scrollbar-hide">
                 {/* Friends toggle button */}
                 <button
                     onClick={() => setFriendsSidebarOpen(o => !o)}
@@ -970,7 +970,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 {/* Collapsible control bar */}
                 {controlBarVisible ? (
                     <div
-                        className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-20 transition-opacity duration-200 ${chatOpen ? 'max-sm:opacity-0 max-sm:pointer-events-none' : ''}`}
+                        className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-40 transition-opacity duration-200 ${chatOpen ? 'max-sm:opacity-0 max-sm:pointer-events-none' : ''}`}
                         onMouseEnter={() => {
                             if (autoHideControlBar) {
                                 // Reset timer on hover
@@ -995,7 +995,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 ) : (
                     <button
                         onClick={() => setControlBarVisible(true)}
-                        className={`fixed bottom-3 left-1/2 -translate-x-1/2 z-20 bg-white/80 hover:bg-white backdrop-blur-md border border-white/60 rounded-full shadow-lg p-2 transition-all duration-200 hover:scale-105 ${chatOpen ? 'max-sm:opacity-0 max-sm:pointer-events-none' : ''}`}
+                        className={`fixed bottom-3 left-1/2 -translate-x-1/2 z-40 bg-white/80 hover:bg-white backdrop-blur-md border border-white/60 rounded-full shadow-lg p-2 transition-all duration-200 hover:scale-105 ${chatOpen ? 'max-sm:opacity-0 max-sm:pointer-events-none' : ''}`}
                         title="Show controls"
                     >
                         <ChevronUp className="w-4 h-4 text-text-main" />
@@ -1010,11 +1010,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 <>
                     {/* Invisible backdrop to capture outside clicks */}
                     <div
-                        className="fixed inset-0 z-20 bg-transparent"
+                        className="fixed inset-0 z-40 bg-transparent"
                         onClick={() => setFriendsSidebarOpen(false)}
                     />
                     {/* Wrapper with !static and !h-full to prevent Mobile Safari from shifting the sticky sidebar upwards and hiding its header */}
-                    <div className="fixed top-16 left-0 bottom-0 z-30 [&_.friends-sidebar]:!static [&_.friends-sidebar]:!h-full">
+                    <div className="fixed top-16 left-0 bottom-0 z-50 [&_.friends-sidebar]:!static [&_.friends-sidebar]:!h-full">
                         <FriendsSidebar
                             currentRoomId={roomId}
                             onInvite={handleInviteFriend}
