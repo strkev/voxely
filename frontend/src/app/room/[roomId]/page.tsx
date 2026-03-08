@@ -697,6 +697,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [showFriendsModal, setShowFriendsModal] = useState(false);
     const [friendsSidebarOpen, setFriendsSidebarOpen] = useState(false);
+    const [toastMessage, setToastMessage] = useState<{ id: string; name: string; text: string } | null>(null);
+    const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
     const qPreset = VIDEO_PRESETS[videoQuality];
 
     // Friends socket
@@ -758,10 +760,27 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const prevLengthRef = React.useRef(0);
     useEffect(() => {
         if (messages.length > prevLengthRef.current) {
-            if (!chatOpen) setUnread(u => u + (messages.length - prevLengthRef.current));
+            if (!chatOpen) {
+                setUnread(u => u + (messages.length - prevLengthRef.current));
+                
+                // Show visual toast
+                const latestMsg = messages[messages.length - 1];
+                if (latestMsg.userId !== user?.id) {
+                    setToastMessage({
+                        id: latestMsg.id,
+                        name: latestMsg.name,
+                        text: latestMsg.text
+                    });
+                    
+                    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                    toastTimerRef.current = setTimeout(() => {
+                        setToastMessage(null);
+                    }, 4000);
+                }
+            }
         }
         prevLengthRef.current = messages.length;
-    }, [messages.length, chatOpen]);
+    }, [messages, chatOpen, user?.id]);
 
     const handleRead = useCallback(() => setUnread(0), []);
 
@@ -1080,6 +1099,35 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             {showFriendsModal && (
                 <FriendRequestsModal onClose={() => setShowFriendsModal(false)} />
             )}
+
+            {/* Message Toast Notification */}
+            <div 
+                className={`
+                    fixed top-[120px] z-50 transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]
+                    ${toastMessage ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8 pointer-events-none'}
+                `}
+                style={{
+                    right: chatOpen && typeof window !== 'undefined' && window.innerWidth >= 640 ? `${chatSidebarWidth + 16}px` : '16px'
+                }}
+            >
+                {toastMessage && (
+                    <button
+                        onClick={() => {
+                            setChatOpen(true);
+                            setToastMessage(null);
+                        }}
+                        className="flex flex-col gap-1 items-start bg-white/95 backdrop-blur-xl border border-[rgba(220,220,220,0.85)] rounded-2xl p-4 shadow-xl max-w-[300px] hover:border-primary/40 hover:shadow-primary/5 transition-all text-left"
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
+                            <span className="text-xs font-semibold text-text-main truncate">{toastMessage.name}</span>
+                        </div>
+                        <p className="text-sm text-text-muted line-clamp-2 leading-relaxed break-words w-full">
+                            {toastMessage.text}
+                        </p>
+                    </button>
+                )}
+            </div>
         </div>
     );
 }
