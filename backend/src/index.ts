@@ -454,6 +454,14 @@ io.on('connection', async (socket) => {
     // ── room:set-open — toggle room visibility ────────────────────────────────
     socket.on('room:set-open', async ({ roomId, isOpen, roomName }: { roomId: string; isOpen: boolean; roomName: string }) => {
         if (typeof roomId !== 'string' || !ROOM_ID_RE.test(roomId)) return;
+
+        // Security Check: Verify user is tracked as actively in this room
+        const userId = socket.data.userId as string;
+        if (userRooms.get(userId) !== roomId) {
+            socket.emit('chat:error', { message: 'Unauthorized: You are not in this room.' });
+            return;
+        }
+
         const cleanRoomName = stripHtml(typeof roomName === 'string' ? roomName : '').slice(0, 100) || roomId;
 
         if (isOpen) {
