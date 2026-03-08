@@ -200,7 +200,7 @@ export default function DashboardPage() {
                                             {participantFriends.slice(0, 5).map(f => (
                                                 <div 
                                                     key={f.id} 
-                                                    className="shrink-0 relative flex h-8 w-8 rounded-full ring-2 ring-white items-center justify-center text-xs font-bold"
+                                                    className="shrink-0 relative flex h-8 w-8 rounded-full items-center justify-center text-xs font-bold"
                                                     style={{ backgroundColor: f.avatarColor || '#FF5A5F', color: getContrastColor(f.avatarColor || '#FF5A5F') }}
                                                     title={f.name}
                                                 >
@@ -208,7 +208,7 @@ export default function DashboardPage() {
                                                 </div>
                                             ))}
                                             {participantFriends.length > 5 && (
-                                                <div className="shrink-0 relative flex h-8 w-8 rounded-full ring-2 ring-white bg-gray-100 items-center justify-center text-xs font-bold text-gray-600">
+                                                <div className="shrink-0 relative flex h-8 w-8 rounded-full bg-gray-100 items-center justify-center text-xs font-bold text-gray-600 border border-gray-200">
                                                     +{participantFriends.length - 5}
                                                 </div>
                                             )}
