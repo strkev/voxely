@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback, KeyboardEvent } from 'react';
-import { MessageSquare, X, ChevronRight, ChevronDown, Send } from 'lucide-react';
+import { MessageSquare, ChevronRight, ChevronDown, Send } from 'lucide-react';
 import { ChatMessage } from '@/hooks/useChatSocket';
 import DOMPurify from 'isomorphic-dompurify';
 

@@ -5,12 +5,17 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Video, Mic, Users, LogIn, UserPlus, LayoutDashboard, Plus } from "lucide-react";
 
+import Image from "next/image";
+
 export default function Home() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { 
+    const t = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(t);
+  }, []);
 
   // Avoid hydration mismatch — render nothing auth-specific until mounted
   if (!mounted) return null;
@@ -73,7 +78,7 @@ export default function Home() {
         </span>
 
         <div className="flex items-center gap-3 sm:gap-6 justify-center">
-          <img src="/logo.png" alt="Voxely Logo" className="w-16 h-16 sm:w-24 sm:h-24 object-contain" />
+          <Image src="/logo.png" alt="Voxely Logo" width={96} height={96} className="w-16 h-16 sm:w-24 sm:h-24 object-contain" />
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold text-text-main tracking-tight leading-[1.1]">
             Voxely
           </h1>

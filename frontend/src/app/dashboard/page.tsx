@@ -21,7 +21,7 @@ export default function DashboardPage() {
 
     const { user, token, isLoading } = useAuthStore();
     const router = useRouter();
-    const { friends, onlineUserIds, openRooms } = useFriendsStore();
+    const { friends, openRooms } = useFriendsStore();
 
     // Connect friends socket for online presence & invitations
     useFriendsSocket(token);
@@ -60,7 +60,6 @@ export default function DashboardPage() {
         router.push(`/room/${joinRoomId.trim()}`);
     };
 
-    const onlineFriends = friends.filter((friend: Friend) => onlineUserIds.has(friend.id));
     const getInitials = (name: string) => name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
 
     return (

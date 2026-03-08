@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useFriendsStore, Friend } from '@/store/useFriendsStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Search, UserPlus, X, UserMinus, Mail, ChevronLeft, Users, Check, Lock, Unlock } from 'lucide-react';
+import { Search, UserPlus, X, UserMinus, Mail, ChevronLeft, Check, Lock, Unlock } from 'lucide-react';
 import { getContrastColor } from '@/lib/colors';
 
 interface FriendsSidebarProps {

@@ -115,7 +115,7 @@ function SpotlightableTile({
             const meta = JSON.parse(trackRef.participant.metadata);
             if (meta.avatarColor) userColor = meta.avatarColor;
         }
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
 
     // Farbe aus dem Friends-Store überschreibt Metadaten (für Echtzeit-Updates)
     if (!trackRef?.participant?.isLocal && trackRef?.participant?.identity) {
@@ -692,7 +692,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [chatSidebarWidth, setChatSidebarWidth] = useState(320);
     const [unread, setUnread] = useState(0);
     const [copied, setCopied] = useState(false);
-    const { videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression, screenShareResolution, screenShareFps } = useSettingsStore();
+    const { videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression, screenShareFps } = useSettingsStore();
     const noiseProcessorRef = useRef<NoiseSuppressionProcessor | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [showFriendsModal, setShowFriendsModal] = useState(false);

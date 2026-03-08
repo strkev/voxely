@@ -14,7 +14,7 @@ export function RoomInviteBanner() {
 
     useEffect(() => {
         if (pendingInvitation) {
-            setVisible(true);
+            const st = setTimeout(() => setVisible(true), 0);
 
             // Auto-dismiss after 30 seconds
             const timer = setTimeout(() => {
@@ -22,9 +22,13 @@ export function RoomInviteBanner() {
                 setTimeout(clearInvitation, 300); // Wait for exit animation
             }, AUTO_DISMISS_MS);
 
-            return () => clearTimeout(timer);
+            return () => {
+                clearTimeout(st);
+                clearTimeout(timer);
+            };
         } else {
-            setVisible(false);
+            const t = setTimeout(() => setVisible(false), 0);
+            return () => clearTimeout(t);
         }
     }, [pendingInvitation, clearInvitation]);
 

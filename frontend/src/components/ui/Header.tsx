@@ -10,6 +10,7 @@ import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { UserSettingsModal } from '@/components/UserSettingsModal';
 import { useFriendsStore } from '@/store/useFriendsStore';
 import { getContrastColor } from '@/lib/colors';
+import Image from 'next/image';
 
 export function Header() {
     const { user, logout, deleteAccount } = useAuthStore();
@@ -27,7 +28,8 @@ export function Header() {
     const { active: leaveGuardActive, requestLeave } = useLeaveGuardStore();
 
     useEffect(() => {
-        setMounted(true);
+        const t = setTimeout(() => setMounted(true), 0);
+        return () => clearTimeout(t);
     }, []);
 
     // Close dropdown on outside click
@@ -74,12 +76,12 @@ export function Header() {
                         onClick={() => navigateOrGuard('/')}
                         className="text-xl font-semibold text-text-main flex items-center gap-2"
                     >
-                        <img src="/logo.png" alt="Voxely Logo" className="w-10 h-10 object-contain" />
+                        <Image src="/logo.png" alt="Voxely Logo" width={40} height={40} className="w-10 h-10 object-contain" />
                         Voxely
                     </button>
                 ) : (
                     <Link href="/" className="text-xl font-semibold text-text-main flex items-center gap-2">
-                        <img src="/logo.png" alt="Voxely Logo" className="w-10 h-10 object-contain" />
+                        <Image src="/logo.png" alt="Voxely Logo" width={40} height={40} className="w-10 h-10 object-contain" />
                         Voxely
                     </Link>
                 )}

@@ -6,6 +6,7 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { playSound } from '@/lib/sounds';
 import { PRESET_COLORS, getContrastColor } from '@/lib/colors';
+import { useFriendsSocket } from '@/hooks/useFriendsSocket';
 import { Volume2, VolumeX, Bell, ChevronLeft, Trash2, Pencil, Loader2, Check, Moon, Palette } from 'lucide-react';
 
 type SoundKey = 'join' | 'leave' | 'mute' | 'unmute' | 'cameraOn' | 'cameraOff' | 'screenShareOn' | 'screenShareOff';
@@ -29,6 +30,8 @@ export default function SettingsPage() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const router = useRouter();
+
+    useFriendsSocket(token);
 
     // Edit profile state
     const [editColor, setEditColor] = useState('#FF5A5F');
@@ -104,7 +107,6 @@ export default function SettingsPage() {
     };
 
     const needsCurrentPassword = newPassword.length > 0;
-    const isCustomColor = !PRESET_COLORS.includes(editColor.toUpperCase());
     return (
         <>
             <div className="flex-1 w-full max-w-2xl mx-auto px-4 py-10 sm:py-16">

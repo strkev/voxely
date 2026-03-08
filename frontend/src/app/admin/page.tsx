@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Trash2, Shield, Users, Loader2, Download } from "lucide-react";
 
 interface AdminUser {
@@ -20,7 +20,7 @@ export default function AdminPage() {
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-    const fetchUsers = async (adminSecret: string) => {
+    const fetchUsers = useCallback(async (adminSecret: string) => {
         setLoading(true);
         setError("");
         try {
@@ -37,7 +37,7 @@ export default function AdminPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [apiUrl]);
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
@@ -87,7 +87,7 @@ export default function AdminPage() {
         if (!authenticated) return;
         const interval = setInterval(() => fetchUsers(secret), 30000);
         return () => clearInterval(interval);
-    }, [authenticated, secret]);
+    }, [authenticated, secret, fetchUsers]);
 
     /* ── LOGIN GATE ─────────────────────────────────────────── */
     if (!authenticated) {
