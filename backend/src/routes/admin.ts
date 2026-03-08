@@ -1,8 +1,20 @@
 import { Router, Request, Response } from 'express';
 import { timingSafeEqual } from 'crypto';
 import { prisma } from '../index';
+import { rateLimit } from 'express-rate-limit';
 
 const router = Router();
+
+const adminLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 5, // Limit each IP to 5 admin requests per `window` (here, per minute)
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    message: { error: 'Too many requests to admin api, please try again later.' },
+});
+
+// Apply rate limiting to all admin routes
+router.use(adminLimiter);
 
 /** Constant-time string comparison to prevent timing attacks. */
 const safeCompare = (a: string, b: string): boolean => {
