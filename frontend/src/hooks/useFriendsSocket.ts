@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { useFriendsStore, RoomInvitation, Friend, FriendRequestIncoming } from '@/store/useFriendsStore';
+import { useFriendsStore, RoomInvitation, Friend, FriendRequestIncoming, OpenRoom } from '@/store/useFriendsStore';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -29,6 +29,7 @@ export function useFriendsSocket(token: string | null) {
         setUserOnline,
         setUserOffline,
         setInvitation,
+        setOpenRooms,
         addIncomingRequest,
         removeIncomingRequest,
         removeOutgoingRequest,
@@ -80,6 +81,11 @@ export function useFriendsSocket(token: string | null) {
             setInvitation({ ...data, receivedAt: Date.now() });
         });
 
+        // Open Rooms list
+        socket.on('friend:open-rooms-list', (rooms: OpenRoom[]) => {
+            setOpenRooms(rooms);
+        });
+
         // New incoming friend request
         socket.on('friend:request-received', (data: FriendRequestIncoming) => {
             addIncomingRequest(data);
@@ -115,7 +121,7 @@ export function useFriendsSocket(token: string | null) {
             socket.disconnect();
             socketRef.current = null;
         };
-    }, [token, setOnlineList, setUserOnline, setUserOffline, setInvitation, addIncomingRequest, removeIncomingRequest, removeOutgoingRequest, addFriend, removeFriendById, updateFriendProfile, fetchFriends, fetchRequests]);
+    }, [token, setOnlineList, setUserOnline, setUserOffline, setInvitation, setOpenRooms, addIncomingRequest, removeIncomingRequest, removeOutgoingRequest, addFriend, removeFriendById, updateFriendProfile, fetchFriends, fetchRequests]);
 
     return socketRef;
 }

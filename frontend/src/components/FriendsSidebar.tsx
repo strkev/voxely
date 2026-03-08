@@ -3,21 +3,25 @@
 import { useState, useMemo } from 'react';
 import { useFriendsStore, Friend } from '@/store/useFriendsStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Search, UserPlus, X, UserMinus, Mail, ChevronLeft, Users, Check } from 'lucide-react';
+import { Search, UserPlus, X, UserMinus, Mail, ChevronLeft, Users, Check, Lock, Unlock } from 'lucide-react';
 import { getContrastColor } from '@/lib/colors';
 
 interface FriendsSidebarProps {
     /** Current room ID when user is in a room — enables invite buttons */
     currentRoomId?: string;
+    /** Is the current room open? */
+    isRoomOpen?: boolean;
     /** Callback to send invitation via socket */
     onInvite?: (friendId: string) => void;
     /** Callback to open the friend requests modal */
     onOpenRequests: () => void;
     /** Callback to fully close/dismiss the sidebar (used in room overlay mode) */
     onClose?: () => void;
+    /** Callback to toggle room open state */
+    onToggleOpen?: (isOpen: boolean) => void;
 }
 
-export function FriendsSidebar({ currentRoomId, onInvite, onOpenRequests, onClose }: FriendsSidebarProps) {
+export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequests, onClose, onToggleOpen }: FriendsSidebarProps) {
     const { friends, onlineUserIds, incomingRequests, removeFriend } = useFriendsStore();
     const { token } = useAuthStore();
     const [search, setSearch] = useState('');
@@ -74,6 +78,10 @@ export function FriendsSidebar({ currentRoomId, onInvite, onOpenRequests, onClos
         }
     };
 
+    const handleToggleOpenRoom = () => {
+        onToggleOpen?.(!isRoomOpen);
+    };
+
     if (collapsed && !onClose) {
         return (
             <div className="friends-sidebar friends-sidebar--collapsed">
@@ -120,6 +128,25 @@ export function FriendsSidebar({ currentRoomId, onInvite, onOpenRequests, onClos
                     </button>
                 </div>
             </div>
+
+            {/* Open Room Toggle (only visible in room) */}
+            {currentRoomId && (
+                <div className="px-4 py-3 border-b border-[rgba(0,0,0,0.05)] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        {isRoomOpen ? <Unlock className="w-4 h-4 text-primary" /> : <Lock className="w-4 h-4 text-text-muted" />}
+                        <div className="flex flex-col">
+                            <span className="text-sm font-medium text-text-main">Open Room</span>
+                            <span className="text-[10px] text-text-muted">Allow friends to join</span>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleToggleOpenRoom}
+                        className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${isRoomOpen ? 'bg-primary' : 'bg-gray-200'}`}
+                    >
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${isRoomOpen ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </button>
+                </div>
+            )}
 
             {/* Search */}
             <div className="friends-sidebar__search">

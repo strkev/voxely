@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import sanitize from 'sanitize-html';
 import { prisma } from '../index';
-import { io, onlineUsers } from '../index';
+import { io, onlineUsers, broadcastOpenRoomsToFriends } from '../index';
 
 // ── Input sanitisation helper ─────────────────────────────────────────────────
 const sanitizeName = (raw: unknown): string | null => {
@@ -220,6 +220,9 @@ export const acceptRequest = async (req: Request, res: Response): Promise<void> 
             }
         }
 
+        // Sync open rooms between the two new friends
+        await broadcastOpenRoomsToFriends([userId, request.senderId]);
+
         res.json({ friend });
     } catch (error) {
         console.error('Accept friend request error:', error);
@@ -323,6 +326,9 @@ export const removeFriend = async (req: Request, res: Response): Promise<void> =
                 io.to(sid).emit('friend:removed', { userId });
             }
         }
+
+        // Sync open rooms now that they are no longer friends (will remove rooms)
+        await broadcastOpenRoomsToFriends([userId, friendId]);
 
         res.json({ message: 'Friend removed' });
     } catch (error) {

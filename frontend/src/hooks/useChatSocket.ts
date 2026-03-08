@@ -21,6 +21,7 @@ interface UseChatSocketReturn {
     messages: ChatMessage[];
     sendMessage: (text: string) => void;
     connected: boolean;
+    isRoomOpen: boolean;
 }
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
@@ -31,6 +32,7 @@ const SEND_THROTTLE_MS = 500;
 export function useChatSocket({ roomId, token, userName }: UseChatSocketOptions): UseChatSocketReturn {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [connected, setConnected] = useState(false);
+    const [isRoomOpen, setIsRoomOpen] = useState(false);
     const socketRef = useRef<Socket | null>(null);
     const lastSentRef = useRef<number>(0);
 
@@ -63,6 +65,10 @@ export function useChatSocket({ roomId, token, userName }: UseChatSocketOptions)
             setMessages(prev => [...prev, msg]);
         });
 
+        socket.on('room:open-status', ({ isOpen }: { isOpen: boolean }) => {
+            setIsRoomOpen(isOpen);
+        });
+
         socket.on('chat:history', (history: ChatMessage[]) => {
             setMessages(history);
         });
@@ -90,5 +96,5 @@ export function useChatSocket({ roomId, token, userName }: UseChatSocketOptions)
         socket.emit('chat:message', { roomId, text: trimmed });
     }, [roomId]);
 
-    return { messages, sendMessage, connected };
+    return { messages, sendMessage, connected, isRoomOpen };
 }

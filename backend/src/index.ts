@@ -136,6 +136,71 @@ export const getFriendIds = async (userId: string): Promise<string[]> => {
     });
     return friendships.map((f: any) => f.friendId);
 };
+
+// ── Open Rooms tracking ───────────────────────────────────────────────────────
+// Map: userId -> roomId
+export const userRooms = new Map<string, string>();
+// Map: roomId -> { roomName, isOpen }
+export const openRooms = new Map<string, { roomName: string; isOpen: boolean }>();
+
+export const getOpenRoomsForUser = async (userId: string) => {
+    const friendIds = await getFriendIds(userId);
+    const visibleOpenRoomsMap = new Map<string, { roomId: string; roomName: string; participants: string[]; totalParticipantCount: number }>();
+
+    for (const friendId of friendIds) {
+        const roomId = userRooms.get(friendId);
+        if (roomId) {
+            const roomConfig = openRooms.get(roomId);
+            if (roomConfig && roomConfig.isOpen) {
+                if (!visibleOpenRoomsMap.has(roomId)) {
+                    // Try to get total participant count from socket.io room
+                    const socketRoom = io.sockets.adapter.rooms.get(roomId);
+                    const totalParticipantCount = socketRoom ? socketRoom.size : 1; 
+
+                    visibleOpenRoomsMap.set(roomId, {
+                        roomId,
+                        roomName: roomConfig.roomName,
+                        participants: [],
+                        totalParticipantCount
+                    });
+                }
+                visibleOpenRoomsMap.get(roomId)!.participants.push(friendId);
+            }
+        }
+    }
+    return Array.from(visibleOpenRoomsMap.values());
+};
+
+export const broadcastOpenRoomsToFriends = async (userIds: string[]) => {
+    const usersToNotify = new Set<string>();
+
+    for (const userId of userIds) {
+        usersToNotify.add(userId);
+        try {
+            const friendIds = await getFriendIds(userId);
+            for (const fid of friendIds) {
+                usersToNotify.add(fid);
+            }
+        } catch (err) {
+            console.error('[WS] Error getting friends for broadcast:', err);
+        }
+    }
+
+    for (const notifyUserId of usersToNotify) {
+        const sockets = onlineUsers.get(notifyUserId);
+        if (sockets && sockets.size > 0) {
+            try {
+                const roomList = await getOpenRoomsForUser(notifyUserId);
+                for (const sid of sockets) {
+                    io.to(sid).emit('friend:open-rooms-list', roomList);
+                }
+            } catch (err) {
+                console.error('[WS] Error updating open rooms list for user:', notifyUserId, err);
+            }
+        }
+    }
+};
+
 app.get('/health', async (_req, res) => {
     try {
         await prisma.$queryRaw`SELECT 1`;
@@ -228,6 +293,10 @@ io.on('connection', async (socket) => {
             // Tell the connecting user which of their friends are online
             const onlineFriendIds = friendIds.filter(fid => onlineUsers.has(fid) && onlineUsers.get(fid)!.size > 0);
             socket.emit('friend:online-list', { userIds: onlineFriendIds });
+
+            // Send initial open rooms list
+            const openRoomsList = await getOpenRoomsForUser(uid);
+            socket.emit('friend:open-rooms-list', openRoomsList);
         } catch (err) {
             console.error('[WS] Failed to notify friends of online status:', err);
         }
@@ -275,7 +344,16 @@ io.on('connection', async (socket) => {
         socket.data.name = displayName;
         socket.data.roomId = roomId;
         socket.join(roomId);
+
+        const currentRoomId = userRooms.get(uid);
+        if (currentRoomId !== roomId) {
+            userRooms.set(uid, roomId);
+            await broadcastOpenRoomsToFriends([uid]);
+        }
         console.log(`[WS] ${displayName} joined room ${roomId}`);
+
+        const currentOpenStatus = openRooms.get(roomId)?.isOpen ?? false;
+        socket.emit('room:open-status', { isOpen: currentOpenStatus });
 
         // Load last 50 messages from DB and send to this socket
         try {
@@ -343,10 +421,11 @@ io.on('connection', async (socket) => {
     // ── Helper: clean up chat messages when a room becomes empty ────────────────
     const cleanupRoomIfEmpty = async (roomId: string) => {
         // Socket.IO keeps the room set until the next tick after leave/disconnect,
-        // so we use setImmediate to check after cleanup completes.
-        setImmediate(async () => {
+        // Wait 60 seconds to allow for brief reconnects before deleting room state
+        setTimeout(async () => {
             const room = io.sockets.adapter.rooms.get(roomId);
             if (!room || room.size === 0) {
+                openRooms.delete(roomId);
                 try {
                     const result = await prisma.chatMessage.deleteMany({ where: { roomId } });
                     if (result.count > 0) {
@@ -356,28 +435,64 @@ io.on('connection', async (socket) => {
                     console.error(`[CLEANUP] Failed to clean room ${roomId}:`, err);
                 }
             }
-        });
+        }, 60_000);
     };
 
     // ── chat:leave — client explicitly leaves ─────────────────────────────────
-    socket.on('chat:leave', ({ roomId }: { roomId: string }) => {
+    socket.on('chat:leave', async ({ roomId }: { roomId: string }) => {
         if (typeof roomId === 'string') {
             socket.leave(roomId);
+            const currentRoomId = userRooms.get(uid);
+            if (currentRoomId === roomId) {
+                userRooms.delete(uid);
+                await broadcastOpenRoomsToFriends([uid]);
+            }
             cleanupRoomIfEmpty(roomId);
         }
+    });
+
+    // ── room:set-open — toggle room visibility ────────────────────────────────
+    socket.on('room:set-open', async ({ roomId, isOpen, roomName }: { roomId: string; isOpen: boolean; roomName: string }) => {
+        if (typeof roomId !== 'string' || !ROOM_ID_RE.test(roomId)) return;
+        const cleanRoomName = stripHtml(typeof roomName === 'string' ? roomName : '').slice(0, 100) || roomId;
+
+        if (isOpen) {
+            openRooms.set(roomId, { roomName: cleanRoomName, isOpen });
+        } else {
+            const currentConfig = openRooms.get(roomId);
+            if (currentConfig) {
+                openRooms.set(roomId, { ...currentConfig, isOpen: false });
+            }
+        }
+
+        const room = io.sockets.adapter.rooms.get(roomId);
+        if (room) {
+            const participantUids = Array.from(room).map(sid => io.sockets.sockets.get(sid)?.data.userId as string).filter(Boolean);
+            await broadcastOpenRoomsToFriends(participantUids);
+        }
+
+        io.to(roomId).emit('room:open-status', { isOpen });
     });
 
     socket.on('disconnect', async () => {
         console.log(`[WS] disconnected ${socket.id}`);
         // Clean up any room this socket was in
         const roomId = socket.data.roomId as string | undefined;
+        const disconnectUid = socket.data.userId as string;
+        
+        const userSockets = onlineUsers.get(disconnectUid);
+        if (userSockets && userSockets.size <= 1) { // Will be 0 soon
+            if (userRooms.has(disconnectUid)) {
+                userRooms.delete(disconnectUid);
+                await broadcastOpenRoomsToFriends([disconnectUid]);
+            }
+        }
+
         if (roomId) {
             cleanupRoomIfEmpty(roomId);
         }
 
         // ── Online presence: remove this socket ──────────────────────────
-        const disconnectUid = socket.data.userId as string;
-        const userSockets = onlineUsers.get(disconnectUid);
         if (userSockets) {
             userSockets.delete(socket.id);
             if (userSockets.size === 0) {

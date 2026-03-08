@@ -30,12 +30,20 @@ export interface RoomInvitation {
     receivedAt: number;
 }
 
+export interface OpenRoom {
+    roomId: string;
+    roomName: string;
+    participants: string[]; // array of friendIds in this room
+    totalParticipantCount: number; // total users in room (including non-friends)
+}
+
 interface FriendsState {
     friends: Friend[];
     onlineUserIds: Set<string>;
     incomingRequests: FriendRequestIncoming[];
     outgoingRequests: FriendRequestOutgoing[];
     pendingInvitation: RoomInvitation | null;
+    openRooms: OpenRoom[];
 
     // Data fetching
     fetchFriends: (token: string) => Promise<void>;
@@ -58,6 +66,9 @@ interface FriendsState {
     setInvitation: (invitation: RoomInvitation) => void;
     clearInvitation: () => void;
 
+    // Open Rooms
+    setOpenRooms: (rooms: OpenRoom[]) => void;
+
     // Add a new incoming request (from socket event)
     addIncomingRequest: (request: FriendRequestIncoming) => void;
 
@@ -75,6 +86,7 @@ export const useFriendsStore = create<FriendsState>()((set, get) => ({
     incomingRequests: [],
     outgoingRequests: [],
     pendingInvitation: null,
+    openRooms: [],
 
     fetchFriends: async (token) => {
         try {
@@ -212,6 +224,8 @@ export const useFriendsStore = create<FriendsState>()((set, get) => ({
 
     setInvitation: (invitation) => set({ pendingInvitation: invitation }),
     clearInvitation: () => set({ pendingInvitation: null }),
+
+    setOpenRooms: (rooms) => set({ openRooms: rooms }),
 
     addIncomingRequest: (request) =>
         set((state) => ({

@@ -17,7 +17,7 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track } from 'livekit-client';
-import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, Mic, Users, ScreenShare, LogOut, Moon } from 'lucide-react';
+import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, Mic, Users, ScreenShare, LogOut, Moon, Lock, Unlock } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
@@ -702,6 +702,16 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     // Friends socket
     const friendsSocketRef = useFriendsSocket(authToken);
 
+    const handleToggleOpenRoom = useCallback((isOpen: boolean) => {
+        const socket = friendsSocketRef.current;
+        if (!socket) return;
+        const roomName = decodeURIComponent(roomId)
+            .replace(/-\d{1,5}$/, '')
+            .replace(/-/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase());
+        socket.emit('room:set-open', { roomId, isOpen, roomName });
+    }, [friendsSocketRef, roomId]);
+
     const handleInviteFriend = useCallback((friendId: string) => {
         const socket = friendsSocketRef.current;
         if (!socket) return;
@@ -737,7 +747,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         };
     }, []);
 
-    const { messages, sendMessage, connected } = useChatSocket({
+    // Set up real-time chat socket
+    const { messages, sendMessage, connected: chatConnected, isRoomOpen } = useChatSocket({
         roomId,
         token: authToken,
         userName: user?.name ?? 'Anonymous',
@@ -899,6 +910,14 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
                 <div className="flex-1 min-w-[8px]" />
 
+                {/* Open Room Status Indicator */}
+                <div 
+                    title={isRoomOpen ? 'Room is open to friends' : 'Room is closed'}
+                    className={`shrink-0 flex items-center gap-1.5 px-3 py-2.5 sm:px-4 sm:py-2.5 rounded-2xl text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm border ${isRoomOpen ? 'bg-primary/10 text-primary border-primary/20' : 'bg-white/90 text-text-muted border-[rgba(220,220,220,0.85)]'}`}
+                >
+                    {isRoomOpen ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                </div>
+
                 {/* Settings gear */}
                 <button
                     onClick={() => setSettingsOpen(true)}
@@ -915,7 +934,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     currentUserId={user?.id ?? ''}
                     messages={messages}
                     sendMessage={sendMessage}
-                    connected={connected}
+                    connected={chatConnected}
                     isOpen={chatOpen}
                     onToggle={() => setChatOpen(o => !o)}
                     unreadCount={unread}
@@ -1017,9 +1036,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     <div className="fixed top-16 left-0 bottom-0 z-50 [&_.friends-sidebar]:!static [&_.friends-sidebar]:!h-full">
                         <FriendsSidebar
                             currentRoomId={roomId}
+                            isRoomOpen={isRoomOpen}
                             onInvite={handleInviteFriend}
                             onOpenRequests={() => setShowFriendsModal(true)}
                             onClose={() => setFriendsSidebarOpen(false)}
+                            onToggleOpen={handleToggleOpenRoom}
                         />
                     </div>
                 </>
