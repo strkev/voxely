@@ -754,7 +754,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     }, []);
 
     // Set up real-time chat socket
-    const { messages, sendMessage, connected: chatConnected, isRoomOpen } = useChatSocket({
+    const { messages, typingUsers, sendMessage, sendTyping, connected: chatConnected, isRoomOpen } = useChatSocket({
         roomId,
         token: authToken,
         userName: user?.name ?? 'Anonymous',
@@ -970,7 +970,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     roomId={roomId}
                     currentUserId={user?.id ?? ''}
                     messages={messages}
+                    typingUsers={typingUsers}
                     sendMessage={sendMessage}
+                    sendTyping={sendTyping}
                     connected={chatConnected}
                     isOpen={chatOpen}
                     onToggle={() => setChatOpen(o => !o)}
@@ -1045,6 +1047,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                         <div className="bg-white/90 backdrop-blur-md border border-white/60 rounded-full shadow-lg px-3 py-1.5 flex items-center">
                             <ControlBar
                                 controls={{ camera: true, microphone: true, screenShare: true, chat: false, leave: false }}
+                                saveUserChoices={true}
                             />
                         </div>
                     </div>

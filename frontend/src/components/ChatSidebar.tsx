@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback, KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { MessageSquare, ChevronRight, ChevronDown, Send } from 'lucide-react';
-import { ChatMessage } from '@/hooks/useChatSocket';
+import { ChatMessage, TypingUser } from '@/hooks/useChatSocket';
 import DOMPurify from 'isomorphic-dompurify';
 
 // ── URL parser: splits text into plain segments and URL segments ───────────────
@@ -36,6 +37,33 @@ function formatTime(iso: string): string {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+// ── Typing Indicator Bubble ───────────────────────────────────────────────────
+function TypingIndicatorBubble({ typingUsers }: { typingUsers: TypingUser[] }) {
+    if (typingUsers.length === 0) return null;
+
+    let text = '';
+    if (typingUsers.length === 1) {
+        text = `${typingUsers[0].name} is typing...`;
+    } else if (typingUsers.length === 2) {
+        text = `${typingUsers[0].name} and ${typingUsers[1].name} are typing...`;
+    } else {
+        text = `Several people are typing...`;
+    }
+
+    return (
+        <div className="flex flex-col items-start gap-0.5 mt-2 animate-in fade-in zoom-in duration-200">
+             <div className="flex items-baseline gap-1.5 text-[10px] text-text-muted px-1">
+                <span className="font-semibold text-text-main truncate max-w-[120px]">{text}</span>
+            </div>
+            <div className="bg-white border border-gray-100 text-text-main rounded-2xl rounded-tl-sm px-3 py-2.5 shadow-sm self-start flex gap-1 items-center">
+                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
+            </div>
+        </div>
+    );
+}
+
 // ── Message bubble ────────────────────────────────────────────────────────────
 function MessageBubble({ msg, isOwn }: { msg: ChatMessage; isOwn: boolean }) {
     return (
@@ -66,7 +94,9 @@ interface ChatSidebarProps {
     roomId: string;
     currentUserId: string;
     messages: ChatMessage[];
+    typingUsers?: TypingUser[];
     sendMessage: (text: string) => void;
+    sendTyping?: (isTyping: boolean) => void;
     connected: boolean;
     isOpen: boolean;
     onToggle: () => void;
@@ -80,7 +110,9 @@ interface ChatSidebarProps {
 export function ChatSidebar({
     currentUserId,
     messages,
+    typingUsers = [],
     sendMessage,
+    sendTyping,
     connected,
     isOpen,
     onToggle,
@@ -90,11 +122,16 @@ export function ChatSidebar({
     onWidthChange,
 }: ChatSidebarProps) {
     const [draft, setDraft] = useState('');
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => { setMounted(true); }, []);
+    
     const bottomRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [isAtBottom, setIsAtBottom] = useState(true);
     const [isResizing, setIsResizing] = useState(false);
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         if (!isResizing) return;
@@ -103,7 +140,12 @@ export function ChatSidebar({
             if (!onWidthChange) return;
             const newWidth = window.innerWidth - e.clientX;
             // Min 320px, max 80% of window width
-            const clampedWidth = Math.max(320, Math.min(newWidth, window.innerWidth * 0.8));
+            // FIX: Ensure that clampedWidth doesn't exceed the actual window width
+            // if the window is smaller than 320px.
+            const clampedWidth = Math.min(
+                window.innerWidth,
+                Math.max(320, Math.min(newWidth, window.innerWidth * 0.8))
+            );
             onWidthChange(clampedWidth);
         };
 
@@ -145,7 +187,7 @@ export function ChatSidebar({
         if (isOpen && isAtBottom) {
             bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [messages, isOpen, isAtBottom]);
+    }, [messages, typingUsers, isOpen, isAtBottom]);
 
     // Mark as read when panel opens
     useEffect(() => {
@@ -156,7 +198,12 @@ export function ChatSidebar({
         const text = draft.trim();
         if (!text) return;
         sendMessage(text);
+        if (sendTyping) sendTyping(false);
         setDraft('');
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+            typingTimeoutRef.current = null;
+        }
         // Reset height back to 1 line after send
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
@@ -170,6 +217,36 @@ export function ChatSidebar({
             handleSend();
         }
     };
+
+    const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const val = e.target.value;
+        if (val.length <= 500) {
+            setDraft(val);
+            resizeTextarea(e.target);
+
+            if (sendTyping) {
+                if (val.length > 0) {
+                    sendTyping(true);
+                    
+                    // Stop typing indicator after 3 seconds of inactivity
+                    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                    typingTimeoutRef.current = setTimeout(() => {
+                        sendTyping(false);
+                    }, 3000);
+                } else {
+                    sendTyping(false);
+                    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                }
+            }
+        }
+    };
+
+    // Cleanup typing timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        };
+    }, []);
 
     const remaining = 500 - draft.length;
 
@@ -197,27 +274,30 @@ export function ChatSidebar({
             </button>
 
             {/* ── Sidebar panel ─────────────────────────────────────────────── */}
-            {/* Mobile backdrop overlay */}
-            {isOpen && (
-                <div
-                    className="fixed inset-0 top-16 z-0 bg-black/40 sm:hidden"
-                    onClick={onToggle}
-                />
-            )}
-            <div
-                className={`
-                    fixed top-16 right-0 bottom-0 w-full z-30
-                    flex flex-col
-                    bg-[#F7F7F7] border-l border-gray-200
-                    ${isOpen ? 'block' : 'hidden'}
-                `}
-                style={{
-                    width: isOpen && typeof window !== 'undefined' && window.innerWidth >= 640 ? `${width}px` : undefined
-                }}
-            >
-                {/* Drag Handle */}
-                <div
-                    className="hidden sm:block absolute top-0 left-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 z-40 transition-colors -ml-1.5"
+            {mounted && typeof document !== 'undefined' ? createPortal(
+                <>
+                    {/* Mobile backdrop overlay */}
+                    {isOpen && (
+                        <div
+                            className="fixed inset-0 top-16 z-[45] bg-black/40 sm:hidden"
+                            onClick={onToggle}
+                        />
+                    )}
+                    <div
+                        className={`
+                            fixed top-16 right-0 bottom-0 z-[50]
+                            flex flex-col
+                            bg-[#F7F7F7] border-l border-gray-200
+                            ${isOpen ? 'flex' : 'hidden'}
+                            w-full sm:w-auto
+                        `}
+                        style={{
+                            width: isOpen && typeof window !== 'undefined' && window.innerWidth >= 640 ? `${width}px` : undefined
+                        }}
+                    >
+                        {/* Drag Handle */}
+                        <div
+                            className="hidden sm:block absolute top-0 left-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 z-[60] transition-colors -ml-1.5"
                     onMouseDown={(e) => {
                         e.preventDefault();
                         setIsResizing(true);
@@ -261,6 +341,10 @@ export function ChatSidebar({
                             />
                         ))
                     )}
+                    
+                    {/* Typing Indicator */}
+                    <TypingIndicatorBubble typingUsers={typingUsers} />
+
                     <div ref={bottomRef} />
 
                     {/* Scroll to bottom button */}
@@ -294,12 +378,7 @@ export function ChatSidebar({
                             ref={textareaRef}
                             rows={1}
                             value={draft}
-                            onChange={e => {
-                                if (e.target.value.length <= 500) {
-                                    setDraft(e.target.value);
-                                    resizeTextarea(e.target);
-                                }
-                            }}
+                            onChange={handleTextareaChange}
                             onKeyDown={handleKeyDown}
                             placeholder=""
                             disabled={!connected}
@@ -331,7 +410,10 @@ export function ChatSidebar({
                         </p>
                     )}
                 </div>
-            </div>
+                    </div>
+                </>,
+                document.body
+            ) : null}
         </>
     );
 }

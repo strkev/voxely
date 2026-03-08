@@ -438,6 +438,25 @@ io.on('connection', async (socket) => {
         }, 60_000);
     };
 
+    // ── chat:typing — client is typing ────────────────────────────────────────
+    socket.on('chat:typing', ({ roomId, isTyping }: { roomId: string; isTyping: boolean }) => {
+        if (typeof roomId !== 'string' || !ROOM_ID_RE.test(roomId)) return;
+        if (typeof isTyping !== 'boolean') return;
+
+        // Ensure sender is actually in the room
+        if (!io.sockets.adapter.rooms.get(roomId)?.has(socket.id)) return;
+
+        const userId = socket.data.userId as string;
+        const name = (socket.data.name as string) || 'Anonymous';
+
+        // Broadcast to everyone in the room EXCEPT the sender
+        socket.to(roomId).emit('chat:typing', {
+            userId,
+            name,
+            isTyping
+        });
+    });
+
     // ── chat:leave — client explicitly leaves ─────────────────────────────────
     socket.on('chat:leave', async ({ roomId }: { roomId: string }) => {
         if (typeof roomId === 'string') {
