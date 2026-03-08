@@ -29,6 +29,7 @@ import { RoomInviteBanner } from '@/components/RoomInviteBanner';
 import { useFriendsSocket } from '@/hooks/useFriendsSocket';
 import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { useFriendsStore } from '@/store/useFriendsStore';
+import { getContrastColor } from '@/lib/colors';
 
 // ─── Auto-start audio ─────────────────────────────────────────────────────────
 function AutoStartAudio() {
@@ -142,8 +143,12 @@ function SpotlightableTile({
             {isCameraTrack && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 bg-[#111] rounded-[16px]">
                     <div
-                        className={`w-[32%] max-w-[120px] min-w-[40px] aspect-square rounded-full text-white flex items-center justify-center font-bold shadow-md transition-transform duration-200 ${isSpeaking ? 'avatar-speaking' : ''}`}
-                        style={{ fontSize: 'clamp(18px, 12cqw, 54px)', backgroundColor: userColor }}
+                        className={`w-[32%] max-w-[120px] min-w-[40px] aspect-square rounded-full flex items-center justify-center font-bold shadow-md transition-transform duration-200 ${isSpeaking ? 'avatar-speaking' : ''}`}
+                        style={{
+                            fontSize: 'clamp(18px, 12cqw, 54px)',
+                            backgroundColor: userColor,
+                            color: getContrastColor(userColor)
+                        }}
                     >
                         {initial}
                     </div>

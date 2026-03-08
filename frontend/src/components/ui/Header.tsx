@@ -9,6 +9,7 @@ import { ChevronDown, LogOut, Trash2, LayoutDashboard, Settings, Users } from 'l
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { UserSettingsModal } from '@/components/UserSettingsModal';
 import { useFriendsStore } from '@/store/useFriendsStore';
+import { getContrastColor } from '@/lib/colors';
 
 export function Header() {
     const { user, logout, deleteAccount } = useAuthStore();
@@ -94,8 +95,11 @@ export function Header() {
                                 aria-expanded={open}
                             >
                                 <div
-                                    className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                                    style={{ backgroundColor: user?.avatarColor || '#FF5A5F' }}
+                                    className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
+                                    style={{
+                                        backgroundColor: user?.avatarColor || '#FF5A5F',
+                                        color: getContrastColor(user?.avatarColor || '#FF5A5F')
+                                    }}
                                 >
                                     {initials}
                                 </div>
@@ -114,8 +118,11 @@ export function Header() {
                                     <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
                                         <div className="flex items-center gap-2.5">
                                             <div
-                                                className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                                                style={{ backgroundColor: user?.avatarColor || '#FF5A5F' }}
+                                                className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
+                                                style={{
+                                                    backgroundColor: user?.avatarColor || '#FF5A5F',
+                                                    color: getContrastColor(user?.avatarColor || '#FF5A5F')
+                                                }}
                                             >
                                                 {initials}
                                             </div>

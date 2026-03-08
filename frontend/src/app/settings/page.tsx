@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { playSound } from '@/lib/sounds';
-import { Volume2, VolumeX, Bell, ChevronLeft, Trash2, Pencil, Loader2, Check, Moon } from 'lucide-react';
+import { PRESET_COLORS, getContrastColor } from '@/lib/colors';
+import { Volume2, VolumeX, Bell, ChevronLeft, Trash2, Pencil, Loader2, Check, Moon, Palette } from 'lucide-react';
 
 type SoundKey = 'join' | 'leave' | 'mute' | 'unmute' | 'cameraOn' | 'cameraOff' | 'screenShareOn' | 'screenShareOff';
 
@@ -20,7 +21,6 @@ const SOUND_LABELS: { key: SoundKey; label: string; description: string }[] = [
     { key: 'screenShareOff', label: 'Screen Share Off', description: 'Played when stopping screen share' },
 ];
 
-const PRESET_COLORS = ['#FF5A5F', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
 
 export default function SettingsPage() {
     const { user, token, setAuth, deleteAccount } = useAuthStore();
@@ -120,8 +120,11 @@ export default function SettingsPage() {
                 {/* Profile card */}
                 <div className="bg-surface border border-gray-100 rounded-2xl p-4 sm:p-6 shadow-flat mb-6 flex items-center gap-3 sm:gap-4 transition-colors">
                     <div
-                        className="w-11 h-11 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white text-lg sm:text-xl font-bold shrink-0 shadow-sm transition-colors duration-300"
-                        style={{ backgroundColor: editColor }}
+                        className="w-11 h-11 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-lg sm:text-xl font-bold shrink-0 shadow-sm transition-colors duration-300"
+                        style={{
+                            backgroundColor: editColor,
+                            color: getContrastColor(editColor)
+                        }}
                     >
                         {initials}
                     </div>
@@ -194,15 +197,67 @@ export default function SettingsPage() {
                         )}
 
                         <div>
-                            <label className="block text-xs font-medium text-text-main mb-1 ml-1">Profile Color</label>
-                            <div className="flex items-center gap-3">
-                                <input
-                                    type="color"
-                                    value={editColor}
-                                    onChange={(e) => { setEditColor(e.target.value); setProfileSuccess(''); }}
-                                    className="w-10 h-10 p-1 rounded-xl border border-gray-200 bg-white cursor-pointer"
-                                />
-                                <span className="text-sm font-mono text-text-muted uppercase">{editColor}</span>
+                            <label className="block text-xs font-medium text-text-main mb-2 ml-1">Profile Color</label>
+                            <div className="flex flex-wrap items-center gap-3 sm:gap-4 px-1 py-1">
+                                {PRESET_COLORS.map((color) => (
+                                    <button
+                                        key={color}
+                                        type="button"
+                                        onClick={() => {
+                                            setEditColor(color);
+                                            setProfileSuccess('');
+                                        }}
+                                        className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full cursor-pointer flex items-center justify-center group relative border-2 border-[var(--color-surface)] shadow-sm transition-all duration-200 ${editColor.toUpperCase() === color.toUpperCase() ? 'ring-2 ring-primary ring-offset-1 ring-offset-[var(--color-surface)]' : ''
+                                            }`}
+                                        style={{ backgroundColor: color }}
+                                        title={color}
+                                    >
+                                        {/* Selection indicator */}
+                                        {editColor.toUpperCase() === color.toUpperCase() && (
+                                            <Check
+                                                className="w-5 h-5 drop-shadow-sm"
+                                                style={{ color: getContrastColor(color) }}
+                                            />
+                                        )}
+                                    </button>
+                                ))}
+
+                                {/* Custom Color Picker Input */}
+                                <div
+                                    className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-full cursor-pointer flex items-center justify-center border-2 border-[var(--color-surface)] shadow-sm overflow-hidden transition-all duration-200 ${!PRESET_COLORS.map(c => c.toUpperCase()).includes(editColor.toUpperCase()) ? 'ring-2 ring-primary ring-offset-1 ring-offset-[var(--color-surface)]' : ''
+                                        }`}
+                                    style={{
+                                        background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
+                                    }}
+                                    title="Custom Color"
+                                >
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none transition-colors duration-200"
+                                        style={{
+                                            backgroundColor: !PRESET_COLORS.map(c => c.toUpperCase()).includes(editColor.toUpperCase()) ? editColor : 'transparent'
+                                        }}
+                                    >
+                                        {!PRESET_COLORS.map(c => c.toUpperCase()).includes(editColor.toUpperCase()) ? (
+                                            <Check
+                                                className="w-5 h-5 drop-shadow-sm"
+                                                style={{ color: getContrastColor(editColor) }}
+                                            />
+                                        ) : (
+                                            <Palette className="w-5 h-5 text-gray-500" />
+                                        )}
+                                    </div>
+                                    <input
+                                        type="color"
+                                        value={editColor}
+                                        onChange={(e) => { setEditColor(e.target.value.toUpperCase()); setProfileSuccess(''); }}
+                                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-3 ml-1">
+                                <span className="text-xs font-mono text-text-muted uppercase bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">
+                                    {editColor}
+                                </span>
                             </div>
                         </div>
 

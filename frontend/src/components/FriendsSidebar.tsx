@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useFriendsStore, Friend } from '@/store/useFriendsStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Search, UserPlus, X, UserMinus, Mail, ChevronLeft, Users, Check } from 'lucide-react';
+import { getContrastColor } from '@/lib/colors';
 
 interface FriendsSidebarProps {
     /** Current room ID when user is in a room — enables invite buttons */
@@ -156,8 +157,10 @@ export function FriendsSidebar({ currentRoomId, onInvite, onOpenRequests, onClos
                                 <div className="friends-sidebar__avatar-wrap">
                                     <div
                                         className="friends-sidebar__avatar"
-                                        // NEU: Hier die dynamische Farbe aus dem friend-Objekt auslesen
-                                        style={{ backgroundColor: friend.avatarColor || '#FF5A5F' }}
+                                        style={{
+                                            backgroundColor: friend.avatarColor || '#FF5A5F',
+                                            color: getContrastColor(friend.avatarColor || '#FF5A5F')
+                                        }}
                                     >
                                         {getInitials(friend.name)}
                                     </div>
