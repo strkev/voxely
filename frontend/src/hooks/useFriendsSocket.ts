@@ -34,6 +34,7 @@ export function useFriendsSocket(token: string | null) {
         removeOutgoingRequest,
         addFriend,
         removeFriendById,
+        updateFriendProfile,
         fetchFriends,
         fetchRequests,
     } = useFriendsStore();
@@ -104,11 +105,17 @@ export function useFriendsSocket(token: string | null) {
             removeFriendById(userId);
         });
 
+        // Friend updated their profile (name or avatar color)
+        socket.on('friend:profile-updated', (data: { userId: string } & Partial<Friend>) => {
+            const { userId, ...updates } = data;
+            updateFriendProfile(userId, updates);
+        });
+
         return () => {
             socket.disconnect();
             socketRef.current = null;
         };
-    }, [token, setOnlineList, setUserOnline, setUserOffline, setInvitation, addIncomingRequest, removeIncomingRequest, removeOutgoingRequest, addFriend, removeFriendById, fetchFriends, fetchRequests]);
+    }, [token, setOnlineList, setUserOnline, setUserOffline, setInvitation, addIncomingRequest, removeIncomingRequest, removeOutgoingRequest, addFriend, removeFriendById, updateFriendProfile, fetchFriends, fetchRequests]);
 
     return socketRef;
 }

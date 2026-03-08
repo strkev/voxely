@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { timingSafeEqual } from 'crypto';
 import sanitize from 'sanitize-html';
-import { prisma } from '../index';
+import { prisma, io, getFriendIds, getOnlineFriendSockets } from '../index';
 import { generateToken, verifyToken, blacklistToken } from '../services/auth';
 
 /** Constant-time string comparison (prevents timing-based leakage). */
@@ -265,6 +265,23 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
             data: updateData,
             select: { id: true, name: true, avatarColor: true },
         });
+
+        // Broadcast profile update to online friends if name or color changed
+        if (updateData.name || updateData.avatarColor) {
+            try {
+                const friendIds = await getFriendIds(userId);
+                const friendSockets = getOnlineFriendSockets(friendIds);
+                for (const sid of friendSockets) {
+                    io.to(sid).emit('friend:profile-updated', {
+                        userId: updated.id,
+                        name: updated.name,
+                        avatarColor: updated.avatarColor,
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to notify friends of profile update:', err);
+            }
+        }
 
         res.json({ user: updated });
     } catch (error) {

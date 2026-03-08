@@ -66,6 +66,7 @@ interface FriendsState {
     removeOutgoingRequest: (requestId: string) => void;
     addFriend: (friend: Friend) => void;
     removeFriendById: (friendId: string) => void;
+    updateFriendProfile: (friendId: string, data: Partial<Friend>) => void;
 }
 
 export const useFriendsStore = create<FriendsState>()((set, get) => ({
@@ -240,5 +241,12 @@ export const useFriendsStore = create<FriendsState>()((set, get) => ({
                 next.delete(friendId);
                 return next;
             })(),
+        })),
+
+    updateFriendProfile: (friendId, data) =>
+        set((state) => ({
+            friends: state.friends.map(f =>
+                f.id === friendId ? { ...f, ...data } : f
+            ),
         })),
 }));

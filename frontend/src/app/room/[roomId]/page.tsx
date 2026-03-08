@@ -28,6 +28,7 @@ import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { RoomInviteBanner } from '@/components/RoomInviteBanner';
 import { useFriendsSocket } from '@/hooks/useFriendsSocket';
 import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
+import { useFriendsStore } from '@/store/useFriendsStore';
 
 // ─── Auto-start audio ─────────────────────────────────────────────────────────
 function AutoStartAudio() {
@@ -104,15 +105,24 @@ function SpotlightableTile({
     const isMuted = useIsMuted(trackRef as TrackReferenceOrPlaceholder);
 
     const localUser = useAuthStore(s => s.user);
+    const friends = useFriendsStore(s => s.friends);
     let userColor = '#FF5A5F';
 
-    // Farbe für andere Teilnehmer aus Metadaten auslesen
+    // Farbe für andere Teilnehmer aus Metadaten auslesen (Fallback)
     try {
         if (trackRef?.participant?.metadata) {
             const meta = JSON.parse(trackRef.participant.metadata);
             if (meta.avatarColor) userColor = meta.avatarColor;
         }
     } catch (e) { /* ignore */ }
+
+    // Farbe aus dem Friends-Store überschreibt Metadaten (für Echtzeit-Updates)
+    if (!trackRef?.participant?.isLocal && trackRef?.participant?.identity) {
+        const friend = friends.find(f => f.id === trackRef.participant!.identity);
+        if (friend?.avatarColor) {
+            userColor = friend.avatarColor;
+        }
+    }
 
     // Farbe für einen selbst direkt aus dem AuthStore (updated sofort)
     if (trackRef?.participant?.isLocal && localUser?.avatarColor) {

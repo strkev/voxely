@@ -118,8 +118,7 @@ app.use('/api/friends', friendsRouter);
 // Supports multiple tabs/windows per user
 export const onlineUsers = new Map<string, Set<string>>();
 
-/** Get all socket IDs for a list of friend user IDs that are currently online */
-const getOnlineFriendSockets = (friendIds: string[]): string[] => {
+export const getOnlineFriendSockets = (friendIds: string[]): string[] => {
     const sockets: string[] = [];
     for (const fid of friendIds) {
         const set = onlineUsers.get(fid);
@@ -130,8 +129,7 @@ const getOnlineFriendSockets = (friendIds: string[]): string[] => {
     return sockets;
 };
 
-/** Get the list of friend IDs for a given user */
-const getFriendIds = async (userId: string): Promise<string[]> => {
+export const getFriendIds = async (userId: string): Promise<string[]> => {
     const friendships = await prisma.friendship.findMany({
         where: { userId },
         select: { friendId: true },
