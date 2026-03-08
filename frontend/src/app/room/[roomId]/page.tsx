@@ -762,7 +762,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         if (messages.length > prevLengthRef.current) {
             if (!chatOpen) {
                 setUnread(u => u + (messages.length - prevLengthRef.current));
-                
+
                 // Show visual toast
                 const latestMsg = messages[messages.length - 1];
                 if (latestMsg.userId !== user?.id) {
@@ -771,7 +771,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                         name: latestMsg.name,
                         text: latestMsg.text
                     });
-                    
+
                     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
                     toastTimerRef.current = setTimeout(() => {
                         setToastMessage(null);
@@ -930,12 +930,13 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 <div className="flex-1 min-w-[8px]" />
 
                 {/* Open Room Status Indicator */}
-                <div 
-                    title={isRoomOpen ? 'Room is open to friends' : 'Room is closed'}
-                    className={`shrink-0 flex items-center gap-1.5 px-3 py-2.5 sm:px-4 sm:py-2.5 rounded-2xl text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm border ${isRoomOpen ? 'bg-primary/10 text-primary border-primary/20' : 'bg-white/90 text-text-muted border-[rgba(220,220,220,0.85)]'}`}
+                <button
+                    onClick={() => handleToggleOpenRoom(!isRoomOpen)}
+                    title={isRoomOpen ? 'Room is open to friends (click to close)' : 'Room is closed (click to open)'}
+                    className={`shrink-0 flex items-center gap-1.5 px-3 py-2.5 sm:px-4 sm:py-2.5 rounded-2xl text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm border ${isRoomOpen ? 'bg-primary/10 hover:bg-primary/20 text-primary border-primary/20 hover:border-primary/40' : 'bg-white/90 hover:bg-white text-text-muted hover:text-primary border-[rgba(220,220,220,0.85)] hover:border-primary/40'}`}
                 >
                     {isRoomOpen ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                </div>
+                </button>
 
                 {/* Settings gear */}
                 <button
@@ -1101,7 +1102,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             )}
 
             {/* Message Toast Notification */}
-            <div 
+            <div
                 className={`
                     fixed top-[120px] z-50 transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]
                     ${toastMessage ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8 pointer-events-none'}
