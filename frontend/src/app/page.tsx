@@ -17,53 +17,18 @@ export default function Home() {
     return () => clearTimeout(t);
   }, []);
 
+  useEffect(() => {
+    if (mounted && user) {
+      router.replace('/dashboard');
+    }
+  }, [mounted, user, router]);
+
   // Avoid hydration mismatch — render nothing auth-specific until mounted
   if (!mounted) return null;
 
   /* ── LOGGED IN ───────────────────────────────────────────────── */
   if (user) {
-    return (
-      <div className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center px-4 py-16">
-        {/* Greeting card */}
-        <div className="bg-surface border border-gray-100 shadow-flat rounded-2xl p-6 sm:p-10 max-w-md w-full text-center flex flex-col items-center gap-5 sm:gap-6">
-          {/* Avatar circle */}
-          <div className="w-16 h-16 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center">
-            <span className="text-primary font-bold text-2xl">
-              {user.name.charAt(0).toUpperCase()}
-            </span>
-          </div>
-
-          <div>
-            <h1 className="text-2xl font-semibold text-text-main">
-              Welcome back, <span className="text-primary">{user.name}</span>
-            </h1>
-            <p className="text-text-muted mt-1 text-sm">
-              What would you like to do today?
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="sm:flex-1 flex items-center justify-center gap-2 h-14 sm:h-11 rounded-xl bg-surface border border-gray-200 text-text-main font-medium text-base sm:text-sm hover:bg-gray-50 transition-colors shadow-flat"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              Dashboard
-            </button>
-            <button
-              onClick={() => {
-                const roomId = `room-${Math.random().toString(36).slice(2, 7)}`;
-                router.push(`/room/${roomId}`);
-              }}
-              className="sm:flex-1 flex items-center justify-center gap-2 h-14 sm:h-11 rounded-xl bg-primary text-white font-medium text-base sm:text-sm hover:bg-[#E0484D] transition-colors shadow-active-speaker"
-            >
-              <Plus className="w-4 h-4" />
-              Create Room
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    return null; // The useEffect will handle the redirect to dashboard
   }
 
   /* ── LOGGED OUT ──────────────────────────────────────────────── */
