@@ -97,17 +97,14 @@ export function VirtualBackgroundModal({ onClose }: { onClose: () => void }) {
 
                             <button
                                 onClick={() => setVirtualBackground('blur')}
-                                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all overflow-hidden relative ${
+                                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all ${
                                     virtualBackground === 'blur' 
-                                        ? 'border-primary text-primary' 
-                                        : 'border-gray-100 hover:border-gray-200 text-text-main'
+                                        ? 'border-primary bg-primary/5 text-primary' 
+                                        : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50 text-text-main'
                                 }`}
                             >
-                                <div className="absolute inset-0 bg-gray-100 backdrop-blur-md opacity-50 z-0"></div>
-                                <div className="relative z-10 flex flex-col items-center gap-2">
-                                    <MonitorPlay className="w-6 h-6" />
-                                    <span className="text-sm font-medium">Blur</span>
-                                </div>
+                                <MonitorPlay className="w-6 h-6" />
+                                <span className="text-sm font-medium">Blur</span>
                             </button>
 
                             <button
