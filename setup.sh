@@ -256,6 +256,7 @@ if [ "$SETUP_DOCKER_SERVICES" = true ]; then
     else
         sudo docker run -d --name dc-redis \
             -p "127.0.0.1:${REDIS_PORT}:6379" \
+            -v dc-redis-data:/data \
             --restart unless-stopped \
             redis:7-alpine
         success "Redis started on port ${REDIS_PORT}"
