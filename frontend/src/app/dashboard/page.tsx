@@ -10,6 +10,7 @@ import { FriendsSidebar } from '@/components/FriendsSidebar';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { RoomInviteBanner } from '@/components/RoomInviteBanner';
 import { useFriendsSocket } from '@/hooks/useFriendsSocket';
+import { getContrastColor } from '@/lib/colors';
 import { Users, ShieldCheck, Clock, Video, DoorOpen } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -200,7 +201,7 @@ export default function DashboardPage() {
                                                 <div 
                                                     key={f.id} 
                                                     className="shrink-0 relative flex h-8 w-8 rounded-full ring-2 ring-white items-center justify-center text-xs font-bold"
-                                                    style={{ backgroundColor: f.avatarColor || '#FF5A5F', color: '#fff' }}
+                                                    style={{ backgroundColor: f.avatarColor || '#FF5A5F', color: getContrastColor(f.avatarColor || '#FF5A5F') }}
                                                     title={f.name}
                                                 >
                                                     {getInitials(f.name)}
