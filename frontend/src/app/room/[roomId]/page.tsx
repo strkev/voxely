@@ -1296,7 +1296,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                             setChatOpen(true);
                             setToastMessage(null);
                         }}
-                        className="flex flex-col gap-1 items-start bg-white/95 backdrop-blur-xl border border-[rgba(220,220,220,0.85)] rounded-2xl p-4 shadow-xl max-w-[300px] hover:border-primary/40 hover:shadow-primary/5 transition-all text-left"
+                        className="flex flex-col gap-1 items-start bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-[rgba(220,220,220,0.85)] dark:border-white/10 rounded-2xl p-4 shadow-xl dark:shadow-2xl dark:shadow-black/40 max-w-[300px] hover:border-primary/40 dark:hover:border-primary/40 hover:shadow-primary/5 transition-all text-left"
                     >
                         <div className="flex items-center gap-2">
                             <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
