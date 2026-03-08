@@ -73,14 +73,14 @@ export function Header() {
             <header className="w-full h-16 border-b border-gray-100 bg-[var(--color-surface)] flex items-center justify-between px-4 sm:px-6 md:px-12 z-40 sticky top-0 shadow-sm">
                 {isInRoom ? (
                     <button
-                        onClick={() => navigateOrGuard('/')}
+                        onClick={() => navigateOrGuard(user ? '/dashboard' : '/')}
                         className="text-xl font-semibold text-text-main flex items-center gap-2"
                     >
                         <Image src="/logo.png" alt="Voxely Logo" width={40} height={40} className="w-10 h-10 object-contain" />
                         Voxely
                     </button>
                 ) : (
-                    <Link href="/" className="text-xl font-semibold text-text-main flex items-center gap-2">
+                    <Link href={user ? '/dashboard' : '/'} className="text-xl font-semibold text-text-main flex items-center gap-2">
                         <Image src="/logo.png" alt="Voxely Logo" width={40} height={40} className="w-10 h-10 object-contain" />
                         Voxely
                     </Link>

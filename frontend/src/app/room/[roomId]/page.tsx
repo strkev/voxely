@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSettingsStore, VIDEO_PRESETS, type VideoQuality, type ScreenShareResolution, type ScreenShareFps } from '@/store/useSettingsStore';
@@ -270,7 +271,9 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
         return () => { document.body.style.overflow = ''; };
     }, []);
 
-    return (
+    if (typeof document === 'undefined') return null;
+
+    return createPortal(
         <div
             ref={backdropRef}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
@@ -454,7 +457,8 @@ function InRoomSettings({ onClose }: { onClose: () => void }) {
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
 
@@ -787,6 +791,19 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     useEffect(() => { setMounted(true); }, []);
     useEffect(() => {
         if (typeof window !== 'undefined' && !navigator.mediaDevices) setIsSecureContext(false);
+    }, []);
+
+    // Prevent white background flash on mobile overscroll
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+        const bodyBg = document.body.style.backgroundColor;
+        const htmlBg = document.documentElement.style.backgroundColor;
+        document.body.style.setProperty('background-color', '#030712', 'important');
+        document.documentElement.style.setProperty('background-color', '#030712', 'important');
+        return () => {
+            document.body.style.backgroundColor = bodyBg;
+            document.documentElement.style.backgroundColor = htmlBg;
+        };
     }, []);
 
     // Browser tab close / refresh warning
