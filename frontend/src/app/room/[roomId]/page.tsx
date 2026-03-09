@@ -19,7 +19,7 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track, LocalTrackPublication } from 'livekit-client';
-import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, Mic, Users, ScreenShare, LogOut, Moon, Lock, Unlock, Image as ImageIcon } from 'lucide-react';
+import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, ChevronLeft, ChevronRight, Mic, Users, ScreenShare, LogOut, Moon, Lock, Unlock, Image as ImageIcon } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
@@ -112,6 +112,64 @@ function SpotlightableTile({
     const friends = useFriendsStore(s => s.friends);
     let userColor = '#FF5A5F';
 
+    // Local volume control state
+    const [volume, setVolume] = useState(1);
+    const [isLocallyMuted, setIsLocallyMuted] = useState(false);
+    const [isVolumeExpanded, setIsVolumeExpanded] = useState(false);
+
+    const audioCtxRef = useRef<AudioContext | null>(null);
+    const gainNodeRef = useRef<GainNode | null>(null);
+    const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+
+    // Apply volume changes
+    useEffect(() => {
+        if (!trackRef?.participant || trackRef.participant.isLocal) return;
+
+        const targetVol = isLocallyMuted ? 0 : volume;
+        const clampedVol = Math.min(1, targetVol);
+        const boostVol = targetVol > 1 ? targetVol : 1;
+
+        const audioPubs = Array.from(trackRef.participant.audioTrackPublications.values());
+        for (const pub of audioPubs) {
+            if (pub.track?.attachedElements) {
+                pub.track.attachedElements.forEach(el => {
+                    const audioEl = el as HTMLAudioElement;
+                    
+                    // Clamp raw volume to avoid DOM Exception [0, 1]
+                    audioEl.volume = clampedVol;
+
+                    // Apply Web Audio gain for > 100%
+                    try {
+                        if (!audioCtxRef.current) {
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                            audioCtxRef.current = new AudioContextClass();
+                        }
+                        
+                        // Create web audio graph once
+                        if (!gainNodeRef.current && audioCtxRef.current) {
+                            sourceNodeRef.current = audioCtxRef.current.createMediaElementSource(audioEl);
+                            gainNodeRef.current = audioCtxRef.current.createGain();
+                            sourceNodeRef.current.connect(gainNodeRef.current);
+                            gainNodeRef.current.connect(audioCtxRef.current.destination);
+                        }
+                        
+                        if (audioCtxRef.current?.state === 'suspended') {
+                            audioCtxRef.current.resume();
+                        }
+                        
+                        if (gainNodeRef.current) {
+                            // Boost the gain if target > 1
+                            gainNodeRef.current.gain.value = boostVol;
+                        }
+                    } catch (err) {
+                        console.warn('Could not apply >100% audio boost', err);
+                    }
+                });
+            }
+        }
+    }, [volume, isLocallyMuted, trackRef]);
+
     // Farbe für andere Teilnehmer aus Metadaten auslesen (Fallback)
     try {
         if (trackRef?.participant?.metadata) {
@@ -182,9 +240,74 @@ function SpotlightableTile({
 
             {/* Spotlight badge when pinned */}
             {isSpotlit && (
-                <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-amber-400/90 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm pointer-events-none">
+                <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-amber-400/90 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm pointer-events-none shadow-md">
                     <Star className="w-3 h-3 fill-white" />
                     Spotlight
+                </div>
+            )}
+
+            {/* Audio Controls (Volume & Mute) — Only for remote participants */}
+            {trackRef?.participant && !trackRef.participant.isLocal && (
+                <div 
+                    className={`
+                        absolute top-2 left-2 z-20 flex items-center p-1.5 rounded-lg backdrop-blur-md bg-black/40 shadow-md transition-opacity duration-200
+                        ${isSpotlit ? 'top-10' : ''} 
+                        opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 group/volume
+                    `}
+                    onClick={(e) => e.stopPropagation()} /* Prevent triggering Spotlight on click */
+                >
+                    <button
+                        onClick={() => setIsLocallyMuted(!isLocallyMuted)}
+                        className="text-white hover:text-primary transition-colors focus:outline-none shrink-0"
+                        title={isLocallyMuted ? "Unmute locally" : "Mute locally"}
+                    >
+                        {isLocallyMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                    </button>
+
+                    {!isVolumeExpanded && (
+                        <button
+                            onClick={() => setIsVolumeExpanded(true)}
+                            className="ml-2 text-white/70 hover:text-white sm:hidden shrink-0"
+                            title="Expand volume slider"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                    )}
+
+                    <div className={`flex items-center overflow-hidden transition-all duration-300 ${isVolumeExpanded ? 'w-48 ml-2 opacity-100' : 'w-0 opacity-0'} sm:w-0 sm:ml-0 sm:opacity-0 sm:group-hover/volume:w-32 sm:group-hover/volume:ml-2 sm:group-hover/volume:opacity-100 focus-within:w-48 focus-within:ml-2 focus-within:opacity-100`}>
+                        <input
+                            type="range"
+                            min="0"
+                            max="2"
+                            step="0.05"
+                            value={isLocallyMuted ? 0 : volume}
+                            onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                setVolume(val);
+                                if (val > 0 && isLocallyMuted) setIsLocallyMuted(false);
+                            }}
+                            className="w-16 sm:w-20 h-1.5 rounded-full appearance-none bg-white/30 cursor-pointer shrink-0"
+                            style={{
+                                background: `linear-gradient(to right, #FF5A5F ${(isLocallyMuted ? 0 : volume) / 2 * 100}%, rgba(255,255,255,0.3) ${(isLocallyMuted ? 0 : volume) / 2 * 100}%)`
+                            }}
+                            title="Adjust volume locally"
+                        />
+                        <span className="text-[10px] font-mono text-white/90 w-10 text-right shrink-0">
+                            {isLocallyMuted ? '0%' : `${Math.round(volume * 100)}%`}
+                        </span>
+                        
+                        <div className="flex-1 sm:hidden" />
+                        
+                        {isVolumeExpanded && (
+                            <button
+                                onClick={() => setIsVolumeExpanded(false)}
+                                className="pl-2 text-white/70 hover:text-white sm:hidden shrink-0"
+                                title="Collapse volume slider"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
@@ -927,10 +1050,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     }, [chatOpen, user?.id]);
 
     // Set up real-time chat socket
-    const { messages, typingUsers, sendMessage, sendTyping, connected: chatConnected, isRoomOpen } = useChatSocket({
+    const { messages, typingUsers, sendMessage, sendTyping, sendReaction, connected: chatConnected, isRoomOpen } = useChatSocket({
         roomId,
         token: authToken,
         userName: user?.name ?? 'Anonymous',
+        userId: user?.id ?? '',
         onNewMessage: handleNewMessage,
     });
 
@@ -1152,6 +1276,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                         typingUsers={typingUsers}
                         sendMessage={sendMessage}
                         sendTyping={sendTyping}
+                        onReact={sendReaction}
                         connected={chatConnected}
                         isOpen={chatOpen}
                         onToggle={() => setChatOpen(o => !o)}

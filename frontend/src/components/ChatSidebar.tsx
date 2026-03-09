@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { MessageSquare, ChevronRight, ChevronDown, Send } from 'lucide-react';
+import { MessageSquare, ChevronRight, ChevronDown, Send, SmilePlus } from 'lucide-react';
 import { ChatMessage, TypingUser } from '@/hooks/useChatSocket';
 import DOMPurify from 'isomorphic-dompurify';
 
@@ -65,26 +65,104 @@ function TypingIndicatorBubble({ typingUsers }: { typingUsers: TypingUser[] }) {
 }
 
 // ── Message bubble ────────────────────────────────────────────────────────────
-function MessageBubble({ msg, isOwn }: { msg: ChatMessage; isOwn: boolean }) {
+const EMOJI_OPTIONS = ['👍', '❤️', '😂', '😮', '😢'];
+
+function MessageBubble({ msg, isOwn, currentUserId, onReact }: { msg: ChatMessage; isOwn: boolean; currentUserId: string; onReact: (msgId: string, emoji: string) => void }) {
+    const [showPicker, setShowPicker] = useState(false);
+    const pickerRef = useRef<HTMLDivElement>(null);
+
+    // Hide picker when clicking outside
+    useEffect(() => {
+        if (!showPicker) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+                setShowPicker(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showPicker]);
+
+    const hasReactions = msg.reactions && Object.keys(msg.reactions).length > 0;
+
     return (
-        <div className={`flex flex-col gap-0.5 ${isOwn ? 'items-end' : 'items-start'}`}>
+        <div className={`flex flex-col gap-0.5 group relative ${isOwn ? 'items-end' : 'items-start'}`}>
             {/* Sender name + time */}
-            <div className={`flex items-baseline gap-1.5 text-xs text-text-muted px-1 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+            <div className={`flex items-baseline gap-1.5 text-[10px] sm:text-xs text-text-muted px-1 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
                 <span className="font-semibold text-text-main truncate max-w-[120px]">{msg.name}</span>
                 <span>{formatTime(msg.timestamp)}</span>
             </div>
-            {/* Bubble */}
-            <div
-                className={`
-                    max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed break-words
-                    ${isOwn
-                        ? 'bg-primary text-white rounded-tr-sm'
-                        : 'bg-white border border-gray-100 text-text-main rounded-tl-sm shadow-sm'
-                    }
-                `}
-            >
-                {parseLinks(DOMPurify.sanitize(msg.text, { ALLOWED_TAGS: [] }))}
+            
+            <div className={`flex items-end gap-2 relative ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+                {/* Bubble */}
+                <div
+                    className={`
+                        max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed break-words relative
+                        ${isOwn
+                            ? 'bg-primary text-white rounded-tr-sm'
+                            : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-text-main dark:text-gray-200 rounded-tl-sm shadow-sm'
+                        }
+                    `}
+                >
+                    {parseLinks(DOMPurify.sanitize(msg.text, { ALLOWED_TAGS: [] }))}
+                </div>
+
+                {/* Reaction Picker Trigger */}
+                <div className={`opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex-shrink-0 relative`}>
+                    <button
+                        onClick={() => setShowPicker(!showPicker)}
+                        className={`p-1 rounded-full text-text-muted hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-text-main dark:hover:text-gray-200 transition-colors ${showPicker ? 'bg-gray-200 dark:bg-gray-700 text-text-main dark:text-gray-200 opacity-100' : ''}`}
+                        title="React"
+                    >
+                        <SmilePlus className="w-4 h-4" />
+                    </button>
+
+                    {/* Emoji Picker Popup */}
+                    {showPicker && (
+                        <div 
+                            ref={pickerRef}
+                            className={`absolute bottom-full mb-1 ${isOwn ? 'right-0' : 'left-0'} flex gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-lg p-1 z-50 animate-in fade-in zoom-in duration-200`}
+                        >
+                            {EMOJI_OPTIONS.map(emoji => (
+                                <button
+                                    key={emoji}
+                                    onClick={() => {
+                                        onReact(msg.id, emoji);
+                                        setShowPicker(false);
+                                    }}
+                                    className="w-8 h-8 flex items-center justify-center text-lg hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors hover:scale-110"
+                                >
+                                    {emoji}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
+
+            {/* Reactions Display (Overlapping the bubble from outside) */}
+            {hasReactions && (
+                <div className={`flex flex-wrap gap-1 relative z-10 -mt-2 ${isOwn ? 'justify-end pr-4' : 'justify-start pl-4'}`}>
+                    {Object.entries(msg.reactions!).map(([emoji, users]) => {
+                        const hasReacted = users.includes(currentUserId);
+                        
+                        const buttonClass = hasReacted
+                            ? 'bg-gray-800 dark:bg-gray-700 border-gray-600 text-white font-bold shadow-sm backdrop-blur-md' 
+                            : 'bg-gray-800/90 dark:bg-gray-800 hover:bg-gray-700 dark:hover:bg-gray-700 border-gray-700 text-white shadow-sm backdrop-blur-md';
+
+                        return (
+                            <button
+                                key={emoji}
+                                onClick={() => onReact(msg.id, emoji)}
+                                className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full transition-colors border ${buttonClass}`}
+                            >
+                                <span>{emoji}</span>
+                                <span className={`opacity-80 ${hasReacted ? '' : 'text-[9px]'}`}>{users.length}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }
@@ -97,6 +175,7 @@ interface ChatSidebarProps {
     typingUsers?: TypingUser[];
     sendMessage: (text: string) => void;
     sendTyping?: (isTyping: boolean) => void;
+    onReact?: (msgId: string, emoji: string) => void;
     connected: boolean;
     isOpen: boolean;
     onToggle: () => void;
@@ -113,6 +192,7 @@ export function ChatSidebar({
     typingUsers = [],
     sendMessage,
     sendTyping,
+    onReact,
     connected,
     isOpen,
     onToggle,
@@ -341,6 +421,8 @@ export function ChatSidebar({
                                 key={msg.id}
                                 msg={msg}
                                 isOwn={msg.userId === currentUserId}
+                                currentUserId={currentUserId}
+                                onReact={onReact || (() => {})}
                             />
                         ))
                     )}
@@ -365,17 +447,10 @@ export function ChatSidebar({
                 {/* Input area */}
                 <div className="shrink-0 border-t border-gray-200 bg-white px-3 py-3">
                     {/*
-                     * Wrapper: min-height = 3 lines (~68px) + vertical padding (16px) = ~84px.
-                     * items-center keeps the send button centred as the textarea grows.
+                     * Wrapper: starts at 1-line height + padding, expands to max 3 lines.
+                     * items-end keeps the send button at the bottom as the textarea grows.
                      */}
-                    <div className="relative flex items-center gap-2 bg-[#F7F7F7] rounded-2xl border border-gray-200 px-3 py-2 min-h-[84px] focus-within:border-primary/50 transition-colors">
-
-                        {/* Custom placeholder — absolutely centred, hidden once user starts typing */}
-                        {!draft && (
-                            <span className="absolute inset-0 flex items-center pl-3 pr-12 text-sm text-text-muted pointer-events-none select-none leading-relaxed">
-                                {connected ? 'Send a message…' : 'Connecting…'}
-                            </span>
-                        )}
+                    <div className="relative flex items-end gap-2 bg-[#F7F7F7] rounded-2xl border border-gray-200 px-3 py-2 min-h-[40px] focus-within:border-primary/50 transition-colors">
 
                         <textarea
                             ref={textareaRef}
@@ -383,12 +458,12 @@ export function ChatSidebar({
                             value={draft}
                             onChange={handleTextareaChange}
                             onKeyDown={handleKeyDown}
-                            placeholder=""
+                            placeholder={connected ? 'Send a message…' : 'Connecting…'}
                             disabled={!connected}
                             className="
                                 flex-1 resize-none bg-transparent text-sm text-text-main
                                 outline-none leading-relaxed overflow-y-auto
-                                disabled:opacity-50
+                                placeholder:text-text-muted disabled:opacity-50
                             "
                             style={{ scrollbarWidth: 'none', maxHeight: `${MAX_HEIGHT_PX}px` }}
                         />
@@ -397,7 +472,7 @@ export function ChatSidebar({
                             disabled={!draft.trim() || !connected}
                             aria-label="Send message"
                             className="
-                                shrink-0 self-end mb-0.5 w-8 h-8 flex items-center justify-center rounded-xl
+                                shrink-0 self-end w-8 h-8 flex items-center justify-center rounded-xl
                                 bg-primary text-white
                                 hover:bg-[#E0484D] disabled:opacity-30 disabled:cursor-not-allowed
                                 transition-all duration-150

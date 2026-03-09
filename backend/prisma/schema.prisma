@@ -65,6 +65,7 @@ model ChatMessage {
   userName  String
   /// @encrypted
   text      String
+  reactions Json?    @default("{}")
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

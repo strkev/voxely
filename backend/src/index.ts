@@ -369,6 +369,7 @@ io.on('connection', async (socket) => {
                 name: m.userName,
                 text: m.text,
                 timestamp: m.createdAt.toISOString(),
+                reactions: m.reactions || {}
             }));
 
             socket.emit('chat:history', formatted);
@@ -411,11 +412,68 @@ io.on('connection', async (socket) => {
                 userId,
                 userName: message.name,
                 text: clean,
+                reactions: {}, // Initialize empty reactions
             },
         }).catch((err: any) => console.error('[WS] Failed to persist message:', err));
 
         // Broadcast to everyone in the room (including sender)
         io.to(roomId).emit('chat:message', message);
+    });
+
+    // ── chat:react — client adds/removes a reaction ───────────────────────────
+    socket.on('chat:react', async ({ roomId, messageId, emoji }: { roomId: string; messageId: string; emoji: string }) => {
+        if (typeof roomId !== 'string' || !ROOM_ID_RE.test(roomId)) return;
+        if (typeof messageId !== 'string' || !UUID_RE.test(messageId)) return;
+        
+        const ALLOWED_EMOJIS = ['👍', '❤️', '😂', '😮', '😢'];
+        if (!ALLOWED_EMOJIS.includes(emoji)) return;
+
+        // Ensure sender is actually in the room
+        if (!io.sockets.adapter.rooms.get(roomId)?.has(socket.id)) return;
+
+        const userId = socket.data.userId as string;
+
+        try {
+            // Fetch current message to update its reactions JSON
+            const msg = await prisma.chatMessage.findUnique({
+                where: { id: messageId },
+                select: { reactions: true, roomId: true }
+            });
+
+            if (!msg || msg.roomId !== roomId) return;
+
+            const reactions = (msg.reactions as Record<string, string[]>) || {};
+            
+            // Initialize array for this emoji if it doesn't exist
+            if (!reactions[emoji]) {
+                reactions[emoji] = [];
+            }
+
+            const userIndex = reactions[emoji].indexOf(userId);
+            
+            // Toggle reaction: if user already reacted with this emoji, remove them; otherwise, add them
+            if (userIndex > -1) {
+                reactions[emoji].splice(userIndex, 1);
+                // Clean up empty arrays
+                if (reactions[emoji].length === 0) {
+                    delete reactions[emoji];
+                }
+            } else {
+                reactions[emoji].push(userId);
+            }
+
+            // Save back to database
+            await prisma.chatMessage.update({
+                where: { id: messageId },
+                data: { reactions }
+            });
+
+            // Broadcast the updated reactions to everyone in the room
+            io.to(roomId).emit('chat:react', { messageId, reactions });
+
+        } catch (err) {
+            console.error('[WS] Failed to process reaction:', err);
+        }
     });
 
     // ── Helper: clean up chat messages when a room becomes empty ────────────────
