@@ -270,7 +270,7 @@ export function ChatSidebar({
                 <span className="hidden sm:inline">Chat</span>
                 {/* Unread badge */}
                 {unreadCount > 0 && !isOpen && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] min-h-[18px] bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-sm animate-pulse-soft">
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] min-h-[18px] bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-sm animate-pulse-soft z-50">
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}

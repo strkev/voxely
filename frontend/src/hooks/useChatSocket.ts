@@ -15,6 +15,7 @@ interface UseChatSocketOptions {
     roomId: string;
     token: string | null;
     userName: string;
+    onNewMessage?: (msg: ChatMessage) => void;
 }
 
 export interface TypingUser {
@@ -37,7 +38,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const SEND_THROTTLE_MS = 500;
 const TYPING_THROTTLE_MS = 1000;
 
-export function useChatSocket({ roomId, token, userName }: UseChatSocketOptions): UseChatSocketReturn {
+export function useChatSocket({ roomId, token, userName, onNewMessage }: UseChatSocketOptions): UseChatSocketReturn {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
     const [connected, setConnected] = useState(false);
@@ -46,6 +47,11 @@ export function useChatSocket({ roomId, token, userName }: UseChatSocketOptions)
     const lastSentRef = useRef<number>(0);
     const lastTypingSentRef = useRef<number>(0);
     const typingTimeoutsRef = useRef<Record<string, NodeJS.Timeout>>({});
+    const onNewMessageRef = useRef(onNewMessage);
+
+    useEffect(() => {
+        onNewMessageRef.current = onNewMessage;
+    }, [onNewMessage]);
 
     useEffect(() => {
         if (!token || !roomId) return;
@@ -74,6 +80,9 @@ export function useChatSocket({ roomId, token, userName }: UseChatSocketOptions)
 
         socket.on('chat:message', (msg: ChatMessage) => {
             setMessages(prev => [...prev, msg]);
+            if (onNewMessageRef.current) {
+                onNewMessageRef.current(msg);
+            }
             
             // If someone sends a message, they are no longer typing
             setTypingUsers(prev => prev.filter(u => u.userId !== msg.userId));

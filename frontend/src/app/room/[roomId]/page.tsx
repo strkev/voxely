@@ -21,7 +21,7 @@ import '@livekit/components-styles';
 import { Track, LocalTrackPublication } from 'livekit-client';
 import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, Mic, Users, ScreenShare, LogOut, Moon, Lock, Unlock, Image as ImageIcon } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
-import { useChatSocket } from '@/hooks/useChatSocket';
+import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
 import { playSound } from '@/lib/sounds';
 import { NoiseSuppressionProcessor } from '@/lib/rnnoise-processor';
@@ -906,38 +906,33 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         };
     }, []);
 
+    const handleNewMessage = useCallback((msg: ChatMessage) => {
+        if (!chatOpen) {
+            setUnread(u => u + 1);
+
+            // Show visual toast
+            if (msg.userId !== user?.id) {
+                setToastMessage({
+                    id: msg.id,
+                    name: msg.name,
+                    text: msg.text
+                });
+
+                if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                toastTimerRef.current = setTimeout(() => {
+                    setToastMessage(null);
+                }, 4000);
+            }
+        }
+    }, [chatOpen, user?.id]);
+
     // Set up real-time chat socket
     const { messages, typingUsers, sendMessage, sendTyping, connected: chatConnected, isRoomOpen } = useChatSocket({
         roomId,
         token: authToken,
         userName: user?.name ?? 'Anonymous',
+        onNewMessage: handleNewMessage,
     });
-
-    // Increment unread when sidebar is closed and new message arrives
-    const prevLengthRef = React.useRef(0);
-    useEffect(() => {
-        if (messages.length > prevLengthRef.current) {
-            if (!chatOpen) {
-                setUnread(u => u + (messages.length - prevLengthRef.current));
-
-                // Show visual toast
-                const latestMsg = messages[messages.length - 1];
-                if (latestMsg.userId !== user?.id) {
-                    setToastMessage({
-                        id: latestMsg.id,
-                        name: latestMsg.name,
-                        text: latestMsg.text
-                    });
-
-                    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-                    toastTimerRef.current = setTimeout(() => {
-                        setToastMessage(null);
-                    }, 4000);
-                }
-            }
-        }
-        prevLengthRef.current = messages.length;
-    }, [messages, chatOpen, user?.id]);
 
     const handleRead = useCallback(() => setUnread(0), []);
 
@@ -1099,7 +1094,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 }}
             >
                 {/* Top bar */}
-                <div className="absolute top-3 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-x-auto scrollbar-hide">
+                <div className="absolute top-3 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-visible py-2 -my-2 flex-wrap sm:flex-nowrap">
                     {/* Friends toggle button */}
                     <button
                         onClick={() => setFriendsSidebarOpen(o => !o)}
