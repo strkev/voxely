@@ -740,7 +740,7 @@ function BackgroundQuickActionButton({ onOpen }: { onOpen: () => void }) {
             onClick={onOpen}
             aria-label="Background Settings"
             title="Quick Background Settings"
-            className="shrink-0 hidden sm:flex items-center justify-center bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 transition-all duration-150 backdrop-blur-md shadow-sm"
+            className="shrink-0 hidden sm:flex items-center justify-center bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl p-2.5 transition-all duration-150 backdrop-blur-md shadow-sm"
         >
             <ImageIcon className="w-4 h-4" />
         </button>
@@ -891,7 +891,7 @@ function CustomVideoConference() {
         );
 
         return (
-            <div className="absolute inset-0 pb-[76px] pt-[52px] flex flex-col">
+            <div className="absolute inset-0 pb-[76px] pt-[64px] flex flex-col">
                 <div className="flex-1 flex flex-col sm:flex-row gap-1.5 sm:gap-2 p-1.5 sm:p-2 min-h-0">
 
                     {/* Main pinned tile — grid constrains height like grid mode */}
@@ -932,7 +932,7 @@ function CustomVideoConference() {
                     'grid-cols-2 sm:grid-cols-4';
 
     return (
-        <div className="absolute inset-0 pb-[76px] pt-[52px] flex flex-col">
+        <div className="absolute inset-0 pb-[76px] pt-[64px] flex flex-col">
             <div
                 className={`flex-1 grid ${gridCols} gap-1.5 sm:gap-2 p-1.5 sm:p-2 auto-rows-fr`}
                 style={{ minHeight: 0 }}
@@ -1219,7 +1219,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 }}
             >
                 {/* Top bar */}
-                <div className="absolute top-3 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-visible py-2 -my-2 flex-wrap sm:flex-nowrap">
+                <div className="absolute top-4 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-visible py-2 -my-2 flex-wrap sm:flex-nowrap">
                     {/* Friends toggle button */}
                     <button
                         onClick={() => setFriendsSidebarOpen(o => !o)}
@@ -1256,7 +1256,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     <button
                         onClick={() => handleToggleOpenRoom(!isRoomOpen)}
                         title={isRoomOpen ? 'Room is open to friends (click to close)' : 'Room is closed (click to open)'}
-                        className={`shrink-0 flex items-center gap-1.5 px-3 py-2.5 sm:px-4 sm:py-2.5 rounded-2xl text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm border ${isRoomOpen ? 'bg-primary/10 hover:bg-primary/20 text-primary border-primary/20 hover:border-primary/40' : 'bg-white/90 hover:bg-white text-text-muted hover:text-primary border-[rgba(220,220,220,0.85)] hover:border-primary/40'}`}
+                        className={`shrink-0 flex items-center justify-center p-2.5 rounded-2xl text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm border ${isRoomOpen ? 'bg-primary/10 hover:bg-primary/20 text-primary border-primary/20 hover:border-primary/40' : 'bg-white/90 hover:bg-white text-text-muted hover:text-primary border-[rgba(220,220,220,0.85)] hover:border-primary/40'}`}
                     >
                         {isRoomOpen ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                     </button>
@@ -1296,7 +1296,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
                     <button
                         onClick={() => requestLeave('/dashboard')}
-                        className="shrink-0 flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
+                        className="shrink-0 flex items-center gap-1.5 bg-primary/90 hover:bg-primary border border-primary/60 text-white rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
                     >
                         <LogOut className="w-4 h-4" />
                         <span className="hidden sm:inline">Leave</span>
