@@ -274,7 +274,7 @@ function SpotlightableTile({
                         </button>
                     )}
 
-                    <div className={`flex items-center overflow-hidden transition-all duration-300 ${isVolumeExpanded ? 'w-48 ml-2 opacity-100' : 'w-0 opacity-0'} sm:w-0 sm:ml-0 sm:opacity-0 sm:group-hover/volume:w-32 sm:group-hover/volume:ml-2 sm:group-hover/volume:opacity-100 focus-within:w-48 focus-within:ml-2 focus-within:opacity-100`}>
+                    <div className={`flex items-center overflow-hidden transition-all duration-300 ${isVolumeExpanded ? 'w-44 ml-2 opacity-100' : 'w-0 opacity-0'} sm:w-0 sm:ml-0 sm:opacity-0 sm:group-hover/volume:w-36 sm:group-hover/volume:ml-2 sm:group-hover/volume:opacity-100 focus-within:w-44 focus-within:ml-2 focus-within:opacity-100`}>
                         <input
                             type="range"
                             min="0"
@@ -286,7 +286,7 @@ function SpotlightableTile({
                                 setVolume(val);
                                 if (val > 0 && isLocallyMuted) setIsLocallyMuted(false);
                             }}
-                            className="w-16 sm:w-20 h-1.5 rounded-full appearance-none bg-white/30 cursor-pointer shrink-0"
+                            className="w-20 sm:w-24 h-1.5 rounded-full appearance-none bg-white/30 cursor-pointer shrink-0"
                             style={{
                                 background: `linear-gradient(to right, #FF5A5F ${(isLocallyMuted ? 0 : volume) / 2 * 100}%, rgba(255,255,255,0.3) ${(isLocallyMuted ? 0 : volume) / 2 * 100}%)`
                             }}
