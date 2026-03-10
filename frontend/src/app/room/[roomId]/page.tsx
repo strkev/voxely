@@ -1250,8 +1250,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                         <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share'}</span>
                     </button>
 
-                    <div className="flex-1 min-w-[8px]" />
-
                     {/* Open Room Status Indicator */}
                     <button
                         onClick={() => handleToggleOpenRoom(!isRoomOpen)}
@@ -1261,11 +1259,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                         {isRoomOpen ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                     </button>
 
-                    {/* Background gear (Quick Action) - Only show if camera is on */}
-                    {typeof window !== 'undefined' && (
-                        <BackgroundQuickActionButton onOpen={() => setVirtualBackgroundOpen(true)} />
-                    )}
+                    <div className="flex-1 min-w-[8px]" />
 
+                    {/* Open Room Status Indicator */}
                     {/* Settings gear */}
                     <button
                         onClick={() => setSettingsOpen(true)}
