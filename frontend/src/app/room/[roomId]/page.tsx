@@ -979,7 +979,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
     const qPreset = VIDEO_PRESETS[videoQuality];
 
-    // Friends socket
+    // Friends state & socket
+    const incomingRequests = useFriendsStore(s => s.incomingRequests);
     const friendsSocketRef = useFriendsSocket(authToken);
 
     const handleToggleOpenRoom = useCallback((isOpen: boolean) => {
@@ -1228,7 +1229,14 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                             : 'bg-white/90 hover:bg-white border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary'
                             }`}
                     >
-                        <Users className="w-4 h-4" />
+                        <div className="relative flex items-center justify-center">
+                            <Users className="w-4 h-4" />
+                            {incomingRequests.length > 0 && (
+                                <span className="absolute -top-1.5 -right-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white border border-white/90 sm:border-white shadow-sm pointer-events-none">
+                                    {incomingRequests.length > 9 ? '9+' : incomingRequests.length}
+                                </span>
+                            )}
+                        </div>
                         <span className="hidden sm:inline">Friends</span>
                     </button>
 
