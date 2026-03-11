@@ -134,7 +134,7 @@ export function UserSettingsModal({ onClose }: UserSettingsModalProps) {
         <>
             <div
                 ref={backdropRef}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm"
                 onClick={(e) => { if (e.target === backdropRef.current) onClose(); }}
             >
                 <div className="bg-surface rounded-2xl shadow-xl border border-gray-100 w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto">
