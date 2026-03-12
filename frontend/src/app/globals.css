@@ -1401,6 +1401,18 @@ body {
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
+.logo-dark-mode {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.logo-dark-mode:hover {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.dark .logo-dark-mode {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) !important;
+}
+
 /* Header avatar trigger */
 .dark header button[aria-haspopup="true"] {
   background-color: var(--elevation-02) !important;
