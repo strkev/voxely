@@ -937,7 +937,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [chatSidebarWidth, setChatSidebarWidth] = useState(320);
     const [unread, setUnread] = useState(0);
     const [copied, setCopied] = useState(false);
-    const { videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius } = useSettingsStore();
+    const { soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius } = useSettingsStore();
     const noiseProcessorRef = useRef<NoiseSuppressionProcessor | null>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const bgProcessorRef = useRef<any>(null);
@@ -1061,6 +1061,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     // Confirm leave: navigate to the pending target from the global store
     const handleConfirmLeave = useCallback(() => {
+        // Play leave sound before closing
+        if (soundsEnabled) {
+            playSound('leave', soundVolume);
+        }
+
         const target = storeConfirmLeave();
         if (target) {
             // Delay the actual navigation by 400ms to allow the LiveKit disconnected 
@@ -1069,7 +1074,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 router.push(target);
             }, 400);
         }
-    }, [storeConfirmLeave, router]);
+    }, [storeConfirmLeave, router, soundsEnabled, soundVolume]);
 
     useEffect(() => {
         if (!mounted) return;
