@@ -3,6 +3,7 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -67,6 +68,9 @@ function LoginForm() {
             </div>
             <div className="w-full max-w-md bg-surface p-8 rounded-video shadow-flat border border-gray-100">
                 <div className="text-center mb-8">
+                    <div className="flex justify-center mb-6">
+                        <Image src="/logo.png" alt="Voxely Logo" width={64} height={64} className="w-16 h-16 object-contain logo-dark-mode" />
+                    </div>
                     <h1 className="text-2xl font-semibold text-text-main mb-2">Welcome back</h1>
                     <p className="text-text-muted text-sm">Sign in to your account to continue</p>
                 </div>

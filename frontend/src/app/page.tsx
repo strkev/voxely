@@ -43,7 +43,7 @@ export default function Home() {
         </span>
 
         <div className="flex items-center gap-3 sm:gap-6 justify-center">
-          <Image src="/logo.png" alt="Voxely Logo" width={96} height={96} className="w-16 h-16 sm:w-24 sm:h-24 object-contain" />
+          <Image src="/logo.png" alt="Voxely Logo" width={96} height={96} className="w-16 h-16 sm:w-24 sm:h-24 object-contain logo-dark-mode" />
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold text-text-main tracking-tight leading-[1.1]">
             Voxely
           </h1>
