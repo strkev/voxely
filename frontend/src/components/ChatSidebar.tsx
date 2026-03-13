@@ -264,6 +264,7 @@ interface ChatSidebarProps {
     onRead: () => void;
     width?: number;
     onWidthChange?: (width: number) => void;
+    forceCompact?: boolean;
 }
 
 // ── ChatSidebar ───────────────────────────────────────────────────────────────
@@ -281,6 +282,7 @@ export function ChatSidebar({
     onRead,
     width = 320,
     onWidthChange,
+    forceCompact = false,
 }: ChatSidebarProps) {
     const [draft, setDraft] = useState('');
     const [mounted, setMounted] = useState(false);
@@ -425,10 +427,10 @@ export function ChatSidebar({
                 onClick={onToggle}
                 aria-label={isOpen ? 'Close chat' : 'Open chat'}
                 title={isOpen ? 'Close chat' : 'Open chat'}
-                className="relative flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
+                className="relative flex items-center bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
             >
                 <MessageSquare className="w-4 h-4" />
-                <span className="hidden sm:inline">Chat</span>
+                <span className={`topbar-btn-inner ${forceCompact ? 'topbar-btn-inner--compact' : ''}`}>Chat</span>
                 {/* Unread badge */}
                 {unreadCount > 0 && !isOpen && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-[18px] min-h-[18px] bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-sm animate-pulse-soft z-50">

@@ -928,6 +928,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [livekitToken, setLivekitToken] = useState<string>('');
     const [isSecureContext, setIsSecureContext] = useState<boolean>(true);
     const [mounted, setMounted] = useState(false);
+    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
     const [tokenError, setTokenError] = useState(false);
     const resolvedParams = React.use(params);
     const roomId = resolvedParams.roomId;
@@ -1035,6 +1036,17 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     useEffect(() => {
         if (typeof window !== 'undefined' && !navigator.mediaDevices) setIsSecureContext(false);
     }, []);
+
+    // Track window width for topbar responsiveness
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const availableWidth = windowWidth - (chatOpen && windowWidth >= 640 ? chatSidebarWidth : 0);
+    const isCompact = availableWidth < 700;
 
     // Prevent white background flash on mobile overscroll
     useEffect(() => {
@@ -1199,7 +1211,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     <button
                         onClick={() => setFriendsSidebarOpen(o => !o)}
                         aria-label="Friends"
-                        className={`shrink-0 flex items-center gap-1.5 backdrop-blur-md border rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm ${friendsSidebarOpen
+                        className={`shrink-0 flex items-center backdrop-blur-md border rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm ${friendsSidebarOpen
                             ? 'bg-primary/90 hover:bg-primary border-primary/60 text-white'
                             : 'bg-white/90 hover:bg-white border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary'
                             }`}
@@ -1212,17 +1224,17 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                                 </span>
                             )}
                         </div>
-                        <span className="hidden sm:inline">Friends</span>
+                        <span className={`topbar-btn-inner ${isCompact ? 'topbar-btn-inner--compact' : ''}`}>Friends</span>
                     </button>
 
                     {/* Copy link button */}
                     <button
                         onClick={handleCopyLink}
                         aria-label="Copy room link"
-                        className="shrink-0 flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white border border-gray-800 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm"
+                        className="shrink-0 flex items-center bg-gray-900 hover:bg-gray-800 text-white border border-gray-800 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm"
                     >
                         {copied ? <Check className="w-4 h-4 text-green-400" /> : <Link2 className="w-4 h-4" />}
-                        <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share'}</span>
+                        <span className={`topbar-btn-inner ${isCompact ? 'topbar-btn-inner--compact' : ''}`}>{copied ? 'Copied!' : 'Share'}</span>
                     </button>
 
                     {/* Open Room Status Indicator */}
@@ -1241,10 +1253,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     <button
                         onClick={() => setSettingsOpen(true)}
                         aria-label="Settings"
-                        className="shrink-0 flex items-center gap-1.5 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
+                        className="shrink-0 flex items-center bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
                     >
                         <Settings className="w-4 h-4" />
-                        <span className="hidden sm:inline">Settings</span>
+                        <span className={`topbar-btn-inner ${isCompact ? 'topbar-btn-inner--compact' : ''}`}>Settings</span>
                     </button>
 
                     {/* Chat toggle button lives inside ChatSidebar */}
@@ -1263,14 +1275,15 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                         onRead={handleRead}
                         width={chatSidebarWidth}
                         onWidthChange={setChatSidebarWidth}
+                        forceCompact={isCompact}
                     />
 
                     <button
                         onClick={() => requestLeave('/dashboard')}
-                        className="shrink-0 flex items-center gap-1.5 bg-primary/90 hover:bg-primary border border-primary/60 text-white rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
+                        className="shrink-0 flex items-center bg-primary/90 hover:bg-primary border border-primary/60 text-white rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
                     >
                         <LogOut className="w-4 h-4" />
-                        <span className="hidden sm:inline">Leave</span>
+                        <span className={`topbar-btn-inner ${isCompact ? 'topbar-btn-inner--compact' : ''}`}>Leave</span>
                     </button>
                 </div>
                 <AutoStartAudio />
