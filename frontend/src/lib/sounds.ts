@@ -16,9 +16,11 @@ type SoundName =
 // Shared AudioContext (created lazily on first use)
 let ctx: AudioContext | null = null;
 
-function getCtx(): AudioContext {
+export function getSharedAudioContext(): AudioContext {
+    if (typeof window === 'undefined') return {} as AudioContext;
     if (!ctx || ctx.state === 'closed') {
-        ctx = new AudioContext();
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        ctx = new AudioContextClass();
     }
     // Resume if suspended (browser autoplay policy)
     if (ctx.state === 'suspended') ctx.resume();
@@ -35,7 +37,7 @@ interface ToneParams {
 }
 
 function playTone(params: ToneParams, volume: number) {
-    const ac = getCtx();
+    const ac = getSharedAudioContext();
     const osc = ac.createOscillator();
     const gain = ac.createGain();
 
@@ -54,7 +56,7 @@ function playTone(params: ToneParams, volume: number) {
 }
 
 function playSequence(tones: ToneParams[], volume: number, gap = 0.08) {
-    const ac = getCtx();
+    const ac = getSharedAudioContext();
     let t = ac.currentTime;
 
     tones.forEach(params => {

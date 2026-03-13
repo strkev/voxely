@@ -12,13 +12,12 @@ import {
     ParticipantTile,
     useTracks,
     useRoomContext,
-    useLocalParticipant,
     useIsSpeaking,
     useIsMuted,
     TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { Track, LocalTrackPublication } from 'livekit-client';
+import { Track, LocalTrackPublication, RemoteAudioTrack } from 'livekit-client';
 import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, ChevronLeft, ChevronRight, Mic, Users, ScreenShare, LogOut, Moon, Lock, Unlock, Image as ImageIcon } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
@@ -112,63 +111,51 @@ function SpotlightableTile({
     const friends = useFriendsStore(s => s.friends);
     let userColor = '#FF5A5F';
 
-    // Local volume control state
     const [volume, setVolume] = useState(1);
     const [isLocallyMuted, setIsLocallyMuted] = useState(false);
     const [isVolumeExpanded, setIsVolumeExpanded] = useState(false);
 
-    const audioCtxRef = useRef<AudioContext | null>(null);
-    const gainNodeRef = useRef<GainNode | null>(null);
-    const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
-
-    // Apply volume changes
+    // Sync volume and mute state
     useEffect(() => {
-        if (!trackRef?.participant || trackRef.participant.isLocal) return;
+        const participant = trackRef?.participant;
+        if (!participant || participant.isLocal) return;
 
         const targetVol = isLocallyMuted ? 0 : volume;
-        const clampedVol = Math.min(1, targetVol);
-        const boostVol = targetVol > 1 ? targetVol : 1;
 
-        const audioPubs = Array.from(trackRef.participant.audioTrackPublications.values());
-        for (const pub of audioPubs) {
-            if (pub.track?.attachedElements) {
-                pub.track.attachedElements.forEach(el => {
+        const sync = () => {
+            const pubs = Array.from(participant.audioTrackPublications.values());
+            pubs.forEach(pub => {
+                const track = pub.track;
+                if (!track) return;
+
+                // Use LiveKit native volume (0-1) - only on RemoteAudioTrack
+                if (track instanceof RemoteAudioTrack) {
+                    track.setVolume(Math.min(1, targetVol));
+                }
+
+                // Firefox/Safari extra safety: explicitly mute elements
+                track.attachedElements.forEach(el => {
                     const audioEl = el as HTMLAudioElement;
-                    
-                    // Clamp raw volume to avoid DOM Exception [0, 1]
-                    audioEl.volume = clampedVol;
-
-                    // Apply Web Audio gain for > 100%
-                    try {
-                        if (!audioCtxRef.current) {
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-                            audioCtxRef.current = new AudioContextClass();
-                        }
-                        
-                        // Create web audio graph once
-                        if (!gainNodeRef.current && audioCtxRef.current) {
-                            sourceNodeRef.current = audioCtxRef.current.createMediaElementSource(audioEl);
-                            gainNodeRef.current = audioCtxRef.current.createGain();
-                            sourceNodeRef.current.connect(gainNodeRef.current);
-                            gainNodeRef.current.connect(audioCtxRef.current.destination);
-                        }
-                        
-                        if (audioCtxRef.current?.state === 'suspended') {
-                            audioCtxRef.current.resume();
-                        }
-                        
-                        if (gainNodeRef.current) {
-                            // Boost the gain if target > 1
-                            gainNodeRef.current.gain.value = boostVol;
-                        }
-                    } catch (err) {
-                        console.warn('Could not apply >100% audio boost', err);
+                    audioEl.muted = (targetVol === 0);
+                    if (targetVol === 0) {
+                        audioEl.volume = 0;
                     }
                 });
-            }
-        }
-    }, [volume, isLocallyMuted, trackRef]);
+            });
+        };
+
+        sync();
+
+        // Listen for track changes/attachments to keep volume in sync
+        // Using string event names for safety
+        participant.on('trackSubscribed', sync);
+        participant.on('trackUnsubscribed', sync);
+
+        return () => {
+            participant.off('trackSubscribed', sync);
+            participant.off('trackUnsubscribed', sync);
+        };
+    }, [volume, isLocallyMuted, trackRef?.participant]);
 
     // Farbe für andere Teilnehmer aus Metadaten auslesen (Fallback)
     try {
@@ -216,7 +203,7 @@ function SpotlightableTile({
                 </div>
             )}
 
-            {/* LIVEKIT TILE: Wird in z-10 gewrappt */}
+            {/* LIVEKIT TILE: Wird in z-10 gewrappt. */}
             <div className={`relative w-full h-full z-10 lk-custom-tile-wrapper ${isMuted ? 'is-muted' : ''}`}>
                 <ParticipantTile trackRef={trackRef} />
             </div>
@@ -278,7 +265,7 @@ function SpotlightableTile({
                         <input
                             type="range"
                             min="0"
-                            max="2"
+                            max="1"
                             step="0.05"
                             value={isLocallyMuted ? 0 : volume}
                             onChange={(e) => {
@@ -288,7 +275,7 @@ function SpotlightableTile({
                             }}
                             className="w-20 sm:w-24 h-1.5 rounded-full appearance-none bg-white/30 cursor-pointer shrink-0"
                             style={{
-                                background: `linear-gradient(to right, #FF5A5F ${(isLocallyMuted ? 0 : volume) / 2 * 100}%, rgba(255,255,255,0.3) ${(isLocallyMuted ? 0 : volume) / 2 * 100}%)`
+                                background: `linear-gradient(to right, #FF5A5F ${(isLocallyMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.3) ${(isLocallyMuted ? 0 : volume) * 100}%)`
                             }}
                             title="Adjust volume locally"
                         />
@@ -729,23 +716,6 @@ function NoiseSuppressionHook({
     return null;
 }
 
-// ─── Background Quick Action Button ───────────────────────────────────────────
-function BackgroundQuickActionButton({ onOpen }: { onOpen: () => void }) {
-    const { isCameraEnabled } = useLocalParticipant();
-    
-    if (!isCameraEnabled) return null;
-
-    return (
-        <button
-            onClick={onOpen}
-            aria-label="Background Settings"
-            title="Quick Background Settings"
-            className="shrink-0 hidden sm:flex items-center justify-center bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl p-2.5 transition-all duration-150 backdrop-blur-md shadow-sm"
-        >
-            <ImageIcon className="w-4 h-4" />
-        </button>
-    );
-}
 
 // ─── Virtual Background Hook ──────────────────────────────────────────────────
 function VirtualBackgroundHook({
