@@ -1342,10 +1342,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             {/* Room Invite Banner */}
             <RoomInviteBanner />
 
-            {/* Leave confirmation modal overlay */}
-            {pendingTarget && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-                    <div className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6">
+            {/* Leave confirmation modal overlay — portaled to body to ensure it stays above all other UI */}
+            {pendingTarget && typeof document !== 'undefined' && createPortal(
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-transparent backdrop-blur-sm p-4"  style={{ backgroundColor: 'rgba(0,0,0,0.4)', pointerEvents: 'auto' }}>
+                    <div className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-3 text-red-500 mb-3">
                             <LogOut className="w-6 h-6" />
                             <h2 className="text-xl font-bold text-text-main">Leave Room?</h2>
@@ -1366,7 +1366,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Friend Requests Modal */}
