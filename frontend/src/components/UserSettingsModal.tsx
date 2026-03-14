@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { playSound } from '@/lib/sounds';
 import { PRESET_COLORS, getContrastColor } from '@/lib/colors';
-import { Volume2, VolumeX, Bell, X, Trash2, Pencil, Loader2, Check, Moon, Palette } from 'lucide-react';
+import { Volume2, VolumeX, Bell, X, Trash2, Pencil, Loader2, Check, Moon, Palette, Sun, Monitor } from 'lucide-react';
 
 type SoundKey = 'join' | 'leave' | 'mute' | 'unmute' | 'cameraOn' | 'cameraOff' | 'screenShareOn' | 'screenShareOff';
 
@@ -340,19 +340,38 @@ export function UserSettingsModal({ onClose }: UserSettingsModalProps) {
                         </div>
                     </div>
 
-                    {/* Dark Mode */}
+                    {/* Appearance / Theme */}
                     <div className="border-b border-gray-100">
                         <div className="px-6 py-3 flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Moon className="w-3.5 h-3.5 text-text-muted" />
-                                <h3 className="text-xs font-semibold text-text-main uppercase tracking-wider">Dark Mode</h3>
+                                <Palette className="w-4 h-4 text-text-muted" />
+                                <span className="text-sm font-semibold text-text-main">Appearance</span>
                             </div>
-                            <button
-                                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                                className={`relative w-10 h-5.5 rounded-full transition-colors duration-200 ${theme === 'dark' ? 'bg-primary' : 'bg-gray-200'}`}
-                            >
-                                <span className={`absolute top-0.5 left-0.5 w-4.5 h-4.5 rounded-full bg-white shadow transition-transform duration-200 ${theme === 'dark' ? 'translate-x-4.5' : 'translate-x-0'}`} />
-                            </button>
+                            <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200">
+                                {(['light', 'dark', 'system'] as const).map((value) => {
+                                    const options = {
+                                        light: { icon: Sun, label: 'Light' },
+                                        dark: { icon: Moon, label: 'Dark' },
+                                        system: { icon: Monitor, label: 'System' }
+                                    };
+                                    const { icon: Icon, label } = options[value];
+                                    const isActive = theme === value;
+                                    return (
+                                        <button
+                                            key={value}
+                                            onClick={() => setTheme(value)}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all ${isActive
+                                                    ? 'bg-white text-primary shadow-sm ring-1 ring-black/5'
+                                                    : 'text-text-muted hover:text-text-main'
+                                                }`}
+                                            title={`${label} Mode`}
+                                        >
+                                            <Icon className="w-3.5 h-3.5" />
+                                            {label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
 

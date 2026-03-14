@@ -33,7 +33,7 @@ interface SettingsState {
     virtualBackground: 'none' | 'blur' | 'image';
     virtualBackgroundImage: string | null;
     blurRadius: number;
-    theme: 'light' | 'dark';
+    theme: 'light' | 'dark' | 'system';
     setSoundsEnabled: (v: boolean) => void;
     setSoundVolume: (v: number) => void;
     setVideoQuality: (v: VideoQuality) => void;
@@ -46,7 +46,7 @@ interface SettingsState {
     setVirtualBackground: (v: 'none' | 'blur' | 'image') => void;
     setVirtualBackgroundImage: (v: string | null) => void;
     setBlurRadius: (v: number) => void;
-    setTheme: (v: 'light' | 'dark') => void;
+    setTheme: (v: 'light' | 'dark' | 'system') => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -64,7 +64,7 @@ export const useSettingsStore = create<SettingsState>()(
             virtualBackground: 'none',
             virtualBackgroundImage: null,
             blurRadius: 10,
-            theme: 'light',
+            theme: 'system',
             setSoundsEnabled: (v) => set({ soundsEnabled: v }),
             setSoundVolume: (v) => set({ soundVolume: Math.max(0, Math.min(1, v)) }),
             setVideoQuality: (v) => set({ videoQuality: v }),

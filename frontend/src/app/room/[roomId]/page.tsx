@@ -18,7 +18,7 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track, LocalTrackPublication, RemoteAudioTrack } from 'livekit-client';
-import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, ScreenShare, LogOut, Moon, Lock, Unlock, Image as ImageIcon } from 'lucide-react';
+import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, ScreenShare, LogOut, Moon, Lock, Unlock, Image as ImageIcon, Sun, Palette } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
@@ -385,6 +385,7 @@ function InRoomSettings({ onClose, onOpenVirtualBackground }: { onClose: () => v
         setSoundsEnabled, setSoundVolume, setVideoQuality, setShowDevInfo, setAutoHideControlBar, setNoiseSuppression,
         setScreenShareResolution, setScreenShareFps,
     } = useSettingsStore();
+
     const backdropRef = useRef<HTMLDivElement>(null);
 
     // Lock body scroll while settings modal is open
@@ -583,19 +584,38 @@ function InRoomSettings({ onClose, onOpenVirtualBackground }: { onClose: () => v
                     </div>
                 </div>
 
-                {/* Dark Mode */}
-                <div className="px-6 py-4">
+                {/* Appearance / Theme */}
+                <div className="px-6 py-4 border-b border-gray-100">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <Moon className="w-4 h-4 text-text-muted" />
-                            <span className="text-sm font-medium text-text-main">Dark Mode</span>
+                            <Palette className="w-4 h-4 text-text-muted" />
+                            <span className="text-sm font-semibold text-text-main">Appearance</span>
                         </div>
-                        <button
-                            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                            className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${theme === 'dark' ? 'bg-primary' : 'bg-gray-200'}`}
-                        >
-                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${theme === 'dark' ? 'translate-x-5' : 'translate-x-0'}`} />
-                        </button>
+                        <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200">
+                            {(['light', 'dark', 'system'] as const).map((value) => {
+                                const options = {
+                                    light: { icon: Sun, label: 'Light' },
+                                    dark: { icon: Moon, label: 'Dark' },
+                                    system: { icon: Monitor, label: 'System' }
+                                };
+                                const { icon: Icon, label } = options[value];
+                                const isActive = theme === value;
+                                return (
+                                    <button
+                                        key={value}
+                                        onClick={() => setTheme(value)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all ${isActive
+                                                ? 'bg-white text-primary shadow-sm ring-1 ring-black/5'
+                                                : 'text-text-muted hover:text-text-main'
+                                            }`}
+                                        title={`${label} Mode`}
+                                    >
+                                        <Icon className="w-3.5 h-3.5" />
+                                        {label}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>

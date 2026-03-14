@@ -4,8 +4,8 @@
   "description": "Secure, real-time voice and video streaming",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0F172A",
-  "theme_color": "#6366F1",
+  "background_color": "#121212",
+  "theme_color": "#FF5A5F",
   "orientation": "portrait",
   "icons": [
     {
