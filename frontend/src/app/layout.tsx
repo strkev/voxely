@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Header } from "@/components/ui/Header";
 import { AuthProvider } from "@/components/AuthProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import Script from "next/script";
 import "./globals.css";
 
 const inter = Inter({
@@ -27,6 +28,15 @@ export const metadata: Metadata = {
     ],
   },
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Voxely',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  themeColor: '#6366F1',
 };
 
 export default function RootLayout({
@@ -44,6 +54,19 @@ export default function RootLayout({
             {children}
           </main>
           {/* <Footer /> */}
+          <Script id="register-sw" strategy="afterInteractive">
+            {`
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                      console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    }, function(err) {
+                      console.log('ServiceWorker registration failed: ', err);
+                    });
+                  });
+                }
+              `}
+          </Script>
         </AuthProvider>
       </body>
     </html>
