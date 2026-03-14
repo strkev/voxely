@@ -204,16 +204,18 @@ function SpotlightableTile({
             )}
 
             {/* LIVEKIT TILE: Wird in z-10 gewrappt. */}
-            <div className={`relative w-full h-full z-10 lk-custom-tile-wrapper ${isMuted ? 'is-muted' : ''}`}>
+            <div className={`relative w-full h-full z-10 lk-custom-tile-wrapper ${isMuted && !isScreenShare ? 'is-muted' : ''}`}>
                 <ParticipantTile trackRef={trackRef} />
                 
                 {/* Custom Participant Name & Status Badge */}
                 <div className="absolute bottom-1.5 left-1.5 z-20 flex items-center gap-2 bg-black/55 backdrop-blur-md px-2 py-1 rounded-md border border-white/5 pointer-events-none">
-                    <div className={`p-0.5 rounded-sm flex items-center justify-center ${isMuted ? 'text-primary' : 'text-green-500'}`}>
-                        {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                    </div>
-                    <span className="text-[16px] font-semibold text-white/90 truncate max-w-[150px]">
-                        {participantName}
+                    {!isScreenShare && (
+                        <div className={`p-0.5 rounded-sm flex items-center justify-center ${isMuted ? 'text-primary' : 'text-green-500'}`}>
+                            {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                        </div>
+                    )}
+                    <span className="text-[16px] font-semibold text-white/90 truncate max-w-[250px]">
+                        {participantName}{isScreenShare ? ' screen share' : ''}
                     </span>
                 </div>
             </div>
