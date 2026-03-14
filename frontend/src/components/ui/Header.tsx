@@ -70,7 +70,7 @@ export function Header() {
 
     return (
         <>
-            <header className="w-full h-16 border-b border-gray-100 bg-[var(--color-surface)] flex items-center justify-between px-4 sm:px-6 md:px-12 z-[60] sticky top-0 shadow-sm">
+            <header className="w-full h-16 border-b border-gray-100 bg-[var(--color-surface)] flex items-center justify-between px-3 sm:px-4 z-[60] sticky top-0 shadow-sm">
                 {isInRoom ? (
                     <button
                         onClick={() => navigateOrGuard(user ? '/dashboard' : '/')}
