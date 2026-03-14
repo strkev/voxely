@@ -31,6 +31,7 @@ export class NoiseSuppressionProcessor {
     private outputOffset = 0;
     private outputReadOffset = 0;
     private frameSize = 480; // RNNoise default
+    private mix = 1.0; // 1.0 = full noise suppression, 0.0 = original
 
     /**
      * Process a MediaStream's audio through RNNoise.
@@ -59,22 +60,31 @@ export class NoiseSuppressionProcessor {
         // Use ScriptProcessorNode (widely supported, runs on main thread)
         // Buffer size of 256 is a good balance between latency and performance
         this.workletNode = this.audioCtx.createScriptProcessor(256, 1, 1);
+        const originalInputBuffer = new Float32Array(this.frameSize);
 
         this.workletNode.onaudioprocess = (event) => {
             const input = event.inputBuffer.getChannelData(0);
             const output = event.outputBuffer.getChannelData(0);
 
             for (let i = 0; i < input.length; i++) {
-                // RNNoise expects 16-bit PCM range (-32768 to 32767)
-                this.inputBuffer[this.inputOffset++] = input[i] * 32768;
+                // Store original input sample for mixing (converting to RNNoise range)
+                const originalSample = input[i] * 32768;
+                this.inputBuffer[this.inputOffset++] = originalSample;
 
                 if (this.inputOffset >= this.frameSize) {
+                    // Store original frame before processing
+                    originalInputBuffer.set(this.inputBuffer);
+
                     // Process a full frame
                     if (this.denoiseState) {
                         this.denoiseState.processFrame(this.inputBuffer);
                     }
-                    // Copy processed frame to output buffer
-                    this.outputBuffer.set(this.inputBuffer);
+
+                    // MIXING LOGIC: interpolate between original and denoised
+                    for (let j = 0; j < this.frameSize; j++) {
+                        this.outputBuffer[j] = (this.inputBuffer[j] * this.mix) + (originalInputBuffer[j] * (1 - this.mix));
+                    }
+
                     this.outputOffset = 0;
                     this.outputReadOffset = 0;
                     this.inputOffset = 0;
@@ -93,6 +103,15 @@ export class NoiseSuppressionProcessor {
         this.workletNode.connect(this.destNode);
 
         return this.destNode.stream;
+    }
+
+    /**
+     * Set the noise suppression level (0.0 to 1.0).
+     * 1.0 = Full denoising
+     * 0.0 = Pass-through
+     */
+    setMix(level: number): void {
+        this.mix = Math.max(0, Math.min(1, level));
     }
 
     /**

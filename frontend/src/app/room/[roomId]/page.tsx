@@ -383,9 +383,9 @@ const SCREEN_FPS_OPTIONS: ScreenShareFps[] = [5, 15, 30, 60];
 
 function InRoomSettings({ onClose, onOpenVirtualBackground }: { onClose: () => void, onOpenVirtualBackground: () => void }) {
     const {
-        soundsEnabled, soundVolume, videoQuality, showDevInfo, autoHideControlBar, noiseSuppression,
+        soundsEnabled, soundVolume, videoQuality, showDevInfo, autoHideControlBar, noiseSuppression, noiseSuppressionLevel,
         screenShareResolution, screenShareFps, theme, setTheme,
-        setSoundsEnabled, setSoundVolume, setVideoQuality, setShowDevInfo, setAutoHideControlBar, setNoiseSuppression,
+        setSoundsEnabled, setSoundVolume, setVideoQuality, setShowDevInfo, setAutoHideControlBar, setNoiseSuppression, setNoiseSuppressionLevel,
         setScreenShareResolution, setScreenShareFps,
     } = useSettingsStore();
 
@@ -432,6 +432,32 @@ function InRoomSettings({ onClose, onOpenVirtualBackground }: { onClose: () => v
                         </button>
                     </div>
                     <p className="text-[10px] text-text-muted mt-1">AI-powered background noise removal (RNNoise)</p>
+                    
+                    {noiseSuppression && (
+                        <div className="mt-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-[10px] font-medium text-text-muted uppercase tracking-wider">Suppression Strength</span>
+                                <span className="text-[10px] font-mono text-primary font-bold">{Math.round(noiseSuppressionLevel * 100)}%</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <VolumeX className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.05"
+                                    value={noiseSuppressionLevel}
+                                    onChange={(e) => setNoiseSuppressionLevel(parseFloat(e.target.value))}
+                                    className="flex-1 h-1.5 rounded-full appearance-none bg-gray-100 cursor-pointer accent-primary"
+                                    style={{
+                                        background: `linear-gradient(to right, #FF5A5F ${noiseSuppressionLevel * 100}%, #F3F4F6 ${noiseSuppressionLevel * 100}%)`
+                                    }}
+                                />
+                                <Volume2 className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                            </div>
+                            <p className="text-[9px] text-text-muted mt-2 italic text-center">Lower values preserve more voice detail but let more noise through.</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Virtual Background */}
@@ -676,13 +702,22 @@ function LiveVideoQualitySync() {
 function NoiseSuppressionHook({
     processorRef,
     enabled,
+    level,
 }: {
     processorRef: React.MutableRefObject<NoiseSuppressionProcessor | null>;
     enabled: boolean;
+    level: number;
 }) {
     const room = useRoomContext();
     const appliedRef = useRef(false);
     const originalTrackRef = useRef<MediaStreamTrack | null>(null);
+
+    // Update mix level on the fly
+    useEffect(() => {
+        if (processorRef.current) {
+            processorRef.current.setMix(level);
+        }
+    }, [level, processorRef]);
 
     useEffect(() => {
         const localP = room.localParticipant;
@@ -709,6 +744,7 @@ function NoiseSuppressionHook({
                         // Replace the track's underlying media stream track
                         await micPub.track.replaceTrack(filteredTrack);
                         processorRef.current = processor;
+                        processor.setMix(level);
                         appliedRef.current = true;
                     }
                 } catch (err) {
@@ -744,7 +780,7 @@ function NoiseSuppressionHook({
         return () => {
             localP.off('localTrackPublished', handleTrackPublished);
         };
-    }, [room, enabled, processorRef]);
+    }, [room, enabled, processorRef, level]);
 
     return null;
 }
@@ -971,7 +1007,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [chatSidebarWidth, setChatSidebarWidth] = useState(320);
     const [unread, setUnread] = useState(0);
     const [copied, setCopied] = useState(false);
-    const { soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius } = useSettingsStore();
+    const { soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression, noiseSuppressionLevel, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius } = useSettingsStore();
     const noiseProcessorRef = useRef<NoiseSuppressionProcessor | null>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const bgProcessorRef = useRef<any>(null);
@@ -1327,7 +1363,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 <AutoStartAudio />
                 <ChevronRotationFix />
                 <LiveVideoQualitySync />
-                <NoiseSuppressionHook processorRef={noiseProcessorRef} enabled={noiseSuppression} />
+                <NoiseSuppressionHook processorRef={noiseProcessorRef} enabled={noiseSuppression} level={noiseSuppressionLevel} />
                 <VirtualBackgroundHook processorRef={bgProcessorRef} bgOption={virtualBackground} bgImage={virtualBackgroundImage} blurRadius={blurRadius} />
                 <CustomVideoConference />
                 <RoomAudioRenderer />
