@@ -18,7 +18,7 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track, LocalTrackPublication, RemoteAudioTrack } from 'livekit-client';
-import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, ChevronLeft, ChevronRight, Mic, Users, ScreenShare, LogOut, Moon, Lock, Unlock, Image as ImageIcon } from 'lucide-react';
+import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, ScreenShare, LogOut, Moon, Lock, Unlock, Image as ImageIcon } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
@@ -105,7 +105,7 @@ function SpotlightableTile({
     const participantName = trackRef?.participant?.name || trackRef?.participant?.identity || 'Unknown';
     const initial = participantName.charAt(0).toUpperCase();
     const isCameraTrack = trackRef?.source === Track.Source.Camera;
-    const isMuted = useIsMuted(trackRef as TrackReferenceOrPlaceholder);
+    const isMuted = useIsMuted({ participant: trackRef?.participant, source: Track.Source.Microphone } as TrackReferenceOrPlaceholder);
 
     const localUser = useAuthStore(s => s.user);
     const friends = useFriendsStore(s => s.friends);
@@ -206,6 +206,16 @@ function SpotlightableTile({
             {/* LIVEKIT TILE: Wird in z-10 gewrappt. */}
             <div className={`relative w-full h-full z-10 lk-custom-tile-wrapper ${isMuted ? 'is-muted' : ''}`}>
                 <ParticipantTile trackRef={trackRef} />
+                
+                {/* Custom Participant Name & Status Badge */}
+                <div className="absolute bottom-1.5 left-1.5 z-20 flex items-center gap-2 bg-black/55 backdrop-blur-md px-2 py-1 rounded-md border border-white/5 pointer-events-none">
+                    <div className={`p-0.5 rounded-sm flex items-center justify-center ${isMuted ? 'text-primary' : 'text-green-500'}`}>
+                        {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    </div>
+                    <span className="text-[16px] font-semibold text-white/90 truncate max-w-[150px]">
+                        {participantName}
+                    </span>
+                </div>
             </div>
 
             {/* Spotlight toggle — auf z-20 erhöht, damit es über dem Video bleibt */}
