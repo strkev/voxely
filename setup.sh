@@ -452,6 +452,10 @@ PRISMA_FIELD_ENCRYPTION_KEY="${PRISMA_ENCRYPTION_KEY}"
 
 # ── Redis ─────────────────────────────────────────
 REDIS_URL="${REDIS_URL}"
+
+# ── Telemetry & Privacy ───────────────────────────
+PRISMA_CLI_TELEMETRY_OPTOUT=1
+PRISMA_TELEMETRY_NOTIFICATION_SKIP=1
 ENVEOF
 
 success "Created backend/.env"
@@ -470,6 +474,9 @@ NEXT_PUBLIC_API_URL=${API_URL}
 
 # LiveKit server URL
 NEXT_PUBLIC_LIVEKIT_URL=${LIVEKIT_WS_URL}
+
+# Telemetry & Privacy
+NEXT_TELEMETRY_DISABLED=1
 ENVEOF
 
 success "Created frontend/.env.local"
