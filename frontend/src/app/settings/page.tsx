@@ -339,7 +339,7 @@ export default function SettingsPage() {
                             <Palette className="w-4 h-4 text-text-muted" />
                             <span className="text-sm font-semibold text-text-main">Appearance</span>
                         </div>
-                        <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200">
+                        <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200 gap-1">
                             {(['light', 'dark', 'system'] as const).map((value) => {
                                 const options = {
                                     light: { icon: Sun, label: 'Light' },
@@ -352,14 +352,14 @@ export default function SettingsPage() {
                                     <button
                                         key={value}
                                         onClick={() => setTheme(value)}
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all ${isActive
+                                        className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs font-medium transition-all ${isActive
                                                 ? 'bg-white text-primary shadow-sm ring-1 ring-black/5'
                                                 : 'text-text-muted hover:text-text-main'
                                             }`}
                                         title={`${label} Mode`}
                                     >
                                         <Icon className="w-4 h-4" />
-                                        {label}
+                                        <span className="hidden sm:inline-block">{label}</span>
                                     </button>
                                 );
                             })}
