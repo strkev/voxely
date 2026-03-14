@@ -80,7 +80,19 @@ export const prisma = new PrismaClient({ adapter }).$extends(fieldEncryptionExte
 // Define helmet policies. We must specify a very permissive CSP because LiveKit needs WS connections, 
 // inline scripts, and media from various origins, plus we must allow crossOrigin requests.
 app.use(helmet({
-    contentSecurityPolicy: false, // Disabling default CSP to prevent blocking Next.js dev scripts and LiveKit WebSockets
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Next.js and some libraries need this
+            connectSrc: ["'self'", ...allowedOrigins, "ws:", "wss:"], // Allow WS for Socket.io and LiveKit
+            imgSrc: ["'self'", "data:", "blob:"],
+            mediaSrc: ["'self'", "blob:", "data:", "https://*"], // Allow media from anywhere for WebRTC
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            fontSrc: ["'self'", "data:"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: [],
+        },
+    },
     crossOriginEmbedderPolicy: false, // Required for WebRTC/LiveKit
     crossOriginResourcePolicy: { policy: "cross-origin" },
 }));

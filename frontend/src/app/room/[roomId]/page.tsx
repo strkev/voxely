@@ -1034,7 +1034,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     useEffect(() => { setMounted(true); }, []);
     useEffect(() => {
-        if (typeof window !== 'undefined' && !navigator.mediaDevices) setIsSecureContext(false);
+        if (typeof window !== 'undefined') {
+            const isSecure = window.isSecureContext || !!navigator.mediaDevices;
+            setIsSecureContext(isSecure);
+        }
     }, []);
 
     // Track window width for topbar responsiveness
@@ -1159,13 +1162,15 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         return (
             <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] px-4">
                 <div className="bg-surface shadow-flat border border-gray-100 rounded-2xl p-8 max-w-md w-full text-center flex flex-col items-center">
-                    <div className="w-16 h-16 bg-red-50 text-primary rounded-full flex items-center justify-center mb-6">
-                        <AlertCircle className="w-8 h-8" />
+                    <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mb-6">
+                        <Lock className="w-8 h-8" />
                     </div>
-                    <h2 className="text-2xl font-bold text-text-main mb-3">Camera Access Blocked</h2>
-                    <p className="text-text-muted mb-6 leading-relaxed">WebRTC erfordert <strong>HTTPS</strong> oder <strong>localhost</strong>.</p>
+                    <h2 className="text-2xl font-bold text-text-main mb-3">Secure Connection Required</h2>
+                    <p className="text-text-muted mb-6 leading-relaxed">
+                        To protect your privacy, video and audio chats are only available over <strong>HTTPS</strong> or <strong>localhost</strong>.
+                    </p>
                     <button onClick={() => router.push('/dashboard')} className="w-full py-2.5 px-6 bg-primary text-white rounded-xl font-medium hover:bg-[#E0484D] transition-colors">
-                        Zurück zum Dashboard
+                        Back to Dashboard
                     </button>
                 </div>
             </div>
