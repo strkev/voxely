@@ -105,7 +105,8 @@ function SpotlightableTile({
     const participantName = trackRef?.participant?.name || trackRef?.participant?.identity || 'Unknown';
     const initial = participantName.charAt(0).toUpperCase();
     const isCameraTrack = trackRef?.source === Track.Source.Camera;
-    const isMuted = useIsMuted({ participant: trackRef?.participant, source: Track.Source.Microphone } as TrackReferenceOrPlaceholder);
+    const isMicMuted = useIsMuted({ participant: trackRef?.participant, source: Track.Source.Microphone } as TrackReferenceOrPlaceholder);
+    const isTrackMuted = useIsMuted(trackRef as TrackReferenceOrPlaceholder);
 
     const localUser = useAuthStore(s => s.user);
     const friends = useFriendsStore(s => s.friends);
@@ -204,14 +205,14 @@ function SpotlightableTile({
             )}
 
             {/* LIVEKIT TILE: Wird in z-10 gewrappt. */}
-            <div className={`relative w-full h-full z-10 lk-custom-tile-wrapper ${isMuted && !isScreenShare ? 'is-muted' : ''}`}>
+            <div className={`relative w-full h-full z-10 lk-custom-tile-wrapper ${isTrackMuted && !isScreenShare ? 'is-muted' : ''}`}>
                 <ParticipantTile trackRef={trackRef} />
                 
                 {/* Custom Participant Name & Status Badge */}
                 <div className="absolute bottom-1.5 left-1.5 z-20 flex items-center gap-2 bg-black/55 backdrop-blur-md px-2 py-1 rounded-md border border-white/5 pointer-events-none">
                     {!isScreenShare && (
-                        <div className={`p-0.5 rounded-sm flex items-center justify-center ${isMuted ? 'text-primary' : 'text-green-500'}`}>
-                            {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                        <div className={`p-0.5 rounded-sm flex items-center justify-center ${isMicMuted ? 'text-primary' : 'text-green-500'}`}>
+                            {isMicMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                         </div>
                     )}
                     <span className="text-[16px] font-semibold text-white/90 truncate max-w-[250px]">
