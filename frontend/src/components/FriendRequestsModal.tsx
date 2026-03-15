@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useFriendsStore } from '@/store/useFriendsStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import { X, UserPlus, Inbox, Send, Check, XIcon, Loader2 } from 'lucide-react';
+import { X, UserPlus, Inbox, Send, Loader2 } from 'lucide-react';
 
 interface FriendRequestsModalProps {
     onClose: () => void;
