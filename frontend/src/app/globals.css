@@ -748,13 +748,11 @@ body {
   display: flex;
   align-items: center;
   gap: 2px;
-  opacity: 0;
+  opacity: 1; /* Always visible */
   transition: opacity 0.15s ease;
 }
 
-.friends-sidebar__item:hover .friends-sidebar__item-actions {
-  opacity: 1;
-}
+/* Removed hover requirement for visibility */
 
 .friends-sidebar__invite-btn,
 .friends-sidebar__remove-btn {
@@ -765,7 +763,7 @@ body {
   justify-content: center;
   border-radius: 6px;
   color: var(--color-text-muted);
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .friends-sidebar__invite-btn:hover {
@@ -803,6 +801,27 @@ body {
 .friends-sidebar__remove-btn:hover {
   background: rgba(255, 90, 95, 0.1);
   color: var(--color-primary);
+}
+
+/* Increase button sizes on mobile for better touch accessibility */
+@media (max-width: 639px) {
+  .friends-sidebar__invite-btn,
+  .friends-sidebar__remove-btn,
+  .friends-sidebar__invited-indicator {
+    width: 34px;
+    height: 34px;
+  }
+  
+  .friends-sidebar__invite-btn svg,
+  .friends-sidebar__remove-btn svg,
+  .friends-sidebar__invited-indicator svg {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+  }
+
+  .friends-sidebar__item-actions {
+    gap: 6px;
+  }
 }
 
 .friends-sidebar__confirm-remove {
