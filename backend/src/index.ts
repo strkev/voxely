@@ -408,6 +408,11 @@ io.on('connection', async (socket) => {
     socket.on('call:response', async ({ callerId, accepted }: { callerId: string; accepted: boolean }) => {
         if (typeof callerId !== 'string' || !UUID_RE.test(callerId)) return;
 
+        const friendship = await prisma.friendship.findUnique({
+            where: { userId_friendId: { userId: uid, friendId: callerId } },
+        });
+        if (!friendship) return;
+
         const callerSockets = onlineUsers.get(callerId);
         if (!callerSockets) return;
 
@@ -428,9 +433,14 @@ io.on('connection', async (socket) => {
         }
     });
 
-    socket.on('call:terminate', ({ friendId }: { friendId: string }) => {
+    socket.on('call:terminate', async ({ friendId }: { friendId: string }) => {
         if (typeof friendId !== 'string' || !UUID_RE.test(friendId)) return;
         
+        const friendship = await prisma.friendship.findUnique({
+            where: { userId_friendId: { userId: uid, friendId } },
+        });
+        if (!friendship) return;
+
         const friendSockets = onlineUsers.get(friendId);
         if (friendSockets) {
             for (const sid of friendSockets) {
@@ -442,6 +452,21 @@ io.on('connection', async (socket) => {
     // ── chat:join — client joins a room channel ────────────────────────────────
     socket.on('chat:join', async ({ roomId, name }: { roomId: string; name?: string }) => {
         if (typeof roomId !== 'string' || !ROOM_ID_RE.test(roomId)) return;
+
+        // Security Check: If it's a private call room, verify the user is an intended participant
+        if (roomId.startsWith('call-')) {
+            const parts = roomId.split('-');
+            if (parts.length >= 3) {
+                const target1 = parts[1];
+                const target2 = parts[2];
+                const shortUid = uid.slice(0, 8);
+                if (target1 !== shortUid && target2 !== shortUid) {
+                    socket.emit('chat:error', { message: 'Unauthorized: You cannot join this private call' });
+                    return;
+                }
+            }
+        }
+
         const displayName = typeof name === 'string'
             ? stripHtml(name).slice(0, 64) || 'Anonymous'
             : 'Anonymous';

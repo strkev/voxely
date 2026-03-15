@@ -30,6 +30,20 @@ export const generateToken = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
+        // Room Access Authorization: Prevent joining private calls anonymously
+        if (safeRoomName.startsWith('call-')) {
+            const parts = safeRoomName.split('-');
+            if (parts.length >= 3) {
+                const target1 = parts[1];
+                const target2 = parts[2];
+                const shortUid = participantId.slice(0, 8);
+                if (target1 !== shortUid && target2 !== shortUid) {
+                    res.status(403).json({ error: 'Unauthorized to join this private call' });
+                    return;
+                }
+            }
+        }
+
         const token = await createLiveKitToken(safeRoomName, safeName, participantId);
         res.json({ token });
     } catch (error) {
