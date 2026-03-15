@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 export type VideoQuality = '360p' | '720p' | '1080p' | '1440p' | '4K';
 export type ScreenShareResolution = '720p' | '1080p' | '1440p' | '4K' | 'Source';
 export type ScreenShareFps = 5 | 15 | 30 | 60;
+export type NoiseSuppressionMode = 'off' | 'rnnoise' | 'native' | 'filter';
 
 export const VIDEO_PRESETS: Record<VideoQuality, { width: number; height: number; frameRate: number; maxBitrate: number }> = {
     '360p': { width: 640, height: 360, frameRate: 24, maxBitrate: 600_000 },
@@ -29,7 +30,7 @@ interface SettingsState {
     showDevInfo: boolean;
     controlBarVisible: boolean;
     autoHideControlBar: boolean;
-    noiseSuppression: boolean;
+    noiseSuppressionMode: NoiseSuppressionMode;
     virtualBackground: 'none' | 'blur' | 'image';
     virtualBackgroundImage: string | null;
     blurRadius: number;
@@ -42,7 +43,7 @@ interface SettingsState {
     setShowDevInfo: (v: boolean) => void;
     setControlBarVisible: (v: boolean) => void;
     setAutoHideControlBar: (v: boolean) => void;
-    setNoiseSuppression: (v: boolean) => void;
+    setNoiseSuppressionMode: (v: NoiseSuppressionMode) => void;
     setVirtualBackground: (v: 'none' | 'blur' | 'image') => void;
     setVirtualBackgroundImage: (v: string | null) => void;
     setBlurRadius: (v: number) => void;
@@ -60,7 +61,7 @@ export const useSettingsStore = create<SettingsState>()(
             showDevInfo: false,
             controlBarVisible: true,
             autoHideControlBar: false,
-            noiseSuppression: false,
+            noiseSuppressionMode: 'off',
             virtualBackground: 'none',
             virtualBackgroundImage: null,
             blurRadius: 10,
@@ -73,7 +74,7 @@ export const useSettingsStore = create<SettingsState>()(
             setShowDevInfo: (v) => set({ showDevInfo: v }),
             setControlBarVisible: (v) => set({ controlBarVisible: v }),
             setAutoHideControlBar: (v) => set({ autoHideControlBar: v }),
-            setNoiseSuppression: (v) => set({ noiseSuppression: v }),
+            setNoiseSuppressionMode: (v) => set({ noiseSuppressionMode: v }),
             setVirtualBackground: (v) => set({ virtualBackground: v }),
             setVirtualBackgroundImage: (v) => set({ virtualBackgroundImage: v }),
             setBlurRadius: (v) => set({ blurRadius: v }),

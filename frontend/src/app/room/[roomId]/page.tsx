@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useSettingsStore, VIDEO_PRESETS, type VideoQuality, type ScreenShareResolution, type ScreenShareFps } from '@/store/useSettingsStore';
+import { useSettingsStore, VIDEO_PRESETS, type VideoQuality, type ScreenShareResolution, type ScreenShareFps, type NoiseSuppressionMode } from '@/store/useSettingsStore';
 import {
     LiveKitRoom,
     RoomAudioRenderer,
@@ -25,6 +25,8 @@ import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
 import { playSound } from '@/lib/sounds';
 import { NoiseSuppressionProcessor } from '@/lib/rnnoise-processor';
+import { NativeNoiseProcessor } from '@/lib/native-noise-processor';
+import { FilterNoiseProcessor } from '@/lib/filter-noise-processor';
 import { FriendsSidebar } from '@/components/FriendsSidebar';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { VirtualBackgroundModal } from '@/components/VirtualBackgroundModal';
@@ -382,11 +384,18 @@ const QUALITY_OPTIONS: VideoQuality[] = ['360p', '720p', '1080p', '1440p', '4K']
 const SCREEN_RES_OPTIONS: ScreenShareResolution[] = ['720p', '1080p', '1440p', '4K', 'Source'];
 const SCREEN_FPS_OPTIONS: ScreenShareFps[] = [5, 15, 30, 60];
 
+const NOISE_SUPPRESSION_OPTIONS: { value: NoiseSuppressionMode; label: string; desc: string }[] = [
+    { value: 'off', label: 'Off', desc: 'No noise suppression' },
+    { value: 'rnnoise', label: 'RNNoise', desc: 'AI-powered (best quality, slight latency)' },
+    { value: 'native', label: 'Native', desc: 'Browser built-in (zero latency)' },
+    { value: 'filter', label: 'Filter', desc: 'Bandpass filter (removes rumble & hiss)' },
+];
+
 function InRoomSettings({ onClose, onOpenVirtualBackground }: { onClose: () => void, onOpenVirtualBackground: () => void }) {
     const {
-        soundsEnabled, soundVolume, videoQuality, showDevInfo, autoHideControlBar, noiseSuppression,
+        soundsEnabled, soundVolume, videoQuality, showDevInfo, autoHideControlBar, noiseSuppressionMode,
         screenShareResolution, screenShareFps, theme, setTheme,
-        setSoundsEnabled, setSoundVolume, setVideoQuality, setShowDevInfo, setAutoHideControlBar, setNoiseSuppression,
+        setSoundsEnabled, setSoundVolume, setVideoQuality, setShowDevInfo, setAutoHideControlBar, setNoiseSuppressionMode,
         setScreenShareResolution, setScreenShareFps,
     } = useSettingsStore();
 
@@ -420,19 +429,28 @@ function InRoomSettings({ onClose, onOpenVirtualBackground }: { onClose: () => v
 
                 {/* Noise Suppression */}
                 <div className="px-6 py-4 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Mic className="w-4 h-4 text-text-muted" />
-                            <span className="text-sm font-medium text-text-main">Noise Suppression</span>
-                        </div>
-                        <button
-                            onClick={() => setNoiseSuppression(!noiseSuppression)}
-                            className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${noiseSuppression ? 'bg-primary' : 'bg-gray-200'}`}
-                        >
-                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${noiseSuppression ? 'translate-x-5' : 'translate-x-0'}`} />
-                        </button>
+                    <div className="flex items-center gap-2 mb-3">
+                        <Mic className="w-4 h-4 text-text-muted" />
+                        <span className="text-sm font-semibold text-text-main">Noise Suppression</span>
                     </div>
-                    <p className="text-[10px] text-text-muted mt-1">AI-powered background noise removal (RNNoise)</p>
+                    <div className="flex gap-1.5 flex-wrap">
+                        {NOISE_SUPPRESSION_OPTIONS.map(opt => (
+                            <button
+                                key={opt.value}
+                                onClick={() => setNoiseSuppressionMode(opt.value)}
+                                className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${
+                                    noiseSuppressionMode === opt.value
+                                        ? 'bg-primary text-white shadow-sm'
+                                        : 'bg-gray-100 text-text-main hover:bg-gray-200'
+                                }`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="text-[10px] text-text-muted mt-2">
+                        {NOISE_SUPPRESSION_OPTIONS.find(o => o.value === noiseSuppressionMode)?.desc}
+                    </p>
                 </div>
 
                 {/* Virtual Background */}
@@ -674,18 +692,27 @@ function LiveVideoQualitySync() {
 }
 
 // ─── Noise Suppression Hook ──────────────────────────────────────────────────
+type AnyNoiseProcessor = NoiseSuppressionProcessor | NativeNoiseProcessor | FilterNoiseProcessor;
+
+function createNoiseProcessor(mode: NoiseSuppressionMode): AnyNoiseProcessor | null {
+    switch (mode) {
+        case 'rnnoise': return new NoiseSuppressionProcessor();
+        case 'native': return new NativeNoiseProcessor();
+        case 'filter': return new FilterNoiseProcessor();
+        default: return null;
+    }
+}
+
 function NoiseSuppressionHook({
     processorRef,
-    enabled,
+    mode,
 }: {
-    processorRef: React.MutableRefObject<NoiseSuppressionProcessor | null>;
-    enabled: boolean;
+    processorRef: React.MutableRefObject<AnyNoiseProcessor | null>;
+    mode: NoiseSuppressionMode;
 }) {
     const room = useRoomContext();
-    const appliedRef = useRef(false);
+    const appliedModeRef = useRef<NoiseSuppressionMode>('off');
     const originalTrackRef = useRef<MediaStreamTrack | null>(null);
-
-    // No level update needed anymore
 
     useEffect(() => {
         const localP = room.localParticipant;
@@ -697,39 +724,53 @@ function NoiseSuppressionHook({
             );
             if (!micPub?.track?.mediaStreamTrack) return;
 
-            if (enabled && !appliedRef.current) {
-                try {
-                    // Store original track for restoration
-                    originalTrackRef.current = micPub.track.mediaStreamTrack;
+            const wasApplied = appliedModeRef.current !== 'off';
+            const wantsApply = mode !== 'off';
 
-                    // Create processor and get filtered stream
-                    const processor = new NoiseSuppressionProcessor();
-                    const originalStream = new MediaStream([micPub.track.mediaStreamTrack]);
-                    const filteredStream = await processor.process(originalStream);
-                    const filteredTrack = filteredStream.getAudioTracks()[0];
-
-                    if (filteredTrack) {
-                        // Replace the track's underlying media stream track
-                        await micPub.track.replaceTrack(filteredTrack);
-                        processorRef.current = processor;
-                        appliedRef.current = true;
-                    }
-                } catch (err) {
-                    console.error('[NoiseSuppression] Failed to apply:', err);
-                }
-            } else if (!enabled && appliedRef.current) {
+            // If mode changed while a processor is active, tear down the old one first
+            if (wasApplied && (mode !== appliedModeRef.current)) {
                 // Restore original track
                 if (originalTrackRef.current) {
                     try {
                         await micPub.track.replaceTrack(originalTrackRef.current);
                     } catch {
-                        // Original track might be ended, that's ok
+                        // Original track might be ended
                     }
                 }
                 processorRef.current?.destroy();
                 processorRef.current = null;
                 originalTrackRef.current = null;
-                appliedRef.current = false;
+                appliedModeRef.current = 'off';
+            }
+
+            // Apply new processor if needed
+            if (wantsApply && appliedModeRef.current === 'off') {
+                try {
+                    // Store original track for restoration
+                    originalTrackRef.current = micPub.track.mediaStreamTrack;
+
+                    const processor = createNoiseProcessor(mode);
+                    if (!processor) return;
+
+                    const originalStream = new MediaStream([micPub.track.mediaStreamTrack]);
+                    const filteredStream = await processor.process(originalStream);
+                    const filteredTrack = filteredStream.getAudioTracks()[0];
+
+                    if (filteredTrack) {
+                        await micPub.track.replaceTrack(filteredTrack);
+                        processorRef.current = processor;
+                        appliedModeRef.current = mode;
+                        console.log(`[NoiseSuppression] Applied mode: ${mode}`);
+                    }
+                } catch (err) {
+                    console.error('[NoiseSuppression] Failed to apply:', err);
+                }
+            }
+
+            // Turning off
+            if (!wantsApply && wasApplied) {
+                // Already cleaned up above
+                console.log('[NoiseSuppression] Disabled');
             }
         };
 
@@ -737,8 +778,7 @@ function NoiseSuppressionHook({
 
         // Listen for new mic track publications
         const handleTrackPublished = () => {
-            if (enabled && !appliedRef.current) {
-                // Small delay to let the track settle
+            if (mode !== 'off' && appliedModeRef.current === 'off') {
                 setTimeout(applyNoiseSuppression, 500);
             }
         };
@@ -747,7 +787,7 @@ function NoiseSuppressionHook({
         return () => {
             localP.off('localTrackPublished', handleTrackPublished);
         };
-    }, [room, enabled, processorRef]);
+    }, [room, mode, processorRef]);
 
     return null;
 }
@@ -1015,8 +1055,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [chatSidebarWidth, setChatSidebarWidth] = useState(320);
     const [unread, setUnread] = useState(0);
     const [copied, setCopied] = useState(false);
-    const { soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius } = useSettingsStore();
-    const noiseProcessorRef = useRef<NoiseSuppressionProcessor | null>(null);
+    const { soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppressionMode, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius } = useSettingsStore();
+    const noiseProcessorRef = useRef<AnyNoiseProcessor | null>(null);
     // Friends state & socket
     const incomingRequests = useFriendsStore(s => s.incomingRequests);
     const { sendRoomInvite, toggleRoomOpen, initiateCall } = useFriends();
@@ -1373,7 +1413,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 <LiveVideoQualitySync />
                 <NoiseSuppressionHook
                     processorRef={noiseProcessorRef}
-                    enabled={noiseSuppression}
+                    mode={noiseSuppressionMode}
                 />
                 <VirtualBackgroundHook processorRef={bgProcessorRef} bgOption={virtualBackground} bgImage={virtualBackgroundImage} blurRadius={blurRadius} />
                 <CustomVideoConference />
