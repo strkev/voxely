@@ -1,8 +1,18 @@
 # Voxely
 
-Sichere, Echtzeit-Voice/Video/Chat-Plattform mit minimalistischem UI.
+Sichere, Echtzeit-Voice/Video/Chat-Plattform mit minimalistischem UI und PWA-Support.
 
 > Detaillierte Architektur- und Tech-Stack-Dokumentation → [ARCHITECTURE.md](./ARCHITECTURE.md)
+
+---
+
+## Features
+
+- 🔒 **Sicherheit:** Ende-zu-Ende verschlüsselte Felder (Prisma Field Encryption), JWT-Blacklisting via Redis, XSS-Schutz.
+- 📱 **PWA:** Installierbar als App auf Desktop und Mobile mit Offline-Caching.
+- 🎙️ **Echtzeit-Kommunikation:** Hochwertige Video- und Audio-Streams via LiveKit (WebRTC).
+- 💬 **Echtzeit-Chat:** Instant-Messaging mit Socket.IO.
+- 🎨 **Modernes UI:** Minimalistisches Design mit Tailwind CSS 4 und Framer Motion Animationen.
 
 ---
 
@@ -12,7 +22,7 @@ Stelle sicher, dass folgende Dienste installiert und verfügbar sind:
 
 | Dienst | Benötigte Version | Hinweis |
 |---|---|---|
-| **Node.js** | ≥ 18 | `node -v` zum Prüfen |
+| **Node.js** | ≥ 18 (empf. 20+) | `node -v` zum Prüfen |
 | **npm** | ≥ 9 | Kommt mit Node.js mit |
 | **PostgreSQL** | ≥ 14 | Muss laufen (z.B. via Docker oder lokal) |
 | **Redis** | ≥ 7 | Optional, aber empfohlen (JWT-Blacklisting) |
@@ -33,7 +43,7 @@ Das Script macht folgendes:
 - ✅ Prüft Voraussetzungen (Node.js, Docker)
 - ✅ Startet PostgreSQL, Redis und LiveKit via Docker (optional)
 - ✅ Fragt alle Konfigurationswerte interaktiv ab
-- ✅ Generiert sichere Secrets automatisch (JWT, Admin)
+- ✅ Generiert sichere Secrets automatisch (JWT, Admin, Prisma Encryption)
 - ✅ Erstellt `.env`-Dateien (bestehende werden gesichert)
 - ✅ Installiert Dependencies und baut beide Apps
 - ✅ Richtet PM2 ein (optional, für Produktionsbetrieb)
@@ -47,8 +57,8 @@ Das Script macht folgendes:
 ### 1. Repository klonen
 
 ```bash
-git clone <repo-url>
-cd discord-airbnb-clone
+git clone <repo-url-hier-einfuegen>
+cd voxely
 ```
 
 ### 2. PostgreSQL starten
@@ -60,7 +70,7 @@ docker run -d --name postgres \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=voxely \
   -p 127.0.0.1:5432:5432 \
-  -v dc-postgres-data:/var/lib/postgresql/data \
+  -v voxely-postgres-data:/var/lib/postgresql/data \
   postgres:16
 ```
 
@@ -70,8 +80,6 @@ docker run -d --name postgres \
 # Beispiel mit Docker:
 docker run -d --name redis -p 127.0.0.1:6379:6379 redis:7-alpine
 ```
-
-> ⚠️ Ohne Redis funktioniert das Logout-Token-Blacklisting nicht. Der Server startet trotzdem, zeigt aber eine Warnung an.
 
 ### 4. LiveKit Server starten
 

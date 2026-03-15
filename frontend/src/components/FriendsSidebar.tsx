@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useFriendsStore, Friend } from '@/store/useFriendsStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Search, UserPlus, X, UserMinus, Mail, ChevronLeft, Check, Lock, Unlock } from 'lucide-react';
+import { Search, UserPlus, X, UserMinus, Mail, ChevronLeft, Check, Lock, Unlock, Phone } from 'lucide-react';
 import { getContrastColor } from '@/lib/colors';
 
 interface FriendsSidebarProps {
@@ -19,9 +19,13 @@ interface FriendsSidebarProps {
     onClose?: () => void;
     /** Callback to toggle room open state */
     onToggleOpen?: (isOpen: boolean) => void;
+    /** Callback to initiate a direct call */
+    onCall?: (friendId: string) => void;
+    /** IDs of users already in the current room */
+    inRoomUserIds?: Set<string>;
 }
 
-export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequests, onClose, onToggleOpen }: FriendsSidebarProps) {
+export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequests, onClose, onToggleOpen, onCall, inRoomUserIds }: FriendsSidebarProps) {
     const { friends, onlineUserIds, incomingRequests, removeFriend } = useFriendsStore();
     const { token } = useAuthStore();
     const [search, setSearch] = useState('');
@@ -204,7 +208,17 @@ export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequ
 
                                 {/* Actions */}
                                 <div className="friends-sidebar__item-actions">
-                                    {currentRoomId && isOnline && onInvite && (
+                                    {isOnline && onCall && !inRoomUserIds?.has(friend.id) && (
+                                        <button
+                                            onClick={() => onCall(friend.id)}
+                                            className="friends-sidebar__call-btn"
+                                            title="Room invite"
+                                            aria-label={`Room invite with ${friend.name}`}
+                                        >
+                                            <Phone className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                    {currentRoomId && isOnline && onInvite && !inRoomUserIds?.has(friend.id) && (
                                         invitedFriendIds.has(friend.id) ? (
                                             <span className="friends-sidebar__invited-indicator" title="Invited!">
                                                 <Check className="w-3.5 h-3.5 text-green-500" />

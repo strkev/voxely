@@ -10,7 +10,7 @@ export const PRESET_COLORS = [
 ];
 
 export function getContrastColor(hexColor: string): string {
-    // Falls kein Hex (z.B. rgba), default zu weiß
+    // If not hex (e.g. rgba), default to white
     if (!/^#[0-9A-F]{6}$/i.test(hexColor)) return '#FFFFFF';
 
     // Parse hex to RGB
@@ -19,9 +19,9 @@ export function getContrastColor(hexColor: string): string {
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
 
-    // YIQ formula um Helligkeit  zu berechnen
+    // YIQ formula to calculate brightness
     const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
 
-    // Helle Farben -> schwarzer Text, Dunkle Farben -> weißer Text
+    // Light colors -> black text, Dark colors -> white text
     return (yiq >= 128) ? '#000000' : '#FFFFFF';
 }

@@ -316,24 +316,23 @@ io.on('connection', async (socket) => {
 
     // ── Room invitation: forward to friend's sockets ───────────────────────
     socket.on('friend:invite', async ({ friendId, roomId, roomName }: { friendId: string; roomId: string; roomName: string }) => {
-        // Validate inputs
         if (typeof friendId !== 'string' || !UUID_RE.test(friendId)) return;
         if (typeof roomId !== 'string' || !ROOM_ID_RE.test(roomId)) return;
         const cleanRoomName = stripHtml(typeof roomName === 'string' ? roomName : '').slice(0, 100) || roomId;
 
-        // Verify friendship exists
         const friendship = await prisma.friendship.findUnique({
             where: { userId_friendId: { userId: uid, friendId } },
         });
         if (!friendship) return;
 
-        // Get sender name
         const sender = await prisma.user.findUnique({
             where: { id: uid },
             select: { name: true },
         });
 
-        // Forward invitation to all of the friend's sockets
+        const socketRoom = io.sockets.adapter.rooms.get(roomId);
+        const participantCount = socketRoom ? socketRoom.size : 1;
+
         const friendSocketIds = onlineUsers.get(friendId);
         if (friendSocketIds) {
             for (const sid of friendSocketIds) {
@@ -342,7 +341,100 @@ io.on('connection', async (socket) => {
                     fromUserName: sender?.name ?? 'Unknown',
                     roomId,
                     roomName: cleanRoomName,
+                    participantCount,
                 });
+            }
+        }
+    });
+
+    // ── Direct Call: initiate, response, terminate ─────────────────────────
+    socket.on('call:initiate', async ({ friendId }: { friendId: string }) => {
+        if (typeof friendId !== 'string' || !UUID_RE.test(friendId)) return;
+
+        const friendship = await prisma.friendship.findUnique({
+            where: { userId_friendId: { userId: uid, friendId } },
+        });
+        if (!friendship) return;
+
+        const caller = await prisma.user.findUnique({
+            where: { id: uid },
+            select: { id: true, name: true, avatarColor: true },
+        });
+        if (!caller) return;
+        const callerWithColor = { ...caller, avatarColor: caller.avatarColor || '#FF5A5F' };
+
+        const callerRoomId = userRooms.get(uid);
+        let participants: { id: string; name: string; avatarColor: string }[] = [];
+        let roomName = '';
+
+        if (callerRoomId) {
+            roomName = openRooms.get(callerRoomId)?.roomName || callerRoomId;
+            const socketRoom = io.sockets.adapter.rooms.get(callerRoomId);
+            if (socketRoom) {
+                const participantIds = new Set<string>();
+                for (const sid of socketRoom) {
+                    const pId = io.sockets.sockets.get(sid)?.data.userId;
+                    if (pId && pId !== uid) {
+                        participantIds.add(pId);
+                    }
+                }
+                
+                if (participantIds.size > 0) {
+                    const rawParticipants = await prisma.user.findMany({
+                        where: { id: { in: Array.from(participantIds) } },
+                        select: { id: true, name: true, avatarColor: true },
+                    });
+                    participants = rawParticipants.map(p => ({
+                        ...p,
+                        avatarColor: p.avatarColor || '#FF5A5F'
+                    }));
+                }
+            }
+        }
+
+        const friendSockets = onlineUsers.get(friendId);
+        if (friendSockets) {
+            for (const sid of friendSockets) {
+                io.to(sid).emit('call:incoming', {
+                    caller: callerWithColor,
+                    roomId: callerRoomId,
+                    roomName,
+                    participants
+                });
+            }
+        }
+    });
+
+    socket.on('call:response', async ({ callerId, accepted }: { callerId: string; accepted: boolean }) => {
+        if (typeof callerId !== 'string' || !UUID_RE.test(callerId)) return;
+
+        const callerSockets = onlineUsers.get(callerId);
+        if (!callerSockets) return;
+
+        if (accepted) {
+            let roomId = userRooms.get(callerId);
+            if (!roomId) {
+                roomId = `call-${uid.slice(0, 8)}-${callerId.slice(0, 8)}`;
+            }
+
+            for (const sid of callerSockets) {
+                io.to(sid).emit('call:accepted', { roomId });
+            }
+            socket.emit('call:accepted', { roomId });
+        } else {
+            for (const sid of callerSockets) {
+                io.to(sid).emit('call:rejected', { fromUserId: uid });
+            }
+        }
+    });
+
+    socket.on('call:terminate', ({ friendId }: { friendId: string }) => {
+        if (typeof friendId !== 'string' || !UUID_RE.test(friendId)) return;
+        
+        const friendSockets = onlineUsers.get(friendId);
+        if (friendSockets) {
+            for (const sid of friendSockets) {
+                io.to(sid).emit('call:terminated', { fromUserId: uid });
             }
         }
     });

@@ -28,6 +28,7 @@ export interface RoomInvitation {
     roomId: string;
     roomName: string;
     receivedAt: number;
+    participantCount?: number;
 }
 
 export interface OpenRoom {
@@ -37,6 +38,18 @@ export interface OpenRoom {
     totalParticipantCount: number; // total users in room (including non-friends)
 }
 
+export interface IncomingCall {
+    caller: Friend;
+    roomId: string | null;
+    roomName?: string;
+    participants: Friend[];
+}
+
+export interface OutgoingCall {
+    recipientId: string;
+    roomId: string | null;
+}
+
 interface FriendsState {
     friends: Friend[];
     onlineUserIds: Set<string>;
@@ -44,6 +57,8 @@ interface FriendsState {
     outgoingRequests: FriendRequestOutgoing[];
     pendingInvitation: RoomInvitation | null;
     openRooms: OpenRoom[];
+    incomingCall: IncomingCall | null;
+    outgoingCall: OutgoingCall | null;
 
     // Data fetching
     fetchFriends: (token: string) => Promise<void>;
@@ -69,6 +84,12 @@ interface FriendsState {
     // Open Rooms
     setOpenRooms: (rooms: OpenRoom[]) => void;
 
+    // Call Actions
+    setIncomingCall: (call: IncomingCall) => void;
+    clearIncomingCall: () => void;
+    setOutgoingCall: (call: OutgoingCall) => void;
+    clearOutgoingCall: () => void;
+
     // Add a new incoming request (from socket event)
     addIncomingRequest: (request: FriendRequestIncoming) => void;
 
@@ -87,6 +108,8 @@ export const useFriendsStore = create<FriendsState>()((set, get) => ({
     outgoingRequests: [],
     pendingInvitation: null,
     openRooms: [],
+    incomingCall: null,
+    outgoingCall: null,
 
     fetchFriends: async (token) => {
         try {
@@ -226,6 +249,11 @@ export const useFriendsStore = create<FriendsState>()((set, get) => ({
     clearInvitation: () => set({ pendingInvitation: null }),
 
     setOpenRooms: (rooms) => set({ openRooms: rooms }),
+
+    setIncomingCall: (call) => set({ incomingCall: call }),
+    clearIncomingCall: () => set({ incomingCall: null }),
+    setOutgoingCall: (call) => set({ outgoingCall: call }),
+    clearOutgoingCall: () => set({ outgoingCall: null }),
 
     addIncomingRequest: (request) =>
         set((state) => ({

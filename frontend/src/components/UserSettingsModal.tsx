@@ -47,7 +47,7 @@ export function UserSettingsModal({ onClose }: UserSettingsModalProps) {
     useEffect(() => {
         if (user) {
             setEditName(user.name);
-            if (user.avatarColor) setEditColor(user.avatarColor); // Initiale Farbe laden
+            if (user.avatarColor) setEditColor(user.avatarColor); // Load initial color
         }
     }, [user]);
 

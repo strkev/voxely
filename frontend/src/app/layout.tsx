@@ -3,8 +3,11 @@ import { Inter } from "next/font/google";
 import { Header } from "@/components/ui/Header";
 import { AuthProvider } from "@/components/AuthProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { IncomingCallModal } from "@/components/IncomingCallModal";
 import Script from "next/script";
 import "./globals.css";
+import { Toaster } from "react-hot-toast";
+import { FriendsProvider } from "@/components/FriendsProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -54,11 +57,15 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} antialiased min-h-screen flex flex-col`}>
         <AuthProvider>
-          <ThemeProvider />
-          <Header />
-          <main className="flex-1 flex flex-col">
-            {children}
-          </main>
+          <FriendsProvider>
+            <ThemeProvider />
+            <Header />
+            <IncomingCallModal />
+            <Toaster position="top-center" reverseOrder={false} />
+            <main className="flex-1 flex flex-col">
+              {children}
+            </main>
+          </FriendsProvider>
           {/* <Footer /> */}
           <Script id="register-sw" strategy="afterInteractive">
             {`

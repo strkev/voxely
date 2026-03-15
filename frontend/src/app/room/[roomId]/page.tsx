@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -14,6 +14,7 @@ import {
     useRoomContext,
     useIsSpeaking,
     useIsMuted,
+    useParticipants,
     TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
@@ -28,7 +29,7 @@ import { FriendsSidebar } from '@/components/FriendsSidebar';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { VirtualBackgroundModal } from '@/components/VirtualBackgroundModal';
 import { RoomInviteBanner } from '@/components/RoomInviteBanner';
-import { useFriendsSocket } from '@/hooks/useFriendsSocket';
+import { useFriends } from '@/components/FriendsProvider';
 import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { useFriendsStore } from '@/store/useFriendsStore';
 import { getContrastColor } from '@/lib/colors';
@@ -158,7 +159,7 @@ function SpotlightableTile({
         };
     }, [volume, isLocallyMuted, trackRef?.participant]);
 
-    // Farbe für andere Teilnehmer aus Metadaten auslesen (Fallback)
+    // Get color for other participants from metadata (fallback)
     try {
         if (trackRef?.participant?.metadata) {
             const meta = JSON.parse(trackRef.participant.metadata);
@@ -166,7 +167,7 @@ function SpotlightableTile({
         }
     } catch { /* ignore */ }
 
-    // Farbe aus dem Friends-Store überschreibt Metadaten (für Echtzeit-Updates)
+    // Color from friends store overrides metadata (for real-time updates)
     if (!trackRef?.participant?.isLocal && trackRef?.participant?.identity) {
         const friend = friends.find(f => f.id === trackRef.participant!.identity);
         if (friend?.avatarColor) {
@@ -174,7 +175,7 @@ function SpotlightableTile({
         }
     }
 
-    // Farbe für einen selbst direkt aus dem AuthStore (updated sofort)
+    // Own color directly from AuthStore (updates immediately)
     if (trackRef?.participant?.isLocal && localUser?.avatarColor) {
         userColor = localUser.avatarColor;
     }
@@ -221,7 +222,7 @@ function SpotlightableTile({
                 </div>
             </div>
 
-            {/* Spotlight toggle — auf z-20 erhöht, damit es über dem Video bleibt */}
+            {/* Spotlight toggle — z-index increased to stay above video */}
             {onSpotlight && (
                 <button
                     onClick={() => onSpotlight(isSpotlit ? null : (trackRef ?? null))}
@@ -402,7 +403,7 @@ function InRoomSettings({ onClose, onOpenVirtualBackground }: { onClose: () => v
     return createPortal(
         <div
             ref={backdropRef}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 backdrop-blur-sm"
             onClick={(e) => { if (e.target === backdropRef.current) onClose(); }}
         >
             <div className="bg-surface rounded-2xl shadow-xl border border-gray-100 w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto">
@@ -955,6 +956,47 @@ function CustomVideoConference() {
     );
 }
 
+// ─── Friends Sidebar with Presence Tracking ─────────────────────────────────
+function FriendsSidebarWithPresence({
+    roomId,
+    isRoomOpen,
+    onInvite,
+    onOpenRequests,
+    onClose,
+    onToggleOpen,
+    onCall,
+}: {
+    roomId: string;
+    isRoomOpen: boolean;
+    onInvite: (friendId: string) => void;
+    onOpenRequests: () => void;
+    onClose: () => void;
+    onToggleOpen: (isOpen: boolean) => void;
+    onCall: (friendId: string) => void;
+}) {
+    const participants = useParticipants();
+    const inRoomUserIds = useMemo(() => {
+        const ids = new Set<string>();
+        participants.forEach(p => {
+            if (p.identity) ids.add(p.identity);
+        });
+        return ids;
+    }, [participants]);
+
+    return (
+        <FriendsSidebar
+            currentRoomId={roomId}
+            isRoomOpen={isRoomOpen}
+            onInvite={onInvite}
+            onOpenRequests={onOpenRequests}
+            onClose={onClose}
+            onToggleOpen={onToggleOpen}
+            onCall={onCall}
+            inRoomUserIds={inRoomUserIds}
+        />
+    );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
     const router = useRouter();
@@ -975,6 +1017,30 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [copied, setCopied] = useState(false);
     const { soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppression, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius } = useSettingsStore();
     const noiseProcessorRef = useRef<NoiseSuppressionProcessor | null>(null);
+    // Friends state & socket
+    const incomingRequests = useFriendsStore(s => s.incomingRequests);
+    const { sendRoomInvite, toggleRoomOpen, initiateCall } = useFriends();
+ 
+    const handleToggleOpenRoom = useCallback((isOpen: boolean) => {
+        const roomName = decodeURIComponent(roomId)
+            .replace(/-\d{1,5}$/, '')
+            .replace(/-/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase());
+        toggleRoomOpen(roomId, isOpen, roomName);
+    }, [toggleRoomOpen, roomId]);
+ 
+    const handleInviteFriend = useCallback((friendId: string) => {
+        // Get human-readable room name from slug
+        const roomName = decodeURIComponent(roomId)
+            .replace(/-\d{1,5}$/, '')
+            .replace(/-/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase());
+        sendRoomInvite(friendId, roomId, roomName);
+    }, [sendRoomInvite, roomId]);
+
+    const handleCallFriend = useCallback((friendId: string) => {
+        initiateCall(friendId);
+    }, [initiateCall]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const bgProcessorRef = useRef<any>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -985,30 +1051,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
     const qPreset = VIDEO_PRESETS[videoQuality];
 
-    // Friends state & socket
-    const incomingRequests = useFriendsStore(s => s.incomingRequests);
-    const friendsSocketRef = useFriendsSocket(authToken);
-
-    const handleToggleOpenRoom = useCallback((isOpen: boolean) => {
-        const socket = friendsSocketRef.current;
-        if (!socket) return;
-        const roomName = decodeURIComponent(roomId)
-            .replace(/-\d{1,5}$/, '')
-            .replace(/-/g, ' ')
-            .replace(/\b\w/g, c => c.toUpperCase());
-        socket.emit('room:set-open', { roomId, isOpen, roomName });
-    }, [friendsSocketRef, roomId]);
-
-    const handleInviteFriend = useCallback((friendId: string) => {
-        const socket = friendsSocketRef.current;
-        if (!socket) return;
-        // Get human-readable room name from slug
-        const roomName = decodeURIComponent(roomId)
-            .replace(/-\d{1,5}$/, '')
-            .replace(/-/g, ' ')
-            .replace(/\b\w/g, c => c.toUpperCase());
-        socket.emit('friend:invite', { friendId, roomId, roomName });
-    }, [friendsSocketRef, roomId]);
 
     // Ensure control bar is always visible on mount + activate leave guard
     useEffect(() => {
@@ -1373,32 +1415,34 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                         <ChevronUp className="w-4 h-4 text-text-main" />
                     </button>
                 )}
+
+                {/* Friends Sidebar — toggle overlay (moved inside LiveKitRoom for context) */}
+                {friendsSidebarOpen && (
+                    <>
+                        {/* Invisible backdrop to capture outside clicks */}
+                        <div
+                            className="fixed inset-0 z-40 bg-transparent"
+                            onClick={() => setFriendsSidebarOpen(false)}
+                        />
+                        {/* Wrapper with !static and !h-full to prevent Mobile Safari from shifting the sticky sidebar upwards and hiding its header */}
+                        <div className="fixed top-16 left-0 bottom-0 z-50 [&_.friends-sidebar]:!static [&_.friends-sidebar]:!h-full">
+                            <FriendsSidebarWithPresence
+                                roomId={roomId}
+                                isRoomOpen={isRoomOpen}
+                                onInvite={handleInviteFriend}
+                                onOpenRequests={() => setShowFriendsModal(true)}
+                                onClose={() => setFriendsSidebarOpen(false)}
+                                onToggleOpen={handleToggleOpenRoom}
+                                onCall={handleCallFriend}
+                            />
+                        </div>
+                    </>
+                )}
             </LiveKitRoom>
 
             {settingsOpen && <InRoomSettings onClose={() => setSettingsOpen(false)} onOpenVirtualBackground={() => setVirtualBackgroundOpen(true)} />}
             {virtualBackgroundOpen && <VirtualBackgroundModal onClose={() => setVirtualBackgroundOpen(false)} />}
 
-            {/* Friends Sidebar — toggle overlay */}
-            {friendsSidebarOpen && (
-                <>
-                    {/* Invisible backdrop to capture outside clicks */}
-                    <div
-                        className="fixed inset-0 z-40 bg-transparent"
-                        onClick={() => setFriendsSidebarOpen(false)}
-                    />
-                    {/* Wrapper with !static and !h-full to prevent Mobile Safari from shifting the sticky sidebar upwards and hiding its header */}
-                    <div className="fixed top-16 left-0 bottom-0 z-50 [&_.friends-sidebar]:!static [&_.friends-sidebar]:!h-full">
-                        <FriendsSidebar
-                            currentRoomId={roomId}
-                            isRoomOpen={isRoomOpen}
-                            onInvite={handleInviteFriend}
-                            onOpenRequests={() => setShowFriendsModal(true)}
-                            onClose={() => setFriendsSidebarOpen(false)}
-                            onToggleOpen={handleToggleOpenRoom}
-                        />
-                    </div>
-                </>
-            )}
 
             {/* Room Invite Banner */}
             <RoomInviteBanner />

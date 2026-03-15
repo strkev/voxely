@@ -27,12 +27,12 @@ export default function AdminPage() {
             const res = await fetch(`${apiUrl}/api/admin/users`, {
                 headers: { "x-admin-secret": adminSecret },
             });
-            if (!res.ok) throw new Error("Ungültiges Admin-Secret");
+            if (!res.ok) throw new Error("Invalid Admin Secret");
             const data = await res.json();
             setUsers(data.users);
             setAuthenticated(true);
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Fehler");
+            setError(err instanceof Error ? err.message : "Error");
             setAuthenticated(false);
         } finally {
             setLoading(false);
@@ -53,12 +53,12 @@ export default function AdminPage() {
             });
             if (!res.ok) {
                 const data = await res.json();
-                throw new Error(data.error || "Löschung fehlgeschlagen");
+                throw new Error(data.error || "Deletion failed");
             }
             setUsers((prev) => prev.filter((u) => u.id !== userId));
             setDeleteConfirm(null);
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Fehler");
+            setError(err instanceof Error ? err.message : "Error");
         } finally {
             setDeleting(false);
         }
@@ -69,7 +69,7 @@ export default function AdminPage() {
             const res = await fetch(`${apiUrl}/api/admin/users/${userId}/export`, {
                 headers: { "x-admin-secret": secret },
             });
-            if (!res.ok) throw new Error("Export fehlgeschlagen");
+            if (!res.ok) throw new Error("Export failed");
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
@@ -78,7 +78,7 @@ export default function AdminPage() {
             a.click();
             URL.revokeObjectURL(url);
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Export-Fehler");
+            setError(err instanceof Error ? err.message : "Export Error");
         }
     };
 
@@ -98,10 +98,10 @@ export default function AdminPage() {
                         <Shield className="w-7 h-7 text-primary" />
                     </div>
                     <h1 className="text-xl font-semibold text-text-main text-center mb-1">
-                        Admin-Zugang
+                        Admin Access
                     </h1>
                     <p className="text-text-muted text-sm text-center mb-6">
-                        Gib das Admin-Secret ein, um fortzufahren.
+                        Enter the admin secret to continue.
                     </p>
 
                     {error && (
@@ -128,7 +128,7 @@ export default function AdminPage() {
                             {loading ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
-                                "Anmelden"
+                                "Sign In"
                             )}
                         </button>
                     </form>
@@ -148,10 +148,10 @@ export default function AdminPage() {
                     </div>
                     <div>
                         <h1 className="text-xl sm:text-2xl font-bold text-text-main">
-                            Benutzerverwaltung
+                            User Management
                         </h1>
                         <p className="text-text-muted text-sm">
-                            {users.length} Benutzer registriert
+                            {users.length} users registered
                         </p>
                     </div>
                 </div>
@@ -166,7 +166,7 @@ export default function AdminPage() {
                 <div className="bg-surface border border-gray-100 rounded-2xl shadow-flat overflow-hidden">
                     {users.length === 0 ? (
                         <div className="p-8 text-center text-text-muted text-sm">
-                            Keine Benutzer gefunden.
+                            No users found.
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-100">
@@ -189,14 +189,14 @@ export default function AdminPage() {
                                                 {user.name}
                                             </p>
                                             <p className="text-xs text-text-muted truncate">
-                                                {new Date(user.createdAt).toLocaleDateString("de-DE")}
+                                                {new Date(user.createdAt).toLocaleDateString()}
                                             </p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center gap-3 shrink-0 ml-4">
                                         <span className="text-xs text-text-muted hidden sm:block">
-                                            {new Date(user.createdAt).toLocaleDateString("de-DE")}
+                                            {new Date(user.createdAt).toLocaleDateString()}
                                         </span>
 
                                         {deleteConfirm === user.id ? (
@@ -205,7 +205,7 @@ export default function AdminPage() {
                                                     onClick={() => setDeleteConfirm(null)}
                                                     className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-text-main hover:bg-gray-50 transition-colors"
                                                 >
-                                                    Abbrechen
+                                                    Cancel
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(user.id)}
@@ -215,7 +215,7 @@ export default function AdminPage() {
                                                     {deleting ? (
                                                         <Loader2 className="w-3 h-3 animate-spin" />
                                                     ) : (
-                                                        "Löschen"
+                                                        "Delete"
                                                     )}
                                                 </button>
                                             </div>
@@ -224,14 +224,14 @@ export default function AdminPage() {
                                                 <button
                                                     onClick={() => handleExport(user.id, user.name)}
                                                     className="p-2 rounded-lg text-text-muted hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                                                    title="Daten exportieren (DSGVO Art. 15)"
+                                                    title="Export data (GDPR Art. 15)"
                                                 >
                                                     <Download className="w-4 h-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => setDeleteConfirm(user.id)}
                                                     className="p-2 rounded-lg text-text-muted hover:text-primary hover:bg-red-50 transition-colors"
-                                                    title="Benutzer löschen (DSGVO Art. 17)"
+                                                    title="Delete user (GDPR Art. 17)"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -245,7 +245,7 @@ export default function AdminPage() {
                 </div>
 
                 <p className="mt-4 text-xs text-text-muted text-center">
-                    <Download className="w-3 h-3 inline mr-1" /> Datenexport (Art. 15) · <Trash2 className="w-3 h-3 inline mr-1" /> Löschung (Art. 17)
+                    <Download className="w-3 h-3 inline mr-1" /> Data Export (Art. 15) · <Trash2 className="w-3 h-3 inline mr-1" /> Deletion (Art. 17)
                 </p>
             </div>
 

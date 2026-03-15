@@ -52,7 +52,7 @@
 | **Node.js + Express** | 5 | REST-API-Server |
 | **TypeScript** | 5 | Typsicherheit |
 | **Socket.IO** | 4.8 | WebSocket-Server für Echtzeit-Chat |
-| **Prisma** | 7.4 | ORM für PostgreSQL (Schema-Definitionen, Migrationen, Typen) |
+| **Prisma** | 6.19 | ORM für PostgreSQL (Schema-Definitionen, Migrationen, Typen) |
 | **PostgreSQL** | – | Relationale Datenbank (Benutzer, Räume, Chat-Nachrichten) |
 | **Redis** | 5.11 | JWT-Blacklisting (Token-Widerruf nach Logout) |
 | **jsonwebtoken** | 9 | JWT-Erstellung und -Verifikation (7 Tage Gültigkeit) |
@@ -77,7 +77,7 @@
 ## Projektstruktur
 
 ```
-discord-airbnb-clone/
+voxely/
 ├── frontend/                     # Next.js App
 │   ├── src/
 │   │   ├── app/                  # App Router Seiten

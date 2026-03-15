@@ -52,8 +52,9 @@ export function RoomInviteBanner() {
         >
             <div className="room-invite-banner__content">
                 <div className="room-invite-banner__text">
-                    <strong>{pendingInvitation.fromUserName}</strong> invited you to{' '}
-                    <strong>{pendingInvitation.roomName}</strong>
+                    <strong>{pendingInvitation.fromUserName}</strong> {pendingInvitation.participantCount && pendingInvitation.participantCount > 1 
+                        ? `invited you (${pendingInvitation.participantCount} in room)` 
+                        : "invited you to join"}
                 </div>
                 <div className="room-invite-banner__actions">
                     <button onClick={handleJoin} className="room-invite-banner__join">

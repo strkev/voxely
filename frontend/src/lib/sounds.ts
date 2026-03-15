@@ -11,7 +11,8 @@ type SoundName =
     | 'cameraOn'
     | 'cameraOff'
     | 'screenShareOn'
-    | 'screenShareOff';
+    | 'screenShareOff'
+    | 'call';
 
 // Shared AudioContext (created lazily on first use)
 let ctx: AudioContext | null = null;
@@ -125,6 +126,13 @@ const SOUNDS: Record<SoundName, (vol: number) => void> = {
         { frequency: 880, type: 'sine', duration: 0.1, attack: 0.01, decay: 0.02, volume: 0.25 },
         { frequency: 440, type: 'sine', duration: 0.16, attack: 0.01, decay: 0.05, volume: 0.2 },
     ], vol, 0.03),
+
+    call: (vol) => playSequence([
+        { frequency: 400, type: 'sine', duration: 0.1, attack: 0.01, decay: 0.02, volume: 0.35 },
+        { frequency: 500, type: 'sine', duration: 0.1, attack: 0.01, decay: 0.02, volume: 0.35 },
+        { frequency: 400, type: 'sine', duration: 0.1, attack: 0.01, decay: 0.02, volume: 0.35 },
+        { frequency: 500, type: 'sine', duration: 0.1, attack: 0.01, decay: 0.02, volume: 0.35 },
+    ], vol, 0.05),
 };
 
 // ─── Public API ───────────────────────────────────────────────────────────────

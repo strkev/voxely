@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFriendsStore, Friend } from '@/store/useFriendsStore';
+import { useFriends } from '@/components/FriendsProvider';
 import { FriendsSidebar } from '@/components/FriendsSidebar';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { RoomInviteBanner } from '@/components/RoomInviteBanner';
-import { useFriendsSocket } from '@/hooks/useFriendsSocket';
 import { getContrastColor } from '@/lib/colors';
 import { Users, ShieldCheck, Clock, Video, DoorOpen } from 'lucide-react';
 
@@ -19,12 +19,12 @@ export default function DashboardPage() {
     const [showFriendsModal, setShowFriendsModal] = useState(false);
     const [mobileFriendsOpen, setMobileFriendsOpen] = useState(false);
 
-    const { user, token, isLoading } = useAuthStore();
+    const { user, isLoading } = useAuthStore();
     const router = useRouter();
     const { friends, openRooms } = useFriendsStore();
 
-    // Connect friends socket for online presence & invitations
-    useFriendsSocket(token);
+    // Use friends context for online presence & invitations (connected via global provider)
+    const { initiateCall } = useFriends();
 
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -66,7 +66,7 @@ export default function DashboardPage() {
         <div className="flex flex-1 h-[calc(100vh-64px)]">
             {/* Friends Sidebar – hidden on mobile by default, toggled via button */}
             <div className={`hidden sm:block`}>
-                <FriendsSidebar onOpenRequests={() => setShowFriendsModal(true)} />
+                <FriendsSidebar onOpenRequests={() => setShowFriendsModal(true)} onCall={initiateCall} />
             </div>
 
             {/* Mobile Friends Sidebar Overlay */}
@@ -77,6 +77,7 @@ export default function DashboardPage() {
                         <FriendsSidebar
                             onOpenRequests={() => setShowFriendsModal(true)}
                             onClose={() => setMobileFriendsOpen(false)}
+                            onCall={initiateCall}
                         />
                     </div>
                 </div>
@@ -181,10 +182,10 @@ export default function DashboardPage() {
                                     <div key={room.roomId} className="bg-surface border border-gray-100 p-5 rounded-2xl flex flex-col gap-4 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 shadow-flat">
                                         <div className="flex items-start justify-between">
                                             <div className="min-w-0">
-                                                <h3 className="font-semibold text-text-main truncate text-lg">{room.roomName}</h3>
-                                                <p className="text-sm text-text-muted truncate mt-0.5">
-                                                    {room.totalParticipantCount} person{room.totalParticipantCount !== 1 ? 's' : ''} here
-                                                </p>
+                                                <h3 className="font-semibold text-text-main truncate text-lg flex items-center gap-2">
+                                                    <Users className="w-5 h-5 text-primary opacity-80" />
+                                                    {room.totalParticipantCount} in room
+                                                </h3>
                                             </div>
                                             <Button 
                                                 variant="primary" 

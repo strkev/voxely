@@ -229,16 +229,16 @@ if [ "$SETUP_DOCKER_SERVICES" = true ]; then
     prompt PG_DB       "PostgreSQL database"  "voxely"
     prompt PG_PORT     "PostgreSQL port"      "5432"
 
-    if sudo docker ps -a --format '{{.Names}}' | grep -q '^dc-postgres$'; then
-        warn "Container 'dc-postgres' already exists  — skipping creation"
-        sudo docker start dc-postgres 2>/dev/null || true
+    if sudo docker ps -a --format '{{.Names}}' | grep -q '^voxely-postgres$'; then
+        warn "Container 'voxely-postgres' already exists  — skipping creation"
+        sudo docker start voxely-postgres 2>/dev/null || true
     else
-        sudo docker run -d --name dc-postgres \
+        sudo docker run -d --name voxely-postgres \
             -e POSTGRES_USER="${PG_USER}" \
             -e POSTGRES_PASSWORD="${PG_PASSWORD}" \
             -e POSTGRES_DB="${PG_DB}" \
             -p "127.0.0.1:${PG_PORT}:5432" \
-            -v dc-postgres-data:/var/lib/postgresql/data \
+            -v voxely-postgres-data:/var/lib/postgresql/data \
             --restart unless-stopped \
             postgres:16
         success "PostgreSQL started on port ${PG_PORT}"
@@ -250,13 +250,13 @@ if [ "$SETUP_DOCKER_SERVICES" = true ]; then
     info "Setting up Redis..."
     prompt REDIS_PORT "Redis port" "6379"
 
-    if sudo docker ps -a --format '{{.Names}}' | grep -q '^dc-redis$'; then
-        warn "Container 'dc-redis' already exists — skipping creation"
-        sudo docker start dc-redis 2>/dev/null || true
+    if sudo docker ps -a --format '{{.Names}}' | grep -q '^voxely-redis$'; then
+        warn "Container 'voxely-redis' already exists — skipping creation"
+        sudo docker start voxely-redis 2>/dev/null || true
     else
-        sudo docker run -d --name dc-redis \
+        sudo docker run -d --name voxely-redis \
             -p "127.0.0.1:${REDIS_PORT}:6379" \
-            -v dc-redis-data:/data \
+            -v voxely-redis-data:/data \
             --restart unless-stopped \
             redis:7-alpine
         success "Redis started on port ${REDIS_PORT}"
@@ -270,11 +270,11 @@ if [ "$SETUP_DOCKER_SERVICES" = true ]; then
     prompt LK_API_SECRET "LiveKit API Secret" "$(openssl rand -hex 24)" true
     prompt LK_PORT       "LiveKit port"       "7880"
 
-    if sudo docker ps -a --format '{{.Names}}' | grep -q '^dc-livekit$'; then
-        warn "Container 'dc-livekit' already exists — skipping creation"
-        sudo docker start dc-livekit 2>/dev/null || true
+    if sudo docker ps -a --format '{{.Names}}' | grep -q '^voxely-livekit$'; then
+        warn "Container 'voxely-livekit' already exists — skipping creation"
+        sudo docker start voxely-livekit 2>/dev/null || true
     else
-        sudo docker run -d --name dc-livekit \
+        sudo docker run -d --name voxely-livekit \
             -p "${LK_PORT}:7880" \
             -p 7881:7881 \
             -p 7882:7882/udp \
@@ -500,7 +500,7 @@ success "Prisma client generated"
 if [ "$SETUP_DOCKER_SERVICES" = true ]; then
     info "Waiting for PostgreSQL to be ready..."
     for i in $(seq 1 30); do
-        if sudo docker exec dc-postgres pg_isready -U "${PG_USER}" &>/dev/null; then
+        if sudo docker exec voxely-postgres pg_isready -U "${PG_USER}" &>/dev/null; then
             break
         fi
         sleep 1
@@ -977,7 +977,7 @@ if [ "$START_METHOD" = "pm2" ]; then
 module.exports = {
     apps: [
         {
-            name: 'dc-backend',
+            name: 'voxely-backend',
             cwd: './backend',
             script: 'dist/index.js',
             env: {
@@ -988,7 +988,7 @@ module.exports = {
             max_memory_restart: '512M',
         },
         {
-            name: 'dc-frontend',
+            name: 'voxely-frontend',
             cwd: './frontend',
             script: 'node_modules/.bin/next',
             args: 'start',
@@ -1005,7 +1005,7 @@ PM2EOF
 
     success "Created ecosystem.config.cjs"
 
-    pm2 delete dc-backend dc-frontend 2>/dev/null || true
+    pm2 delete voxely-backend voxely-frontend 2>/dev/null || true
     pm2 start ecosystem.config.cjs
     pm2 save
 
@@ -1014,7 +1014,7 @@ PM2EOF
     info "Useful PM2 commands:"
     echo -e "    ${BOLD}pm2 status${NC}           — Show process status"
     echo -e "    ${BOLD}pm2 logs${NC}             — Show logs (all processes)"
-    echo -e "    ${BOLD}pm2 logs dc-backend${NC}  — Show backend logs"
+    echo -e "    ${BOLD}pm2 logs voxely-backend${NC}  — Show backend logs"
     echo -e "    ${BOLD}pm2 restart all${NC}      — Restart all processes"
     echo -e "    ${BOLD}pm2 stop all${NC}         — Stop all processes"
     echo -e "    ${BOLD}pm2 startup${NC}          — Auto-start on boot"
