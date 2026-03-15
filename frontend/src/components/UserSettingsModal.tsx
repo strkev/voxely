@@ -134,7 +134,7 @@ export function UserSettingsModal({ onClose }: UserSettingsModalProps) {
         <>
             <div
                 ref={backdropRef}
-                className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm"
                 onClick={(e) => { if (e.target === backdropRef.current) onClose(); }}
             >
                 <div className="bg-surface rounded-2xl shadow-xl border border-gray-100 w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto">
@@ -395,7 +395,7 @@ export function UserSettingsModal({ onClose }: UserSettingsModalProps) {
 
             {/* Delete Account Confirmation */}
             {showDeleteModal && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm">
                     <div className="bg-surface rounded-2xl shadow-xl border border-gray-100 max-w-sm w-full mx-4 p-6">
                         <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-50 mx-auto mb-4">
                             <Trash2 className="w-6 h-6 text-primary" />

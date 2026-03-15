@@ -30,7 +30,6 @@ interface SettingsState {
     controlBarVisible: boolean;
     autoHideControlBar: boolean;
     noiseSuppression: boolean;
-    noiseSuppressionLevel: number; // 0-1
     virtualBackground: 'none' | 'blur' | 'image';
     virtualBackgroundImage: string | null;
     blurRadius: number;
@@ -44,7 +43,6 @@ interface SettingsState {
     setControlBarVisible: (v: boolean) => void;
     setAutoHideControlBar: (v: boolean) => void;
     setNoiseSuppression: (v: boolean) => void;
-    setNoiseSuppressionLevel: (v: number) => void;
     setVirtualBackground: (v: 'none' | 'blur' | 'image') => void;
     setVirtualBackgroundImage: (v: string | null) => void;
     setBlurRadius: (v: number) => void;
@@ -63,7 +61,6 @@ export const useSettingsStore = create<SettingsState>()(
             controlBarVisible: true,
             autoHideControlBar: false,
             noiseSuppression: false,
-            noiseSuppressionLevel: 0.5,
             virtualBackground: 'none',
             virtualBackgroundImage: null,
             blurRadius: 10,
@@ -77,7 +74,6 @@ export const useSettingsStore = create<SettingsState>()(
             setControlBarVisible: (v) => set({ controlBarVisible: v }),
             setAutoHideControlBar: (v) => set({ autoHideControlBar: v }),
             setNoiseSuppression: (v) => set({ noiseSuppression: v }),
-            setNoiseSuppressionLevel: (v) => set({ noiseSuppressionLevel: Math.max(0, Math.min(1, v)) }),
             setVirtualBackground: (v) => set({ virtualBackground: v }),
             setVirtualBackgroundImage: (v) => set({ virtualBackgroundImage: v }),
             setBlurRadius: (v) => set({ blurRadius: v }),

@@ -65,7 +65,7 @@ export function FriendRequestsModal({ onClose }: FriendRequestsModalProps) {
     ];
 
     return (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
             <div
                 className="friend-modal"
                 onClick={e => e.stopPropagation()}
