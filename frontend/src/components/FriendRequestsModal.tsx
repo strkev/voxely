@@ -157,7 +157,7 @@ export function FriendRequestsModal({ onClose }: FriendRequestsModalProps) {
                                                 aria-label={`Accept ${req.sender.name}`}
                                                 title="Accept"
                                             >
-                                                <Check className="w-4 h-4" />
+                                                Approve
                                             </button>
                                             <button
                                                 onClick={() => handleDecline(req.id)}
@@ -166,7 +166,7 @@ export function FriendRequestsModal({ onClose }: FriendRequestsModalProps) {
                                                 aria-label={`Decline ${req.sender.name}`}
                                                 title="Decline"
                                             >
-                                                <XIcon className="w-4 h-4" />
+                                                Reject
                                             </button>
                                         </div>
                                     </div>
