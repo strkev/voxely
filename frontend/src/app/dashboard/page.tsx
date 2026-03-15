@@ -21,7 +21,7 @@ export default function DashboardPage() {
 
     const { user, isLoading } = useAuthStore();
     const router = useRouter();
-    const { friends, openRooms } = useFriendsStore();
+    const { friends, openRooms, incomingRequests } = useFriendsStore();
 
     // Use friends context for online presence & invitations (connected via global provider)
     const { initiateCall } = useFriends();
@@ -91,6 +91,11 @@ export default function DashboardPage() {
             >
                 <Users className="w-4 h-4" />
                 Friends
+                {incomingRequests.length > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white ring-2 ring-white animate-pulse-soft">
+                        {incomingRequests.length > 9 ? '9+' : incomingRequests.length}
+                    </span>
+                )}
             </button>
 
             <div className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-6 md:p-12 lg:p-16 overflow-y-auto">
