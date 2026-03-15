@@ -116,22 +116,22 @@ export const IncomingCallModal: React.FC = () => {
                         exit={{ scale: 0.9, opacity: 0 }}
                         className="bg-[#1e1f22] w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border border-white/10"
                     >
-                        <div className="p-8 flex flex-col items-center">
+                        <div className="pt-14 pb-10 px-8 flex flex-col items-center">
                             <div className="relative mb-6">
                                 <motion.div
                                     animate={{
-                                        scale: [1, 1.3, 1],
-                                        opacity: [0.2, 0.4, 0.2],
+                                        scale: [1, 1.2, 1],
+                                        opacity: [0.1, 0.2, 0.1],
                                     }}
                                     transition={{
-                                        duration: 1.5,
+                                        duration: 2,
                                         repeat: Infinity,
                                         ease: "easeInOut"
                                     }}
                                     className="absolute -inset-4 bg-blue-500/20 rounded-full"
                                 />
                                 <div className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white shadow-xl ring-4 ring-[#1e1f22]">
-                                    <Phone size={32} className="animate-pulse" />
+                                    <Phone size={32} />
                                 </div>
                             </div>
 
