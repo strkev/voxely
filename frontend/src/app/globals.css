@@ -834,36 +834,51 @@ body {
 
 .friends-sidebar__confirm-remove {
   display: flex;
-  gap: 2px;
+  gap: 4px;
 }
 
 .friends-sidebar__confirm-yes,
 .friends-sidebar__confirm-no {
-  width: 22px;
-  height: 22px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  transition: background-color 0.15s ease;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0 8px;
+  transition: all 0.15s ease;
 }
 
 .friends-sidebar__confirm-yes {
+  background: rgba(255, 90, 95, 0.08);
   color: var(--color-primary);
 }
 
 .friends-sidebar__confirm-yes:hover {
-  background: rgba(255, 90, 95, 0.1);
+  background: var(--color-primary);
+  color: white;
 }
 
 .friends-sidebar__confirm-no {
+  background: rgba(0, 0, 0, 0.04);
   color: var(--color-text-muted);
 }
 
 .friends-sidebar__confirm-no:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--color-text-main);
+}
+
+/* Mobile adjustments */
+@media (max-width: 639px) {
+  .friends-sidebar__confirm-yes,
+  .friends-sidebar__confirm-no {
+    height: 38px;
+    padding: 0 14px;
+    font-size: 0.85rem;
+    border-radius: 10px;
+  }
 }
 
 /* ── Friend Requests Modal ────────────────────────────────────────────────────── */

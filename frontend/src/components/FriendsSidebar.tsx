@@ -208,50 +208,62 @@ export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequ
 
                                 {/* Actions */}
                                 <div className="friends-sidebar__item-actions">
-                                    {isOnline && onCall && !inRoomUserIds?.has(friend.id) && (
-                                        <button
-                                            onClick={() => onCall(friend.id)}
-                                            className="friends-sidebar__call-btn"
-                                            title="Room invite"
-                                            aria-label={`Room invite with ${friend.name}`}
-                                        >
-                                            <Phone className="w-3.5 h-3.5" />
-                                        </button>
-                                    )}
-                                    {currentRoomId && isOnline && onInvite && !inRoomUserIds?.has(friend.id) && (
-                                        invitedFriendIds.has(friend.id) ? (
-                                            <span className="friends-sidebar__invited-indicator" title="Invited!">
-                                                <Check className="w-3.5 h-3.5 text-green-500" />
-                                            </span>
-                                        ) : (
-                                            <button
-                                                onClick={() => handleInvite(friend.id)}
-                                                className="friends-sidebar__invite-btn"
-                                                title="Invite to room"
-                                                aria-label={`Invite ${friend.name} to room`}
-                                            >
-                                                <Mail className="w-3.5 h-3.5" />
-                                            </button>
-                                        )
-                                    )}
                                     {confirmRemove === friend.id ? (
-                                        <div className="friends-sidebar__confirm-remove">
-                                            <button onClick={() => handleRemoveFriend(friend)} className="friends-sidebar__confirm-yes" aria-label="Confirm remove">
-                                                ✓
+                                        <div className="friends-sidebar__confirm-remove animate-pop-in">
+                                            <button 
+                                                onClick={() => handleRemoveFriend(friend)} 
+                                                className="friends-sidebar__confirm-yes" 
+                                                aria-label="Confirm remove"
+                                                title="Remove friend"
+                                            >
+                                                Remove
                                             </button>
-                                            <button onClick={() => setConfirmRemove(null)} className="friends-sidebar__confirm-no" aria-label="Cancel remove">
-                                                ✗
+                                            <button 
+                                                onClick={() => setConfirmRemove(null)} 
+                                                className="friends-sidebar__confirm-no" 
+                                                aria-label="Cancel remove"
+                                                title="Cancel"
+                                            >
+                                                Cancel
                                             </button>
                                         </div>
                                     ) : (
-                                        <button
-                                            onClick={() => setConfirmRemove(friend.id)}
-                                            className="friends-sidebar__remove-btn"
-                                            title="Remove friend"
-                                            aria-label={`Remove ${friend.name}`}
-                                        >
-                                            <UserMinus className="w-3.5 h-3.5" />
-                                        </button>
+                                        <>
+                                            {isOnline && onCall && !inRoomUserIds?.has(friend.id) && (
+                                                <button
+                                                    onClick={() => onCall(friend.id)}
+                                                    className="friends-sidebar__call-btn"
+                                                    title="Room invite"
+                                                    aria-label={`Room invite with ${friend.name}`}
+                                                >
+                                                    <Phone className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
+                                            {currentRoomId && isOnline && onInvite && !inRoomUserIds?.has(friend.id) && (
+                                                invitedFriendIds.has(friend.id) ? (
+                                                    <span className="friends-sidebar__invited-indicator" title="Invited!">
+                                                        <Check className="w-3.5 h-3.5 text-green-500" />
+                                                    </span>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleInvite(friend.id)}
+                                                        className="friends-sidebar__invite-btn"
+                                                        title="Invite to room"
+                                                        aria-label={`Invite ${friend.name} to room`}
+                                                    >
+                                                        <Mail className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )
+                                            )}
+                                            <button
+                                                onClick={() => setConfirmRemove(friend.id)}
+                                                className="friends-sidebar__remove-btn"
+                                                title="Remove friend"
+                                                aria-label={`Remove ${friend.name}`}
+                                            >
+                                                <UserMinus className="w-3.5 h-3.5" />
+                                            </button>
+                                        </>
                                     )}
                                 </div>
                             </div>
