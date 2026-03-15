@@ -119,7 +119,43 @@ function SpotlightableTile({
     const [isLocallyMuted, setIsLocallyMuted] = useState(false);
     const [isVolumeExpanded, setIsVolumeExpanded] = useState(false);
 
-    // Sync volume and mute state
+    // Web Audio GainNode for per-user volume control (0-200%).
+    // We route the audio element through: element → MediaElementSource → GainNode → speakers.
+    // This gives us full control over volume including amplification beyond 100%.
+    const gainCtxRef = useRef<AudioContext | null>(null);
+    const gainNodeRef = useRef<GainNode | null>(null);
+    const gainSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+    const gainElementRef = useRef<HTMLAudioElement | null>(null);
+
+    // Ensure GainNode is connected to the correct audio element
+    const ensureGainNode = useCallback((audioEl: HTMLAudioElement) => {
+        // Already connected to this element
+        if (gainElementRef.current === audioEl && gainNodeRef.current) return;
+
+        // Clean up old chain if element changed
+        try { gainSourceRef.current?.disconnect(); } catch {}
+        try { gainCtxRef.current?.close(); } catch {}
+        gainCtxRef.current = null;
+        gainNodeRef.current = null;
+        gainSourceRef.current = null;
+        gainElementRef.current = null;
+
+        try {
+            const ctx = new AudioContext();
+            const source = ctx.createMediaElementSource(audioEl);
+            const gain = ctx.createGain();
+            source.connect(gain);
+            gain.connect(ctx.destination);
+            gainCtxRef.current = ctx;
+            gainNodeRef.current = gain;
+            gainSourceRef.current = source;
+            gainElementRef.current = audioEl;
+        } catch (e) {
+            console.warn('[Volume] Failed to create GainNode:', e);
+        }
+    }, []);
+
+    // Sync volume via GainNode
     useEffect(() => {
         const participant = trackRef?.participant;
         if (!participant || participant.isLocal) return;
@@ -132,34 +168,53 @@ function SpotlightableTile({
                 const track = pub.track;
                 if (!track) return;
 
-                // Use LiveKit native volume (0-1) - only on RemoteAudioTrack
-                if (track instanceof RemoteAudioTrack) {
-                    track.setVolume(Math.min(1, targetVol));
-                }
+                // Find the attached audio element and connect it to our GainNode
+                const elements = track.attachedElements;
+                if (elements.length === 0) return;
 
-                // Firefox/Safari extra safety: explicitly mute elements
-                track.attachedElements.forEach(el => {
-                    const audioEl = el as HTMLAudioElement;
-                    audioEl.muted = (targetVol === 0);
-                    if (targetVol === 0) {
-                        audioEl.volume = 0;
-                    }
-                });
+                const audioEl = elements[0] as HTMLAudioElement;
+
+                // Always ensure the audio element is unmuted and at full volume —
+                // the GainNode controls the actual output level
+                audioEl.muted = false;
+                audioEl.volume = 1;
+
+                // Set up or re-use the GainNode
+                ensureGainNode(audioEl);
+
+                // Apply the volume (0 = silent, 1 = normal, 2 = 200%)
+                if (gainNodeRef.current) {
+                    gainNodeRef.current.gain.value = targetVol;
+                }
             });
         };
 
         sync();
 
-        // Listen for track changes/attachments to keep volume in sync
-        // Using string event names for safety
+        // Periodic re-sync: handles late track attachment, tab switches, etc.
+        const interval = setInterval(sync, 1500);
+
         participant.on('trackSubscribed', sync);
         participant.on('trackUnsubscribed', sync);
 
         return () => {
+            clearInterval(interval);
             participant.off('trackSubscribed', sync);
             participant.off('trackUnsubscribed', sync);
         };
-    }, [volume, isLocallyMuted, trackRef?.participant]);
+    }, [volume, isLocallyMuted, trackRef?.participant, ensureGainNode]);
+
+    // Clean up GainNode on unmount
+    useEffect(() => {
+        return () => {
+            try { gainSourceRef.current?.disconnect(); } catch {}
+            try { gainCtxRef.current?.close(); } catch {}
+            gainCtxRef.current = null;
+            gainNodeRef.current = null;
+            gainSourceRef.current = null;
+            gainElementRef.current = null;
+        };
+    }, []);
 
     // Get color for other participants from metadata (fallback)
     try {
@@ -281,7 +336,7 @@ function SpotlightableTile({
                         <input
                             type="range"
                             min="0"
-                            max="1"
+                            max="2"
                             step="0.05"
                             value={isLocallyMuted ? 0 : volume}
                             onChange={(e) => {
@@ -291,9 +346,9 @@ function SpotlightableTile({
                             }}
                             className="w-20 sm:w-24 h-1.5 rounded-full appearance-none bg-white/30 cursor-pointer shrink-0"
                             style={{
-                                background: `linear-gradient(to right, #FF5A5F ${(isLocallyMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.3) ${(isLocallyMuted ? 0 : volume) * 100}%)`
+                                background: `linear-gradient(to right, #FF5A5F ${(isLocallyMuted ? 0 : volume) * 50}%, rgba(255,255,255,0.3) ${(isLocallyMuted ? 0 : volume) * 50}%)`
                             }}
-                            title="Adjust volume locally"
+                            title="Adjust volume locally (0-200%)"
                         />
                         <span className="text-[10px] font-mono text-white/90 w-10 text-right shrink-0">
                             {isLocallyMuted ? '0%' : `${Math.round(volume * 100)}%`}
