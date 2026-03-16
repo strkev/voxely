@@ -18,7 +18,7 @@ import {
     TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { Track, LocalTrackPublication } from 'livekit-client';
+import { Track, LocalTrackPublication, RemoteAudioTrack } from 'livekit-client';
 import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, ScreenShare, LogOut, Moon, Lock, Unlock, Image as ImageIcon, Sun, Palette } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
@@ -132,8 +132,8 @@ function SpotlightableTile({
                 const track = pub.track;
                 if (!track) return;
                 // Use LiveKit internal volume control if it's a remote audio track
-                if (track.kind === Track.Kind.Audio && 'setVolume' in track) {
-                    (track as any).setVolume(targetVol);
+                if (track.kind === Track.Kind.Audio && track instanceof RemoteAudioTrack) {
+                    track.setVolume(targetVol);
                 }
             });
         };
