@@ -3,7 +3,7 @@
  * No external files needed. All sounds are generated programmatically.
  */
 
-type SoundName =
+export type SoundName =
     | 'join'
     | 'leave'
     | 'mute'

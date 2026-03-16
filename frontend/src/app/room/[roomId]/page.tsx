@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useSettingsStore, VIDEO_PRESETS, type VideoQuality, type ScreenShareResolution, type ScreenShareFps, type NoiseSuppressionMode } from '@/store/useSettingsStore';
+import { useSettingsStore, VIDEO_PRESETS, type NoiseSuppressionMode } from '@/store/useSettingsStore';
 import {
     LiveKitRoom,
     RoomAudioRenderer,
@@ -19,7 +19,7 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track, LocalTrackPublication, RemoteAudioTrack } from 'livekit-client';
-import { AlertCircle, Star, X, Link2, Check, Volume2, VolumeX, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, LogOut, Lock, Unlock } from 'lucide-react';
+import { AlertCircle, Star, Link2, Check, Volume2, VolumeX, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, LogOut, Lock, Unlock } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';

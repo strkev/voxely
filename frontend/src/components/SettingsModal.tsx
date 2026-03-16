@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSettingsStore, QUALITY_OPTIONS, SCREEN_RES_OPTIONS, SCREEN_FPS_OPTIONS, type VideoQuality, type ScreenShareResolution, type ScreenShareFps, type NoiseSuppressionMode } from '@/store/useSettingsStore';
-import { playSound } from '@/lib/sounds';
+import { playSound, type SoundName } from '@/lib/sounds';
 import { PRESET_COLORS, getContrastColor } from '@/lib/colors';
 import { 
     X, Settings, Mic, Monitor, Palette, Bell, User, Lock, Trash2, 
@@ -26,7 +26,7 @@ const NOISE_SUPPRESSION_OPTIONS: { value: NoiseSuppressionMode; label: string; d
     { value: 'filter', label: 'Filter', desc: 'Bandpass filter (removes rumble & hiss)' },
 ];
 
-const SOUND_LABELS: { key: string; label: string }[] = [
+const SOUND_LABELS: { key: SoundName; label: string }[] = [
     { key: 'join', label: 'Join' },
     { key: 'leave', label: 'Leave' },
     { key: 'mute', label: 'Mute' },
@@ -123,8 +123,8 @@ export function SettingsModal({ onClose, onOpenVirtualBackground }: SettingsModa
             setProfileSuccess('Profile updated successfully');
             setCurrentPassword('');
             setNewPassword('');
-        } catch (err: any) {
-            setProfileError(err.message || 'Error');
+        } catch (err: unknown) {
+            setProfileError(err instanceof Error ? err.message : 'Error');
         } finally {
             setProfileLoading(false);
         }
@@ -425,7 +425,7 @@ export function SettingsModal({ onClose, onOpenVirtualBackground }: SettingsModa
                                                 {SOUND_LABELS.map(({ key, label }) => (
                                                     <SettingsOptionButton
                                                         key={key}
-                                                        onClick={() => playSound(key as any, soundVolume)}
+                                                        onClick={() => playSound(key, soundVolume)}
                                                         className="flex items-center gap-2 px-4 py-3 text-[11px]"
                                                     >
                                                         <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
