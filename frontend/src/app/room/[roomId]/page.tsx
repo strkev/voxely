@@ -35,6 +35,10 @@ import { useFriends } from '@/components/FriendsProvider';
 import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { useFriendsStore } from '@/store/useFriendsStore';
 import { getContrastColor } from '@/lib/colors';
+import { SettingsOptionButton } from '@/components/ui/SettingsOptionButton';
+import { SettingsToggle } from '@/components/ui/SettingsToggle';
+import { SettingsSlider } from '@/components/ui/SettingsSlider';
+import { SettingsNavButton } from '@/components/ui/SettingsNavButton';
 
 // ─── Auto-start audio ─────────────────────────────────────────────────────────
 function AutoStartAudio() {
@@ -386,6 +390,8 @@ function InRoomSettings({ onClose, onOpenVirtualBackground }: { onClose: () => v
         setScreenShareResolution, setScreenShareFps,
     } = useSettingsStore();
 
+    const [activeTab, setActiveTab] = useState<'audio-video' | 'quality' | 'interface' | 'sounds'>('audio-video');
+    const [isNavExpanded, setIsNavExpanded] = useState(false);
     const backdropRef = useRef<HTMLDivElement>(null);
 
     // Lock body scroll while settings modal is open
@@ -396,235 +402,312 @@ function InRoomSettings({ onClose, onOpenVirtualBackground }: { onClose: () => v
 
     if (typeof document === 'undefined') return null;
 
+    const tabs: { id: typeof activeTab; label: string; icon: React.ElementType }[] = [
+        { id: 'audio-video', label: 'Audio & Video', icon: Mic },
+        { id: 'quality', label: 'Stream Quality', icon: Monitor },
+        { id: 'interface', label: 'Interface', icon: Palette },
+        { id: 'sounds', label: 'Sounds', icon: Bell },
+    ];
+
     return createPortal(
         <div
             ref={backdropRef}
-            className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
             onClick={(e) => { if (e.target === backdropRef.current) onClose(); }}
         >
-            <div className="bg-surface rounded-2xl shadow-xl border border-gray-100 w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto">
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-surface rounded-t-2xl z-10">
-                    <div className="flex items-center gap-2">
-                        <Settings className="w-4 h-4 text-text-muted" />
-                        <h2 className="text-sm font-semibold text-text-main">Room Settings</h2>
-                    </div>
-                    <button onClick={onClose} className="p-1.5 rounded-lg text-text-muted hover:text-text-main hover:bg-gray-100 transition-colors">
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
-
-                {/* Noise Suppression */}
-                <div className="px-6 py-4 border-b border-gray-100">
-                    <div className="flex items-center gap-2 mb-3">
-                        <Mic className="w-4 h-4 text-text-muted" />
-                        <span className="text-sm font-semibold text-text-main">Noise Suppression</span>
-                    </div>
-                    <div className="flex gap-1.5 flex-wrap">
-                        {NOISE_SUPPRESSION_OPTIONS.map(opt => (
-                            <button
-                                key={opt.value}
-                                onClick={() => setNoiseSuppressionMode(opt.value)}
-                                className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${
-                                    noiseSuppressionMode === opt.value
-                                        ? 'bg-primary text-white shadow-sm'
-                                        : 'bg-gray-100 text-text-main hover:bg-gray-200'
-                                }`}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
-                    </div>
-                    <p className="text-[10px] text-text-muted mt-2">
-                        {NOISE_SUPPRESSION_OPTIONS.find(o => o.value === noiseSuppressionMode)?.desc}
-                    </p>
-                </div>
-
-                {/* Virtual Background */}
-                <div className="px-6 py-4 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <ImageIcon className="w-4 h-4 text-text-muted" />
-                            <span className="text-sm font-medium text-text-main">Virtual Background</span>
-                        </div>
+            <div className="bg-surface rounded-3xl shadow-2xl border border-white/10 w-full max-w-2xl flex flex-col md:flex-row overflow-hidden h-[600px] max-h-[90vh]">
+                {/* Sidebar Navigation */}
+                <div className={`w-full md:w-64 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-100 flex flex-col shrink-0 transition-all duration-300 ${isNavExpanded ? 'h-auto' : 'h-auto md:h-full'}`}>
+                    <div className="p-6 md:p-8 flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-text-main flex items-center gap-2">
+                            <Settings className="w-5 h-5 text-primary" />
+                            <span className="md:inline">Settings</span>
+                        </h2>
+                        {/* Mobile Toggle */}
                         <button
-                            onClick={() => {
-                                onClose();
-                                onOpenVirtualBackground();
-                            }}
-                            className="bg-gray-100 hover:bg-gray-200 text-text-main px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                            onClick={() => setIsNavExpanded(!isNavExpanded)}
+                            className="md:hidden p-2 rounded-xl text-text-muted hover:bg-gray-100 transition-colors"
                         >
-                            Configure
+                            <ChevronUp className={`w-5 h-5 transition-transform duration-300 ${isNavExpanded ? 'rotate-0' : 'rotate-180'}`} />
                         </button>
                     </div>
-                    <p className="text-[10px] text-text-muted mt-1">Blur your background or use a custom image.</p>
-                </div>
 
-                {/* Camera Quality */}
-                <div className="px-6 py-4 border-b border-gray-100">
-                    <div className="flex items-center gap-2 mb-3">
-                        <Monitor className="w-4 h-4 text-text-muted" />
-                        <span className="text-sm font-semibold text-text-main">Camera Quality</span>
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                        {QUALITY_OPTIONS.map(q => (
-                            <button
-                                key={q}
-                                onClick={() => setVideoQuality(q)}
-                                className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${videoQuality === q
-                                    ? 'bg-primary text-white shadow-sm'
-                                    : 'bg-gray-100 text-text-main hover:bg-gray-200'
-                                    }`}
-                            >
-                                {q}
-                            </button>
-                        ))}
-                    </div>
-                    <p className="text-[10px] text-text-muted mt-2">Changes apply immediately to your camera stream.</p>
-                </div>
-
-                {/* Screen Share Quality */}
-                <div className="px-6 py-4 border-b border-gray-100">
-                    <div className="flex items-center gap-2 mb-3">
-                        <ScreenShare className="w-4 h-4 text-text-muted" />
-                        <span className="text-sm font-semibold text-text-main">Screen Share Quality</span>
-                    </div>
-
-                    {/* Resolution */}
-                    <p className="text-[10px] font-medium text-text-muted mb-1.5 uppercase tracking-wider">Resolution</p>
-                    <div className="flex gap-1.5 flex-wrap mb-3">
-                        {SCREEN_RES_OPTIONS.map(r => (
-                            <button
-                                key={r}
-                                onClick={() => setScreenShareResolution(r)}
-                                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all ${screenShareResolution === r
-                                    ? 'bg-primary text-white shadow-sm'
-                                    : 'bg-gray-100 text-text-main hover:bg-gray-200'
-                                    }`}
-                            >
-                                {r}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* FPS */}
-                    <p className="text-[10px] font-medium text-text-muted mb-1.5 uppercase tracking-wider">Frame Rate</p>
-                    <div className="flex gap-1.5 flex-wrap">
-                        {SCREEN_FPS_OPTIONS.map(f => (
-                            <button
-                                key={f}
-                                onClick={() => setScreenShareFps(f)}
-                                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all ${screenShareFps === f
-                                    ? 'bg-primary text-white shadow-sm'
-                                    : 'bg-gray-100 text-text-main hover:bg-gray-200'
-                                    }`}
-                            >
-                                {f} fps
-                            </button>
-                        ))}
-                    </div>
-                    <p className="text-[10px] text-text-muted mt-2">&quot;Source&quot; streams at your native screen resolution. Changes apply on next screen share.</p>
-                </div>
-
-                {/* Auto-hide Control Bar */}
-                <div className="px-6 py-4 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-text-main">Auto-hide Controls</span>
-                        <button
-                            onClick={() => setAutoHideControlBar(!autoHideControlBar)}
-                            className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${autoHideControlBar ? 'bg-primary' : 'bg-gray-200'}`}
-                        >
-                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${autoHideControlBar ? 'translate-x-5' : 'translate-x-0'}`} />
-                        </button>
-                    </div>
-                    <p className="text-[10px] text-text-muted mt-1">Automatically hides controls after 4s of inactivity</p>
-                </div>
-
-                {/* Dev Info Toggle */}
-                <div className="px-6 py-4 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-text-main">Developer Info Overlay</span>
-                        <button
-                            onClick={() => setShowDevInfo(!showDevInfo)}
-                            className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${showDevInfo ? 'bg-primary' : 'bg-gray-200'}`}
-                        >
-                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${showDevInfo ? 'translate-x-5' : 'translate-x-0'}`} />
-                        </button>
-                    </div>
-                    <p className="text-[10px] text-text-muted mt-1">Shows bitrate, resolution, codec & FPS</p>
-                </div>
-
-                {/* Sound Settings */}
-                <div className="px-6 py-4 border-b border-gray-100">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                            <Bell className="w-4 h-4 text-text-muted" />
-                            <span className="text-sm font-semibold text-text-main">Sound Effects</span>
-                        </div>
-                        <button
-                            onClick={() => setSoundsEnabled(!soundsEnabled)}
-                            className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${soundsEnabled ? 'bg-primary' : 'bg-gray-200'}`}
-                        >
-                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${soundsEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
-                        </button>
-                    </div>
-                    <div className={`transition-opacity ${soundsEnabled ? '' : 'opacity-40 pointer-events-none'}`}>
-                        <div className="flex items-center gap-2 mb-3">
-                            <VolumeX className="w-3 h-3 text-text-muted" />
-                            <input
-                                type="range" min={0} max={100} step={1} value={soundVolume}
-                                onChange={(e) => setSoundVolume(parseInt(e.target.value))}
-                                className="flex-1 h-1 rounded-full accent-primary cursor-pointer"
+                    <nav className={`flex-1 px-4 pb-6 space-y-1 overflow-y-auto ${!isNavExpanded ? 'hidden md:block' : 'block'}`}>
+                        {tabs.map((tab) => (
+                            <SettingsNavButton
+                                key={tab.id}
+                                isActive={activeTab === tab.id}
+                                onClick={() => {
+                                    setActiveTab(tab.id);
+                                    setIsNavExpanded(false);
+                                }}
+                                icon={tab.icon}
+                                label={tab.label}
                             />
-                            <Volume2 className="w-3 h-3 text-text-muted" />
-                            <span className="text-[10px] font-mono text-text-muted w-7 text-right">{Math.round(soundVolume)}%</span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-1.5">
-                            {SOUND_LABELS.map(({ key, label }) => (
-                                <button
-                                    key={key}
-                                    onClick={() => playSound(key, soundVolume)}
-                                    className="text-[10px] font-medium text-primary border border-primary/20 bg-primary/5 hover:bg-primary/10 px-2 py-1 rounded-lg transition-colors truncate"
-                                >
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                        ))}
+                    </nav>
                 </div>
 
-                {/* Appearance / Theme */}
-                <div className="px-6 py-4 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Palette className="w-4 h-4 text-text-muted" />
-                            <span className="text-sm font-semibold text-text-main">Appearance</span>
-                        </div>
-                        <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200 gap-1">
-                            {(['light', 'dark', 'system'] as const).map((value) => {
-                                const options = {
-                                    light: { icon: Sun, label: 'Light' },
-                                    dark: { icon: Moon, label: 'Dark' },
-                                    system: { icon: Monitor, label: 'System' }
-                                };
-                                const { icon: Icon, label } = options[value];
-                                const isActive = theme === value;
-                                return (
-                                    <button
-                                        key={value}
-                                        onClick={() => setTheme(value)}
-                                        className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all ${isActive
-                                                ? 'bg-white text-primary shadow-sm ring-1 ring-black/5'
-                                                : 'text-text-muted hover:text-text-main'
-                                            }`}
-                                        title={`${label} Mode`}
-                                    >
-                                        <Icon className="w-3.5 h-3.5" />
-                                        <span className="hidden sm:inline-block">{label}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                {/* Content Area */}
+                <div className="flex-1 flex flex-col min-w-0 bg-white min-h-0">
+                    <div className="flex items-center justify-between px-6 md:px-8 py-4 md:py-6 border-b border-gray-50 shrink-0">
+                        <h3 className="text-base font-bold text-text-main">
+                            {tabs.find(t => t.id === activeTab)?.label}
+                        </h3>
+                        <button onClick={onClose} className="p-2 rounded-xl text-text-muted hover:text-text-main hover:bg-gray-100 transition-colors">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 scroll-smooth overscroll-contain">
+                        {activeTab === 'audio-video' && (
+                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                {/* Noise Suppression */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-primary/5 flex items-center justify-center">
+                                            <Mic className="w-5 h-5 text-primary" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-text-main">Noise Suppression</h4>
+                                            <p className="text-xs text-text-muted">Reduce background noise for crystal clear audio</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                        {NOISE_SUPPRESSION_OPTIONS.map(opt => (
+                                            <SettingsOptionButton
+                                                key={opt.value}
+                                                active={noiseSuppressionMode === opt.value}
+                                                onClick={() => setNoiseSuppressionMode(opt.value)}
+                                            >
+                                                {opt.label}
+                                            </SettingsOptionButton>
+                                        ))}
+                                    </div>
+                                    <p className="text-[11px] text-text-muted bg-gray-50 p-3 rounded-xl border border-gray-100 italic">
+                                        {NOISE_SUPPRESSION_OPTIONS.find(o => o.value === noiseSuppressionMode)?.desc}
+                                    </p>
+                                </div>
+
+                                <div className="h-px bg-gray-100 my-8" />
+
+                                {/* Virtual Background */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-2xl bg-primary/5 flex items-center justify-center">
+                                                <ImageIcon className="w-5 h-5 text-primary" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-bold text-text-main">Virtual Background</h4>
+                                                <p className="text-xs text-text-muted">Blur background or use an image</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                onClose();
+                                                onOpenVirtualBackground();
+                                            }}
+                                            className="bg-primary text-white px-5 py-2.5 rounded-2xl text-xs font-bold shadow-lg shadow-primary/20 hover:bg-[#E0484D] active:scale-95 transition-all"
+                                        >
+                                            Configure
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'quality' && (
+                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-10">
+                                {/* Camera Quality */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-primary/5 flex items-center justify-center">
+                                            <Monitor className="w-5 h-5 text-primary" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-text-main">Camera Quality</h4>
+                                            <p className="text-xs text-text-muted">Balance performance and visual clarity</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {QUALITY_OPTIONS.map(q => (
+                                            <SettingsOptionButton
+                                                key={q}
+                                                className="flex-1 min-w-[70px]"
+                                                active={videoQuality === q}
+                                                onClick={() => setVideoQuality(q)}
+                                            >
+                                                {q}
+                                            </SettingsOptionButton>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="h-px bg-gray-100" />
+
+                                {/* Screen Share Quality */}
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-primary/5 flex items-center justify-center">
+                                            <ScreenShare className="w-5 h-5 text-primary" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-text-main">Screen Share Quality</h4>
+                                            <p className="text-xs text-text-muted">Optimize for readability or smoothness</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <p className="text-[11px] font-bold text-text-muted uppercase tracking-widest pl-1">Resolution</p>
+                                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                                            {SCREEN_RES_OPTIONS.map(r => (
+                                                <SettingsOptionButton
+                                                    key={r}
+                                                    active={screenShareResolution === r}
+                                                    onClick={() => setScreenShareResolution(r)}
+                                                    className="py-2.5 rounded-xl text-[11px]"
+                                                >
+                                                    {r}
+                                                </SettingsOptionButton>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <p className="text-[11px] font-bold text-text-muted uppercase tracking-widest pl-1">Frame Rate</p>
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {SCREEN_FPS_OPTIONS.map(f => (
+                                                <SettingsOptionButton
+                                                    key={f}
+                                                    active={screenShareFps === f}
+                                                    onClick={() => setScreenShareFps(f)}
+                                                    className="py-2.5 rounded-xl text-[11px]"
+                                                >
+                                                    {f} fps
+                                                </SettingsOptionButton>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'interface' && (
+                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
+                                {/* Toggles */}
+                                <div className="space-y-3">
+                                    {[
+                                        {
+                                            id: 'auto-hide',
+                                            label: 'Auto-hide Controls',
+                                            desc: 'Hide UI after 4 seconds of inactivity',
+                                            value: autoHideControlBar,
+                                            onChange: () => setAutoHideControlBar(!autoHideControlBar)
+                                        },
+                                        {
+                                            id: 'dev-info',
+                                            label: 'Developer Overlay',
+                                            desc: 'Show bitrate, resolution, and FPS',
+                                            value: showDevInfo,
+                                            onChange: () => setShowDevInfo(!showDevInfo)
+                                        }
+                                    ].map(item => (
+                                        <SettingsToggle
+                                            key={item.id}
+                                            label={item.label}
+                                            description={item.desc}
+                                            value={item.value}
+                                            onChange={item.onChange}
+                                        />
+                                    ))}
+                                </div>
+
+                                <div className="h-px bg-gray-100 my-4" />
+
+                                {/* Appearance */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-primary/5 flex items-center justify-center">
+                                            <Palette className="w-5 h-5 text-primary" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-text-main">Appearance</h4>
+                                            <p className="text-xs text-text-muted">Choose your preferred theme</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2 bg-gray-50 p-1.5 rounded-[20px] border border-gray-100">
+                                        {(['light', 'dark', 'system'] as const).map((value) => {
+                                            const options = {
+                                                light: { icon: Sun, label: 'Light' },
+                                                dark: { icon: Moon, label: 'Dark' },
+                                                system: { icon: Monitor, label: 'System' }
+                                            };
+                                            const { icon: Icon, label } = options[value];
+                                            const isActive = theme === value;
+                                            return (
+                                                <button
+                                                    key={value}
+                                                    onClick={() => setTheme(value)}
+                                                    className={`flex items-center justify-center gap-2 py-3 rounded-[16px] text-xs font-bold transition-all ${
+                                                        isActive
+                                                            ? 'bg-white text-primary shadow-sm'
+                                                            : 'text-text-muted hover:text-text-main'
+                                                    }`}
+                                                >
+                                                    <Icon className="w-4 h-4" />
+                                                    {label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'sounds' && (
+                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-8">
+                                <SettingsToggle
+                                    label="Enable Interface Sounds"
+                                    description="Play subtle sounds for UI interactions"
+                                    value={soundsEnabled}
+                                    onChange={() => setSoundsEnabled(!soundsEnabled)}
+                                    icon={Bell}
+                                />
+
+                                <div className={`space-y-8 transition-all ${soundsEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none grayscale'}`}>
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between px-1">
+                                            <h4 className="text-xs font-bold text-text-muted uppercase tracking-widest">Master Volume</h4>
+                                        </div>
+                                        <SettingsSlider
+                                            value={soundVolume}
+                                            onChange={setSoundVolume}
+                                            leftIcon={VolumeX}
+                                            rightIcon={Volume2}
+                                            label={`${Math.round(soundVolume)}%`}
+                                            className="px-1"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <h4 className="text-xs font-bold text-text-muted uppercase tracking-widest px-1">Test Sounds</h4>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {SOUND_LABELS.map(({ key, label }) => (
+                                                <SettingsOptionButton
+                                                    key={key}
+                                                    onClick={() => playSound(key, soundVolume)}
+                                                    className="flex items-center gap-2 px-4 py-3 text-[11px]"
+                                                >
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
+                                                    {label}
+                                                </SettingsOptionButton>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

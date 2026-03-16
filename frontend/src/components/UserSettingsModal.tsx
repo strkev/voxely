@@ -7,6 +7,7 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { playSound } from '@/lib/sounds';
 import { PRESET_COLORS, getContrastColor } from '@/lib/colors';
 import { Volume2, VolumeX, Bell, X, Trash2, Pencil, Loader2, Check, Moon, Palette, Sun, Monitor } from 'lucide-react';
+import { SettingsSlider } from '@/components/ui/SettingsSlider';
 
 type SoundKey = 'join' | 'leave' | 'mute' | 'unmute' | 'cameraOn' | 'cameraOff' | 'screenShareOn' | 'screenShareOff';
 
@@ -316,16 +317,14 @@ export function UserSettingsModal({ onClose }: UserSettingsModalProps) {
                             </button>
                         </div>
                         <div className={`px-6 pb-4 transition-opacity ${soundsEnabled ? '' : 'opacity-40 pointer-events-none'}`}>
-                            <div className="flex items-center gap-2 mb-3">
-                                <VolumeX className="w-3 h-3 text-text-muted" />
-                                <input
-                                    type="range" min={0} max={100} step={1} value={soundVolume}
-                                    onChange={(e) => setSoundVolume(parseInt(e.target.value))}
-                                    className="flex-1 h-1 rounded-full accent-primary cursor-pointer"
-                                />
-                                <Volume2 className="w-3 h-3 text-text-muted" />
-                                <span className="text-[10px] font-mono text-text-muted w-7 text-right">{Math.round(soundVolume)}%</span>
-                            </div>
+                            <SettingsSlider
+                                value={soundVolume}
+                                onChange={setSoundVolume}
+                                leftIcon={VolumeX}
+                                rightIcon={Volume2}
+                                label={`${Math.round(soundVolume)}%`}
+                                className="mb-3"
+                            />
                             <div className="grid grid-cols-4 gap-1.5">
                                 {SOUND_LABELS.map(({ key, label }) => (
                                     <button
