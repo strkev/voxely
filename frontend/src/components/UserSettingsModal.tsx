@@ -319,12 +319,12 @@ export function UserSettingsModal({ onClose }: UserSettingsModalProps) {
                             <div className="flex items-center gap-2 mb-3">
                                 <VolumeX className="w-3 h-3 text-text-muted" />
                                 <input
-                                    type="range" min={0} max={1} step={0.01} value={soundVolume}
-                                    onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
+                                    type="range" min={0} max={100} step={1} value={soundVolume}
+                                    onChange={(e) => setSoundVolume(parseInt(e.target.value))}
                                     className="flex-1 h-1 rounded-full accent-primary cursor-pointer"
                                 />
                                 <Volume2 className="w-3 h-3 text-text-muted" />
-                                <span className="text-[10px] font-mono text-text-muted w-7 text-right">{Math.round(soundVolume * 100)}%</span>
+                                <span className="text-[10px] font-mono text-text-muted w-7 text-right">{Math.round(soundVolume)}%</span>
                             </div>
                             <div className="grid grid-cols-4 gap-1.5">
                                 {SOUND_LABELS.map(({ key, label }) => (

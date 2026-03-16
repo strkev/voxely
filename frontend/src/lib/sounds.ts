@@ -137,10 +137,10 @@ const SOUNDS: Record<SoundName, (vol: number) => void> = {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export function playSound(name: SoundName, volume = 1): void {
+export function playSound(name: SoundName, volume = 100): void {
     try {
         if (typeof window === 'undefined' || !window.AudioContext) return;
-        SOUNDS[name](Math.max(0, Math.min(1, volume)));
+        SOUNDS[name](Math.max(0, Math.min(1, volume / 100)));
     } catch (e) {
         // Silently fail — sounds are non-critical
         console.warn('Sound playback failed:', e);

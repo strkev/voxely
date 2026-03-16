@@ -33,7 +33,7 @@ export const IncomingCallModal: React.FC = () => {
         // Repeat every 2.5 seconds
         const interval = setInterval(() => {
             playSound('call', soundVolume);
-        }, 2500);
+        }, 2000);
 
         return () => clearInterval(interval);
     }, [incomingCall, outgoingCall, soundsEnabled, soundVolume]);

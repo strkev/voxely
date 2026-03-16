@@ -54,7 +54,7 @@ export const useSettingsStore = create<SettingsState>()(
     persist(
         (set) => ({
             soundsEnabled: true,
-            soundVolume: 0.8,
+            soundVolume: 100,
             videoQuality: '1080p',
             screenShareResolution: 'Source',
             screenShareFps: 60,
@@ -67,7 +67,7 @@ export const useSettingsStore = create<SettingsState>()(
             blurRadius: 10,
             theme: 'system',
             setSoundsEnabled: (v) => set({ soundsEnabled: v }),
-            setSoundVolume: (v) => set({ soundVolume: Math.max(0, Math.min(1, v)) }),
+            setSoundVolume: (v) => set({ soundVolume: Math.max(0, Math.min(100, v)) }),
             setVideoQuality: (v) => set({ videoQuality: v }),
             setScreenShareResolution: (v) => set({ screenShareResolution: v }),
             setScreenShareFps: (v) => set({ screenShareFps: v }),

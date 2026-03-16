@@ -115,106 +115,38 @@ function SpotlightableTile({
     const friends = useFriendsStore(s => s.friends);
     let userColor = '#FF5A5F';
 
-    const [volume, setVolume] = useState(1);
+    const [volume, setVolume] = useState(100);
     const [isLocallyMuted, setIsLocallyMuted] = useState(false);
     const [isVolumeExpanded, setIsVolumeExpanded] = useState(false);
 
-    // Web Audio GainNode for per-user volume control (0-200%).
-    // We route the audio element through: element → MediaElementSource → GainNode → speakers.
-    // This gives us full control over volume including amplification beyond 100%.
-    const gainCtxRef = useRef<AudioContext | null>(null);
-    const gainNodeRef = useRef<GainNode | null>(null);
-    const gainSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
-    const gainElementRef = useRef<HTMLAudioElement | null>(null);
-
-    // Ensure GainNode is connected to the correct audio element
-    const ensureGainNode = useCallback((audioEl: HTMLAudioElement) => {
-        // Already connected to this element
-        if (gainElementRef.current === audioEl && gainNodeRef.current) return;
-
-        // Clean up old chain if element changed
-        try { gainSourceRef.current?.disconnect(); } catch {}
-        try { gainCtxRef.current?.close(); } catch {}
-        gainCtxRef.current = null;
-        gainNodeRef.current = null;
-        gainSourceRef.current = null;
-        gainElementRef.current = null;
-
-        try {
-            const ctx = new AudioContext();
-            const source = ctx.createMediaElementSource(audioEl);
-            const gain = ctx.createGain();
-            source.connect(gain);
-            gain.connect(ctx.destination);
-            gainCtxRef.current = ctx;
-            gainNodeRef.current = gain;
-            gainSourceRef.current = source;
-            gainElementRef.current = audioEl;
-        } catch (e) {
-            console.warn('[Volume] Failed to create GainNode:', e);
-        }
-    }, []);
-
-    // Sync volume via GainNode
+    // Sync volume via LiveKit's built-in setVolume (0-1 range)
     useEffect(() => {
         const participant = trackRef?.participant;
         if (!participant || participant.isLocal) return;
 
-        const targetVol = isLocallyMuted ? 0 : volume;
+        const targetVol = isLocallyMuted ? 0 : (volume / 100);
 
         const sync = () => {
             const pubs = Array.from(participant.audioTrackPublications.values());
             pubs.forEach(pub => {
                 const track = pub.track;
                 if (!track) return;
-
-                // Find the attached audio element and connect it to our GainNode
-                const elements = track.attachedElements;
-                if (elements.length === 0) return;
-
-                const audioEl = elements[0] as HTMLAudioElement;
-
-                // Always ensure the audio element is unmuted and at full volume —
-                // the GainNode controls the actual output level
-                audioEl.muted = false;
-                audioEl.volume = 1;
-
-                // Set up or re-use the GainNode
-                ensureGainNode(audioEl);
-
-                // Apply the volume (0 = silent, 1 = normal, 2 = 200%)
-                if (gainNodeRef.current) {
-                    gainNodeRef.current.gain.value = targetVol;
+                // Use LiveKit internal volume control if it's a remote audio track
+                if (track.kind === Track.Kind.Audio && 'setVolume' in track) {
+                    (track as any).setVolume(targetVol);
                 }
             });
         };
 
         sync();
-
-        // Periodic re-sync: handles late track attachment, tab switches, etc.
-        const interval = setInterval(sync, 1500);
-
+        const interval = setInterval(sync, 2000);
         participant.on('trackSubscribed', sync);
-        participant.on('trackUnsubscribed', sync);
 
         return () => {
             clearInterval(interval);
             participant.off('trackSubscribed', sync);
-            participant.off('trackUnsubscribed', sync);
         };
-    }, [volume, isLocallyMuted, trackRef?.participant, ensureGainNode]);
-
-    // Clean up GainNode on unmount
-    useEffect(() => {
-        return () => {
-            try { gainSourceRef.current?.disconnect(); } catch {}
-            try { gainCtxRef.current?.close(); } catch {}
-            gainCtxRef.current = null;
-            gainNodeRef.current = null;
-            gainSourceRef.current = null;
-            gainElementRef.current = null;
-        };
-    }, []);
+    }, [volume, isLocallyMuted, trackRef?.participant]);
 
     // Get color for other participants from metadata (fallback)
     try {
@@ -333,26 +265,26 @@ function SpotlightableTile({
                     )}
 
                     <div className={`flex items-center overflow-hidden transition-all duration-300 ${isVolumeExpanded ? 'w-44 ml-2 opacity-100' : 'w-0 opacity-0'} sm:w-0 sm:ml-0 sm:opacity-0 sm:group-hover/volume:w-36 sm:group-hover/volume:ml-2 sm:group-hover/volume:opacity-100 focus-within:w-44 focus-within:ml-2 focus-within:opacity-100`}>
-                        <input
-                            type="range"
-                            min="0"
-                            max="2"
-                            step="0.05"
-                            value={isLocallyMuted ? 0 : volume}
-                            onChange={(e) => {
-                                const val = parseFloat(e.target.value);
-                                setVolume(val);
-                                if (val > 0 && isLocallyMuted) setIsLocallyMuted(false);
-                            }}
-                            className="w-20 sm:w-24 h-1.5 rounded-full appearance-none bg-white/30 cursor-pointer shrink-0"
-                            style={{
-                                background: `linear-gradient(to right, #FF5A5F ${(isLocallyMuted ? 0 : volume) * 50}%, rgba(255,255,255,0.3) ${(isLocallyMuted ? 0 : volume) * 50}%)`
-                            }}
-                            title="Adjust volume locally (0-200%)"
-                        />
-                        <span className="text-[10px] font-mono text-white/90 w-10 text-right shrink-0">
-                            {isLocallyMuted ? '0%' : `${Math.round(volume * 100)}%`}
-                        </span>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    value={isLocallyMuted ? 0 : volume}
+                                    onChange={(e) => {
+                                        const val = parseInt(e.target.value);
+                                        setVolume(val);
+                                        if (val > 0 && isLocallyMuted) setIsLocallyMuted(false);
+                                    }}
+                                    className="w-20 sm:w-24 h-1.5 rounded-full appearance-none bg-white/30 cursor-pointer shrink-0"
+                                    style={{
+                                        background: `linear-gradient(to right, #FF5A5F ${(isLocallyMuted ? 0 : volume)}%, rgba(255,255,255,0.3) ${(isLocallyMuted ? 0 : volume)}%)`
+                                    }}
+                                    title="Adjust volume locally (0-100%)"
+                                />
+                                <span className="text-[10px] font-mono text-white/90 w-10 text-right shrink-0">
+                                    {isLocallyMuted ? '0%' : `${Math.round(volume)}%`}
+                                </span>
                         
                         <div className="flex-1 sm:hidden" />
                         
@@ -640,12 +572,12 @@ function InRoomSettings({ onClose, onOpenVirtualBackground }: { onClose: () => v
                         <div className="flex items-center gap-2 mb-3">
                             <VolumeX className="w-3 h-3 text-text-muted" />
                             <input
-                                type="range" min={0} max={1} step={0.01} value={soundVolume}
-                                onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
+                                type="range" min={0} max={100} step={1} value={soundVolume}
+                                onChange={(e) => setSoundVolume(parseInt(e.target.value))}
                                 className="flex-1 h-1 rounded-full accent-primary cursor-pointer"
                             />
                             <Volume2 className="w-3 h-3 text-text-muted" />
-                            <span className="text-[10px] font-mono text-text-muted w-7 text-right">{Math.round(soundVolume * 100)}%</span>
+                            <span className="text-[10px] font-mono text-text-muted w-7 text-right">{Math.round(soundVolume)}%</span>
                         </div>
                         <div className="grid grid-cols-4 gap-1.5">
                             {SOUND_LABELS.map(({ key, label }) => (
