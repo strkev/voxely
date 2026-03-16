@@ -540,26 +540,52 @@ export function SettingsModal({ onClose, onOpenVirtualBackground }: SettingsModa
                                                 <input 
                                                     type="password" 
                                                     value={newPassword}
-                                                    onChange={(e) => { setNewPassword(e.target.value); setProfileSuccess(''); }}
+                                                    onChange={(e) => { 
+                                                        setNewPassword(e.target.value); 
+                                                        setProfileSuccess(''); 
+                                                        setProfileError('');
+                                                    }}
                                                     placeholder="••••••••"
                                                     className="w-full h-12 px-4 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-semibold"
                                                 />
                                             </div>
                                             {newPassword.length > 0 && (
-                                                <div className="space-y-2">
-                                                    <label className="text-[11px] font-bold text-primary ml-1">Current Password Required</label>
-                                                    <input 
-                                                        type="password" 
-                                                        value={currentPassword}
-                                                        onChange={(e) => setCurrentPassword(e.target.value)}
-                                                        placeholder="Enter current password to continue"
-                                                        className="w-full h-12 px-4 rounded-2xl border border-primary/20 bg-primary/5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-semibold"
-                                                        required
-                                                    />
-                                                </div>
+                                                <>
+                                                    <div className="space-y-2">
+                                                        <label className="text-[11px] font-bold text-primary ml-1">Current Password Required</label>
+                                                        <input 
+                                                            type="password" 
+                                                            value={currentPassword}
+                                                            onChange={(e) => {
+                                                                setCurrentPassword(e.target.value);
+                                                                setProfileSuccess('');
+                                                                setProfileError('');
+                                                            }}
+                                                            placeholder="Enter current password to continue"
+                                                            className="w-full h-12 px-4 rounded-2xl border border-primary/20 bg-primary/5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-semibold"
+                                                            required
+                                                        />
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => handleProfileUpdate(e as any)}
+                                                        disabled={profileLoading || !currentPassword}
+                                                        className="w-full h-12 mt-4 rounded-2xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-[#E0484D] active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                                                    >
+                                                        {profileLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save New Password'}
+                                                    </button>
+                                                </>
                                             )}
                                         </div>
                                     </div>
+
+                                    {(profileError || profileSuccess) && (
+                                        <div className="space-y-4">
+                                            {profileError && <div className="p-3 bg-red-50 text-red-600 rounded-2xl text-xs text-center">{profileError}</div>}
+                                            {profileSuccess && <div className="p-3 bg-green-50 text-green-600 rounded-2xl text-xs text-center flex items-center justify-center gap-2"><Check className="w-4 h-4" />{profileSuccess}</div>}
+                                        </div>
+                                    )}
 
                                     <div className="h-px bg-gray-50" />
 
