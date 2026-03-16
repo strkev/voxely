@@ -7,7 +7,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { ChevronDown, LogOut, Trash2, LayoutDashboard, Settings, Users } from 'lucide-react';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
-import { UserSettingsModal } from '@/components/UserSettingsModal';
+import { SettingsModal } from '@/components/SettingsModal';
+import { VirtualBackgroundModal } from '@/components/VirtualBackgroundModal';
 import { useFriendsStore } from '@/store/useFriendsStore';
 import { getContrastColor } from '@/lib/colors';
 import Image from 'next/image';
@@ -23,7 +24,8 @@ export function Header() {
     const pathname = usePathname();
     const isInRoom = pathname?.startsWith('/room/');
     const [showFriendsModal, setShowFriendsModal] = useState(false);
-    const [showUserSettings, setShowUserSettings] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+    const [showVirtualBackground, setShowVirtualBackground] = useState(false);
     const { incomingRequests } = useFriendsStore();
     const { active: leaveGuardActive, requestLeave } = useLeaveGuardStore();
 
@@ -144,24 +146,13 @@ export function Header() {
                                             Dashboard
                                         </button>
 
-                                        {isInRoom ? (
                                             <button
-                                                onClick={() => { setOpen(false); setShowUserSettings(true); }}
+                                                onClick={() => { setOpen(false); setShowSettings(true); }}
                                                 className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text-main hover:bg-gray-50 transition-colors"
                                             >
                                                 <Settings className="w-4 h-4 text-text-muted" />
                                                 Settings
                                             </button>
-                                        ) : (
-                                            <Link
-                                                href="/settings"
-                                                onClick={() => setOpen(false)}
-                                                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text-main hover:bg-gray-50 transition-colors"
-                                            >
-                                                <Settings className="w-4 h-4 text-text-muted" />
-                                                Settings
-                                            </Link>
-                                        )}
 
                                         <button
                                             onClick={() => { setOpen(false); setShowFriendsModal(true); }}
@@ -252,9 +243,17 @@ export function Header() {
                 <FriendRequestsModal onClose={() => setShowFriendsModal(false)} />
             )}
 
-            {/* User Settings Modal (in-room) */}
-            {showUserSettings && (
-                <UserSettingsModal onClose={() => setShowUserSettings(false)} />
+            {/* Unified Settings Modal */}
+            {showSettings && (
+                <SettingsModal 
+                    onClose={() => setShowSettings(false)} 
+                    onOpenVirtualBackground={isInRoom ? () => setShowVirtualBackground(true) : undefined} 
+                />
+            )}
+
+            {/* Virtual Background Modal (only if opened from settings) */}
+            {showVirtualBackground && (
+                <VirtualBackgroundModal onClose={() => setShowVirtualBackground(false)} />
             )}
         </>
     );

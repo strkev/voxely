@@ -21,6 +21,10 @@ export const SCREEN_SHARE_RESOLUTIONS: Record<Exclude<ScreenShareResolution, 'So
     '4K': { width: 3840, height: 2160 },
 };
 
+export const QUALITY_OPTIONS: VideoQuality[] = ['360p', '720p', '1080p', '1440p', '4K'];
+export const SCREEN_RES_OPTIONS: ScreenShareResolution[] = ['720p', '1080p', '1440p', '4K', 'Source'];
+export const SCREEN_FPS_OPTIONS: ScreenShareFps[] = [5, 15, 30, 60];
+
 interface SettingsState {
     soundsEnabled: boolean;
     soundVolume: number; // 0–1

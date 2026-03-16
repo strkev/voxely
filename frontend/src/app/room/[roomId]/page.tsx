@@ -19,7 +19,7 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track, LocalTrackPublication, RemoteAudioTrack } from 'livekit-client';
-import { AlertCircle, Star, X, Link2, Check, Settings, Monitor, Volume2, VolumeX, Bell, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, ScreenShare, LogOut, Moon, Lock, Unlock, Image as ImageIcon, Sun, Palette } from 'lucide-react';
+import { AlertCircle, Star, X, Link2, Check, Volume2, VolumeX, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, LogOut, Lock, Unlock } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
@@ -29,16 +29,11 @@ import { NativeNoiseProcessor } from '@/lib/native-noise-processor';
 import { FilterNoiseProcessor } from '@/lib/filter-noise-processor';
 import { FriendsSidebar } from '@/components/FriendsSidebar';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
-import { VirtualBackgroundModal } from '@/components/VirtualBackgroundModal';
 import { RoomInviteBanner } from '@/components/RoomInviteBanner';
 import { useFriends } from '@/components/FriendsProvider';
 import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { useFriendsStore } from '@/store/useFriendsStore';
 import { getContrastColor } from '@/lib/colors';
-import { SettingsOptionButton } from '@/components/ui/SettingsOptionButton';
-import { SettingsToggle } from '@/components/ui/SettingsToggle';
-import { SettingsSlider } from '@/components/ui/SettingsSlider';
-import { SettingsNavButton } from '@/components/ui/SettingsNavButton';
 
 // ─── Auto-start audio ─────────────────────────────────────────────────────────
 function AutoStartAudio() {
@@ -359,362 +354,6 @@ function DevInfoOverlay() {
     );
 }
 
-// ─── In-room settings modal ─────────────────────────────────────────────────
-type SoundKey = 'join' | 'leave' | 'mute' | 'unmute' | 'cameraOn' | 'cameraOff' | 'screenShareOn' | 'screenShareOff';
-const SOUND_LABELS: { key: SoundKey; label: string }[] = [
-    { key: 'join', label: 'Join' },
-    { key: 'leave', label: 'Leave' },
-    { key: 'mute', label: 'Mute' },
-    { key: 'unmute', label: 'Unmute' },
-    { key: 'cameraOn', label: 'Camera On' },
-    { key: 'cameraOff', label: 'Camera Off' },
-    { key: 'screenShareOn', label: 'Screen On' },
-    { key: 'screenShareOff', label: 'Screen Off' },
-];
-const QUALITY_OPTIONS: VideoQuality[] = ['360p', '720p', '1080p', '1440p', '4K'];
-const SCREEN_RES_OPTIONS: ScreenShareResolution[] = ['720p', '1080p', '1440p', '4K', 'Source'];
-const SCREEN_FPS_OPTIONS: ScreenShareFps[] = [5, 15, 30, 60];
-
-const NOISE_SUPPRESSION_OPTIONS: { value: NoiseSuppressionMode; label: string; desc: string }[] = [
-    { value: 'off', label: 'Off', desc: 'No noise suppression' },
-    { value: 'rnnoise', label: 'RNNoise', desc: 'AI-powered (best quality, slight latency)' },
-    { value: 'native', label: 'Native', desc: 'Browser built-in (zero latency)' },
-    { value: 'filter', label: 'Filter', desc: 'Bandpass filter (removes rumble & hiss)' },
-];
-
-function InRoomSettings({ onClose, onOpenVirtualBackground }: { onClose: () => void, onOpenVirtualBackground: () => void }) {
-    const {
-        soundsEnabled, soundVolume, videoQuality, showDevInfo, autoHideControlBar, noiseSuppressionMode,
-        screenShareResolution, screenShareFps, theme, setTheme,
-        setSoundsEnabled, setSoundVolume, setVideoQuality, setShowDevInfo, setAutoHideControlBar, setNoiseSuppressionMode,
-        setScreenShareResolution, setScreenShareFps,
-    } = useSettingsStore();
-
-    const [activeTab, setActiveTab] = useState<'audio-video' | 'quality' | 'interface' | 'sounds'>('audio-video');
-    const [isNavExpanded, setIsNavExpanded] = useState(false);
-    const backdropRef = useRef<HTMLDivElement>(null);
-
-    // Lock body scroll while settings modal is open
-    useEffect(() => {
-        document.body.style.overflow = 'hidden';
-        return () => { document.body.style.overflow = ''; };
-    }, []);
-
-    if (typeof document === 'undefined') return null;
-
-    const tabs: { id: typeof activeTab; label: string; icon: React.ElementType }[] = [
-        { id: 'audio-video', label: 'Audio & Video', icon: Mic },
-        { id: 'quality', label: 'Stream Quality', icon: Monitor },
-        { id: 'interface', label: 'Interface', icon: Palette },
-        { id: 'sounds', label: 'Sounds', icon: Bell },
-    ];
-
-    return createPortal(
-        <div
-            ref={backdropRef}
-            className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-            onClick={(e) => { if (e.target === backdropRef.current) onClose(); }}
-        >
-            <div className="bg-surface rounded-3xl shadow-2xl border border-white/10 w-full max-w-2xl flex flex-col md:flex-row overflow-hidden h-[600px] max-h-[90vh]">
-                {/* Sidebar Navigation */}
-                <div className={`w-full md:w-64 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-100 flex flex-col shrink-0 transition-all duration-300 ${isNavExpanded ? 'h-auto' : 'h-auto md:h-full'}`}>
-                    <div className="p-6 md:p-8 flex items-center justify-between">
-                        <h2 className="text-xl font-bold text-text-main flex items-center gap-2">
-                            <Settings className="w-5 h-5 text-primary" />
-                            <span className="md:inline">Settings</span>
-                        </h2>
-                        {/* Mobile Toggle */}
-                        <button
-                            onClick={() => setIsNavExpanded(!isNavExpanded)}
-                            className="md:hidden p-2 rounded-xl text-text-muted hover:bg-gray-100 transition-colors"
-                        >
-                            <ChevronUp className={`w-5 h-5 transition-transform duration-300 ${isNavExpanded ? 'rotate-0' : 'rotate-180'}`} />
-                        </button>
-                    </div>
-
-                    <nav className={`flex-1 px-4 pb-6 space-y-1 overflow-y-auto ${!isNavExpanded ? 'hidden md:block' : 'block'}`}>
-                        {tabs.map((tab) => (
-                            <SettingsNavButton
-                                key={tab.id}
-                                isActive={activeTab === tab.id}
-                                onClick={() => {
-                                    setActiveTab(tab.id);
-                                    setIsNavExpanded(false);
-                                }}
-                                icon={tab.icon}
-                                label={tab.label}
-                            />
-                        ))}
-                    </nav>
-                </div>
-
-                {/* Content Area */}
-                <div className="flex-1 flex flex-col min-w-0 bg-white min-h-0">
-                    <div className="flex items-center justify-between px-6 md:px-8 py-4 md:py-6 border-b border-gray-50 shrink-0">
-                        <h3 className="text-base font-bold text-text-main">
-                            {tabs.find(t => t.id === activeTab)?.label}
-                        </h3>
-                        <button onClick={onClose} className="p-2 rounded-xl text-text-muted hover:text-text-main hover:bg-gray-100 transition-colors">
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 scroll-smooth overscroll-contain">
-                        {activeTab === 'audio-video' && (
-                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                {/* Noise Suppression */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-2xl bg-primary/5 flex items-center justify-center">
-                                            <Mic className="w-5 h-5 text-primary" />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-bold text-text-main">Noise Suppression</h4>
-                                            <p className="text-xs text-text-muted">Reduce background noise for crystal clear audio</p>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                        {NOISE_SUPPRESSION_OPTIONS.map(opt => (
-                                            <SettingsOptionButton
-                                                key={opt.value}
-                                                active={noiseSuppressionMode === opt.value}
-                                                onClick={() => setNoiseSuppressionMode(opt.value)}
-                                            >
-                                                {opt.label}
-                                            </SettingsOptionButton>
-                                        ))}
-                                    </div>
-                                    <p className="text-[11px] text-text-muted bg-gray-50 p-3 rounded-xl border border-gray-100 italic">
-                                        {NOISE_SUPPRESSION_OPTIONS.find(o => o.value === noiseSuppressionMode)?.desc}
-                                    </p>
-                                </div>
-
-                                <div className="h-px bg-gray-100 my-8" />
-
-                                {/* Virtual Background */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-2xl bg-primary/5 flex items-center justify-center">
-                                                <ImageIcon className="w-5 h-5 text-primary" />
-                                            </div>
-                                            <div>
-                                                <h4 className="text-sm font-bold text-text-main">Virtual Background</h4>
-                                                <p className="text-xs text-text-muted">Blur background or use an image</p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => {
-                                                onClose();
-                                                onOpenVirtualBackground();
-                                            }}
-                                            className="bg-primary text-white px-5 py-2.5 rounded-2xl text-xs font-bold shadow-lg shadow-primary/20 hover:bg-[#E0484D] active:scale-95 transition-all"
-                                        >
-                                            Configure
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'quality' && (
-                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-10">
-                                {/* Camera Quality */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-2xl bg-primary/5 flex items-center justify-center">
-                                            <Monitor className="w-5 h-5 text-primary" />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-bold text-text-main">Camera Quality</h4>
-                                            <p className="text-xs text-text-muted">Balance performance and visual clarity</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2 flex-wrap">
-                                        {QUALITY_OPTIONS.map(q => (
-                                            <SettingsOptionButton
-                                                key={q}
-                                                className="flex-1 min-w-[70px]"
-                                                active={videoQuality === q}
-                                                onClick={() => setVideoQuality(q)}
-                                            >
-                                                {q}
-                                            </SettingsOptionButton>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="h-px bg-gray-100" />
-
-                                {/* Screen Share Quality */}
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-2xl bg-primary/5 flex items-center justify-center">
-                                            <ScreenShare className="w-5 h-5 text-primary" />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-bold text-text-main">Screen Share Quality</h4>
-                                            <p className="text-xs text-text-muted">Optimize for readability or smoothness</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <p className="text-[11px] font-bold text-text-muted uppercase tracking-widest pl-1">Resolution</p>
-                                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                                            {SCREEN_RES_OPTIONS.map(r => (
-                                                <SettingsOptionButton
-                                                    key={r}
-                                                    active={screenShareResolution === r}
-                                                    onClick={() => setScreenShareResolution(r)}
-                                                    className="py-2.5 rounded-xl text-[11px]"
-                                                >
-                                                    {r}
-                                                </SettingsOptionButton>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <p className="text-[11px] font-bold text-text-muted uppercase tracking-widest pl-1">Frame Rate</p>
-                                        <div className="grid grid-cols-4 gap-2">
-                                            {SCREEN_FPS_OPTIONS.map(f => (
-                                                <SettingsOptionButton
-                                                    key={f}
-                                                    active={screenShareFps === f}
-                                                    onClick={() => setScreenShareFps(f)}
-                                                    className="py-2.5 rounded-xl text-[11px]"
-                                                >
-                                                    {f} fps
-                                                </SettingsOptionButton>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'interface' && (
-                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
-                                {/* Toggles */}
-                                <div className="space-y-3">
-                                    {[
-                                        {
-                                            id: 'auto-hide',
-                                            label: 'Auto-hide Controls',
-                                            desc: 'Hide UI after 4 seconds of inactivity',
-                                            value: autoHideControlBar,
-                                            onChange: () => setAutoHideControlBar(!autoHideControlBar)
-                                        },
-                                        {
-                                            id: 'dev-info',
-                                            label: 'Developer Overlay',
-                                            desc: 'Show bitrate, resolution, and FPS',
-                                            value: showDevInfo,
-                                            onChange: () => setShowDevInfo(!showDevInfo)
-                                        }
-                                    ].map(item => (
-                                        <SettingsToggle
-                                            key={item.id}
-                                            label={item.label}
-                                            description={item.desc}
-                                            value={item.value}
-                                            onChange={item.onChange}
-                                        />
-                                    ))}
-                                </div>
-
-                                <div className="h-px bg-gray-100 my-4" />
-
-                                {/* Appearance */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-2xl bg-primary/5 flex items-center justify-center">
-                                            <Palette className="w-5 h-5 text-primary" />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-bold text-text-main">Appearance</h4>
-                                            <p className="text-xs text-text-muted">Choose your preferred theme</p>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2 bg-gray-50 p-1.5 rounded-[20px] border border-gray-100">
-                                        {(['light', 'dark', 'system'] as const).map((value) => {
-                                            const options = {
-                                                light: { icon: Sun, label: 'Light' },
-                                                dark: { icon: Moon, label: 'Dark' },
-                                                system: { icon: Monitor, label: 'System' }
-                                            };
-                                            const { icon: Icon, label } = options[value];
-                                            const isActive = theme === value;
-                                            return (
-                                                <button
-                                                    key={value}
-                                                    onClick={() => setTheme(value)}
-                                                    className={`flex items-center justify-center gap-2 py-3 rounded-[16px] text-xs font-bold transition-all ${
-                                                        isActive
-                                                            ? 'bg-white text-primary shadow-sm'
-                                                            : 'text-text-muted hover:text-text-main'
-                                                    }`}
-                                                >
-                                                    <Icon className="w-4 h-4" />
-                                                    {label}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'sounds' && (
-                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-8">
-                                <SettingsToggle
-                                    label="Enable Interface Sounds"
-                                    description="Play subtle sounds for UI interactions"
-                                    value={soundsEnabled}
-                                    onChange={() => setSoundsEnabled(!soundsEnabled)}
-                                    icon={Bell}
-                                />
-
-                                <div className={`space-y-8 transition-all ${soundsEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none grayscale'}`}>
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between px-1">
-                                            <h4 className="text-xs font-bold text-text-muted uppercase tracking-widest">Master Volume</h4>
-                                        </div>
-                                        <SettingsSlider
-                                            value={soundVolume}
-                                            onChange={setSoundVolume}
-                                            leftIcon={VolumeX}
-                                            rightIcon={Volume2}
-                                            label={`${Math.round(soundVolume)}%`}
-                                            className="px-1"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <h4 className="text-xs font-bold text-text-muted uppercase tracking-widest px-1">Test Sounds</h4>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {SOUND_LABELS.map(({ key, label }) => (
-                                                <SettingsOptionButton
-                                                    key={key}
-                                                    onClick={() => playSound(key, soundVolume)}
-                                                    className="flex items-center gap-2 px-4 py-3 text-[11px]"
-                                                >
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
-                                                    {label}
-                                                </SettingsOptionButton>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>,
-        document.body
-    );
-}
 
 // ─── Live Video Quality Sync ─────────────────────────────────────────────────
 // Watches the settings store and applies quality changes to the active tracks
@@ -1153,8 +792,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     }, [initiateCall]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const bgProcessorRef = useRef<any>(null);
-    const [settingsOpen, setSettingsOpen] = useState(false);
-    const [virtualBackgroundOpen, setVirtualBackgroundOpen] = useState(false);
     const [showFriendsModal, setShowFriendsModal] = useState(false);
     const [friendsSidebarOpen, setFriendsSidebarOpen] = useState(false);
     const [toastMessage, setToastMessage] = useState<{ id: string; name: string; text: string } | null>(null);
@@ -1440,16 +1077,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
                     <div className="flex-1 min-w-[8px]" />
 
-                    {/* Open Room Status Indicator */}
-                    {/* Settings gear */}
-                    <button
-                        onClick={() => setSettingsOpen(true)}
-                        aria-label="Settings"
-                        className="shrink-0 flex items-center bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
-                    >
-                        <Settings className="w-4 h-4" />
-                        <span className={`topbar-btn-inner ${isCompact ? 'topbar-btn-inner--compact' : ''}`}>Settings</span>
-                    </button>
 
                     {/* Chat toggle button lives inside ChatSidebar */}
                     <ChatSidebar
@@ -1550,8 +1177,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 )}
             </LiveKitRoom>
 
-            {settingsOpen && <InRoomSettings onClose={() => setSettingsOpen(false)} onOpenVirtualBackground={() => setVirtualBackgroundOpen(true)} />}
-            {virtualBackgroundOpen && <VirtualBackgroundModal onClose={() => setVirtualBackgroundOpen(false)} />}
 
 
             {/* Room Invite Banner */}
