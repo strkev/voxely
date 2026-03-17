@@ -3,6 +3,8 @@
 @theme {
   --color-background: #F7F7F7;
   --color-surface: #FFFFFF;
+  --color-app-background: #F7F7F7;
+  --color-app-surface: #FFFFFF;
   --color-primary: #FF5A5F;
   --color-text-main: #222222;
   --color-text-muted: #5E5E5E;
@@ -14,6 +16,11 @@
 
   --shadow-flat: 0 1px 3px rgba(0, 0, 0, 0.02);
   --shadow-active-speaker: 0 8px 24px rgba(255, 90, 95, 0.15);
+}
+
+[data-lk-theme] {
+  --lk-bg: var(--color-background) !important;
+  outline: none !important;
 }
 
 body {
@@ -184,7 +191,7 @@ body {
   width: 100% !important;
   height: 100% !important;
   object-fit: contain !important;
-  background: #111;
+  background: var(--color-surface);
   transition: opacity 0.3s ease;
 }
 

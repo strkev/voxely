@@ -101,6 +101,9 @@ function SpotlightableTile({
     isSpotlit?: boolean;
     onSpotlight?: (t: TrackReferenceOrPlaceholder | null) => void;
 }) {
+    const { theme } = useSettingsStore();
+    const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    
     const isSpeaking = useIsSpeaking(trackRef?.participant ?? undefined);
     const isScreenShare = trackRef?.source === Track.Source.ScreenShare;
 
@@ -179,7 +182,7 @@ function SpotlightableTile({
             {/* HINTERGRUND-AVATAR: Liegt unter dem Video (z-0). 
                 Wird als Fallback gerendert. */}
             {isCameraTrack && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 bg-[#111] rounded-[16px]">
+                <div className={`absolute inset-0 flex items-center justify-center pointer-events-none z-0 rounded-[16px] ${isDark ? 'bg-[#111]' : 'bg-app-surface'}`}>
                     <div
                         className={`w-[32%] max-w-[120px] min-w-[40px] aspect-square rounded-full flex items-center justify-center font-bold shadow-md transition-transform duration-200 ${isSpeaking ? 'avatar-speaking' : ''}`}
                         style={{
@@ -198,13 +201,13 @@ function SpotlightableTile({
                 <ParticipantTile trackRef={trackRef} />
                 
                 {/* Custom Participant Name & Status Badge */}
-                <div className="absolute bottom-1.5 left-1.5 z-20 flex items-center gap-2 bg-black/55 backdrop-blur-md px-2 py-1 rounded-md border border-white/5 pointer-events-none">
+                <div className={`absolute bottom-1.5 left-1.5 z-20 flex items-center gap-2 backdrop-blur-md px-2 py-1 rounded-md border pointer-events-none ${isDark ? 'bg-black/55 border-white/5' : 'bg-white/80 border-black/5 shadow-sm'}`}>
                     {!isScreenShare && (
                         <div className={`p-0.5 rounded-sm flex items-center justify-center ${isMicMuted ? 'text-primary' : 'text-green-500'}`}>
                             {isMicMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                         </div>
                     )}
-                    <span className="text-[16px] font-semibold text-white/90 truncate max-w-[250px]">
+                    <span className={`text-[16px] font-semibold truncate max-w-[250px] ${isDark ? 'text-white/90' : 'text-text-main'}`}>
                         {participantName}{isScreenShare ? ' screen share' : ''}
                     </span>
                 </div>
@@ -239,7 +242,8 @@ function SpotlightableTile({
             {trackRef?.participant && !trackRef.participant.isLocal && (
                 <div 
                     className={`
-                        absolute top-2 left-2 z-20 flex items-center p-1.5 rounded-lg backdrop-blur-md bg-black/40 shadow-md transition-opacity duration-200
+                        absolute top-2 left-2 z-20 flex items-center p-1.5 rounded-lg backdrop-blur-md shadow-md transition-opacity duration-200
+                        ${isDark ? 'bg-black/40' : 'bg-white/60'}
                         ${isSpotlit ? 'top-10' : ''} 
                         opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 group/volume
                     `}
@@ -247,7 +251,7 @@ function SpotlightableTile({
                 >
                     <button
                         onClick={() => setIsLocallyMuted(!isLocallyMuted)}
-                        className="text-white hover:text-primary transition-colors focus:outline-none shrink-0"
+                        className={`hover:text-primary transition-colors focus:outline-none shrink-0 ${isDark ? 'text-white' : 'text-text-main'}`}
                         title={isLocallyMuted ? "Unmute locally" : "Mute locally"}
                     >
                         {isLocallyMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -256,7 +260,7 @@ function SpotlightableTile({
                     {!isVolumeExpanded && (
                         <button
                             onClick={() => setIsVolumeExpanded(true)}
-                            className="ml-2 text-white/70 hover:text-white sm:hidden shrink-0"
+                            className={`ml-2 sm:hidden shrink-0 ${isDark ? 'text-white/70 hover:text-white' : 'text-text-muted hover:text-text-main'}`}
                             title="Expand volume slider"
                         >
                             <ChevronRight className="w-4 h-4" />
@@ -275,13 +279,13 @@ function SpotlightableTile({
                                         setVolume(val);
                                         if (val > 0 && isLocallyMuted) setIsLocallyMuted(false);
                                     }}
-                                    className="w-20 sm:w-24 h-1.5 rounded-full appearance-none bg-white/30 cursor-pointer shrink-0"
+                                    className={`w-20 sm:w-24 h-1.5 rounded-full appearance-none cursor-pointer shrink-0 ${isDark ? 'bg-white/30' : 'bg-black/20'}`}
                                     style={{
-                                        background: `linear-gradient(to right, #FF5A5F ${(isLocallyMuted ? 0 : volume)}%, rgba(255,255,255,0.3) ${(isLocallyMuted ? 0 : volume)}%)`
+                                        background: `linear-gradient(to right, #FF5A5F ${(isLocallyMuted ? 0 : volume)}%, ${isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)'} ${(isLocallyMuted ? 0 : volume)}%)`
                                     }}
                                     title="Adjust volume locally (0-100%)"
                                 />
-                                <span className="text-[10px] font-mono text-white/90 w-10 text-right shrink-0">
+                                <span className={`text-[10px] font-mono w-10 text-right shrink-0 ${isDark ? 'text-white/90' : 'text-text-main'}`}>
                                     {isLocallyMuted ? '0%' : `${Math.round(volume)}%`}
                                 </span>
                         
@@ -290,7 +294,7 @@ function SpotlightableTile({
                         {isVolumeExpanded && (
                             <button
                                 onClick={() => setIsVolumeExpanded(false)}
-                                className="pl-2 text-white/70 hover:text-white sm:hidden shrink-0"
+                                className={`pl-2 sm:hidden shrink-0 ${isDark ? 'text-white/70 hover:text-white' : 'text-text-muted hover:text-text-main'}`}
                                 title="Collapse volume slider"
                             >
                                 <ChevronLeft className="w-4 h-4" />
@@ -764,11 +768,12 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [chatSidebarWidth, setChatSidebarWidth] = useState(320);
     const [unread, setUnread] = useState(0);
     const [copied, setCopied] = useState(false);
-    const { soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppressionMode, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius } = useSettingsStore();
+    const { soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppressionMode, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius, theme } = useSettingsStore();
     const noiseProcessorRef = useRef<AnyNoiseProcessor | null>(null);
     // Friends state & socket
     const incomingRequests = useFriendsStore(s => s.incomingRequests);
     const { sendRoomInvite, toggleRoomOpen, initiateCall } = useFriends();
+    const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
  
     const handleToggleOpenRoom = useCallback((isOpen: boolean) => {
         const roomName = decodeURIComponent(roomId)
@@ -880,13 +885,18 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         if (typeof document === 'undefined') return;
         const bodyBg = document.body.style.backgroundColor;
         const htmlBg = document.documentElement.style.backgroundColor;
-        document.body.style.setProperty('background-color', '#030712', 'important');
-        document.documentElement.style.setProperty('background-color', '#030712', 'important');
+        
+        // Use theme-aware background colors
+        const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        const bgVal = isDark ? '#030712' : '#F7F7F7';
+        
+        document.body.style.setProperty('background-color', bgVal, 'important');
+        document.documentElement.style.setProperty('background-color', bgVal, 'important');
         return () => {
             document.body.style.backgroundColor = bodyBg;
             document.documentElement.style.backgroundColor = htmlBg;
         };
-    }, []);
+    }, [theme]);
 
     // Browser tab close / refresh warning
     useEffect(() => {
@@ -1005,7 +1015,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     return (
         <div
-            className="fixed inset-0 top-16 bg-gray-950 overflow-hidden transition-[padding-right] duration-300"
+            className={`fixed inset-0 top-16 overflow-hidden transition-[padding-right] duration-300 ${isDark ? 'bg-gray-950' : 'bg-[#F7F7F7]'}`}
             style={{ paddingRight: chatOpen && typeof window !== 'undefined' && window.innerWidth >= 640 ? `${chatSidebarWidth}px` : '0px' }}
         >
             <LiveKitRoom
