@@ -7,8 +7,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useSettingsStore, QUALITY_OPTIONS, SCREEN_RES_OPTIONS, SCREEN_FPS_OPTIONS, type VideoQuality, type ScreenShareResolution, type ScreenShareFps, type NoiseSuppressionMode } from '@/store/useSettingsStore';
 import { playSound, type SoundName } from '@/lib/sounds';
 import { PRESET_COLORS, getContrastColor } from '@/lib/colors';
-import { 
-    X, Settings, Mic, Monitor, Palette, Bell, User, Lock, Trash2, 
+import {
+    X, Settings, Mic, Monitor, Palette, Bell, User, Lock, Trash2,
     ChevronUp, VolumeX, Volume2, ImageIcon, Check, Pencil, Loader2,
     Sun, Moon, ScreenShare, CircleSlash, MonitorPlay, Upload
 } from 'lucide-react';
@@ -171,7 +171,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 canvas.height = Math.round(height);
                 const ctx = canvas.getContext('2d');
                 if (!ctx) return;
-                
+
                 ctx.drawImage(img, 0, 0, width, height);
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.85); // Compress as JPEG
                 setVirtualBackgroundImage(dataUrl);
@@ -289,11 +289,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                                         <div className="grid grid-cols-3 gap-3">
                                             <button
                                                 onClick={() => setVirtualBackground('none')}
-                                                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${
-                                                    virtualBackground === 'none' 
-                                                        ? 'border-primary bg-primary/5 text-primary shadow-sm' 
-                                                        : 'border-gray-50 hover:border-gray-200 hover:bg-gray-50 text-text-main'
-                                                }`}
+                                                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${virtualBackground === 'none'
+                                                    ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                                                    : 'border-gray-50 hover:border-gray-200 hover:bg-gray-50 text-text-main'
+                                                    }`}
                                             >
                                                 <CircleSlash className="w-5 h-5 text-current opacity-70" />
                                                 <span className="text-[11px] font-bold">None</span>
@@ -301,11 +300,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
                                             <button
                                                 onClick={() => setVirtualBackground('blur')}
-                                                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${
-                                                    virtualBackground === 'blur' 
-                                                        ? 'border-primary bg-primary/5 text-primary shadow-sm' 
-                                                        : 'border-gray-50 hover:border-gray-200 hover:bg-gray-50 text-text-main'
-                                                }`}
+                                                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${virtualBackground === 'blur'
+                                                    ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                                                    : 'border-gray-50 hover:border-gray-200 hover:bg-gray-50 text-text-main'
+                                                    }`}
                                             >
                                                 <MonitorPlay className="w-5 h-5 text-current opacity-70" />
                                                 <span className="text-[11px] font-bold">Blur</span>
@@ -313,11 +311,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
                                             <button
                                                 onClick={() => setVirtualBackground('image')}
-                                                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${
-                                                    virtualBackground === 'image' 
-                                                        ? 'border-primary bg-primary/5 text-primary shadow-sm' 
-                                                        : 'border-gray-50 hover:border-gray-200 hover:bg-gray-50 text-text-main'
-                                                }`}
+                                                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${virtualBackground === 'image'
+                                                    ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                                                    : 'border-gray-50 hover:border-gray-200 hover:bg-gray-50 text-text-main'
+                                                    }`}
                                             >
                                                 <ImageIcon className="w-5 h-5 text-current opacity-70" />
                                                 <span className="text-[11px] font-bold">Image</span>
@@ -352,7 +349,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                                                     onChange={handleImageUpload}
                                                     className="hidden"
                                                 />
-                                                
+
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <button
                                                         onClick={() => fileInputRef.current?.click()}
@@ -365,25 +362,24 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                                                     </button>
 
                                                     {virtualBackgroundImage && (
-                                                        <div className={`relative group aspect-video rounded-2xl overflow-hidden border-2 transition-all ${
-                                                            virtualBackground === 'image'
-                                                                ? 'border-primary shadow-md' 
-                                                                : 'border-transparent hover:border-gray-200'
-                                                        }`}>
+                                                        <div className={`relative group aspect-video rounded-2xl overflow-hidden border-2 transition-all ${virtualBackground === 'image'
+                                                            ? 'border-primary shadow-md'
+                                                            : 'border-transparent hover:border-gray-200'
+                                                            }`}>
                                                             <button
                                                                 onClick={() => setVirtualBackground('image')}
                                                                 className="w-full h-full text-left"
                                                             >
                                                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                                <img 
-                                                                    src={virtualBackgroundImage} 
+                                                                <img
+                                                                    src={virtualBackgroundImage}
                                                                     alt="Custom background"
                                                                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                                                 />
                                                                 <div className={`absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors ${virtualBackground === 'image' ? 'bg-black/0' : ''}`} />
                                                             </button>
-                                                            
-                                                            <button 
+
+                                                            <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     setVirtualBackgroundImage(null);
@@ -451,7 +447,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                                                         key={r}
                                                         active={screenShareResolution === r}
                                                         onClick={() => setScreenShareResolution(r)}
-                                                        className="py-2.5 rounded-xl text-[11px]"
+                                                        className="flex-1 min-w-[70px]"
                                                     >
                                                         {r}
                                                     </SettingsOptionButton>
@@ -467,7 +463,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                                                         key={f}
                                                         active={screenShareFps === f}
                                                         onClick={() => setScreenShareFps(f)}
-                                                        className="py-2.5 rounded-xl text-[11px]"
+                                                        className="flex-1 min-w-[70px]"
                                                     >
                                                         {f} fps
                                                     </SettingsOptionButton>
@@ -521,11 +517,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                                                     <button
                                                         key={value}
                                                         onClick={() => setTheme(value)}
-                                                        className={`flex items-center justify-center gap-2 py-3 rounded-[16px] text-xs font-bold transition-all ${
-                                                            isActive
-                                                                ? 'bg-white text-primary shadow-sm'
-                                                                : 'text-text-muted hover:text-text-main'
-                                                        }`}
+                                                        className={`flex items-center justify-center gap-2 py-3 rounded-[16px] text-xs font-bold transition-all ${isActive
+                                                            ? 'bg-white text-primary shadow-sm'
+                                                            : 'text-text-muted hover:text-text-main'
+                                                            }`}
                                                     >
                                                         <Icon className="w-4 h-4" />
                                                         {label}
@@ -589,7 +584,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
                                         <div className="space-y-6">
                                             <div className="flex items-center gap-4">
-                                                <div 
+                                                <div
                                                     className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold shadow-lg shadow-black/5"
                                                     style={{ backgroundColor: editColor, color: getContrastColor(editColor) }}
                                                 >
@@ -599,8 +594,8 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                                                     <label className="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2 px-1">Username</label>
                                                     <div className="relative group">
                                                         <Pencil className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary transition-colors" />
-                                                        <input 
-                                                            type="text" 
+                                                        <input
+                                                            type="text"
                                                             value={editName}
                                                             onChange={(e) => { setEditName(e.target.value); setProfileSuccess(''); }}
                                                             className="w-full h-12 pl-11 pr-4 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-semibold"
@@ -679,12 +674,12 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                                         <div className="space-y-4">
                                             <div className="space-y-2">
                                                 <label className="text-[11px] font-bold text-text-muted ml-1">New Password</label>
-                                                <input 
-                                                    type="password" 
+                                                <input
+                                                    type="password"
                                                     value={newPassword}
-                                                    onChange={(e) => { 
-                                                        setNewPassword(e.target.value); 
-                                                        setProfileSuccess(''); 
+                                                    onChange={(e) => {
+                                                        setNewPassword(e.target.value);
+                                                        setProfileSuccess('');
                                                         setProfileError('');
                                                     }}
                                                     placeholder="••••••••"
@@ -695,8 +690,8 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                                                 <>
                                                     <div className="space-y-2">
                                                         <label className="text-[11px] font-bold text-primary ml-1">Current Password Required</label>
-                                                        <input 
-                                                            type="password" 
+                                                        <input
+                                                            type="password"
                                                             value={currentPassword}
                                                             onChange={(e) => {
                                                                 setCurrentPassword(e.target.value);
@@ -738,7 +733,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                                                 <h5 className="text-sm font-bold text-red-600">Delete Account</h5>
                                                 <p className="text-xs text-red-500/80 mt-1">Permanently remove your account and all data. This cannot be undone.</p>
                                             </div>
-                                            <button 
+                                            <button
                                                 onClick={() => setShowDeleteModal(true)}
                                                 className="px-6 py-3 rounded-2xl bg-white text-red-600 text-xs font-bold shadow-sm hover:shadow-md active:scale-95 transition-all w-full flex items-center justify-center gap-2 border border-red-100"
                                             >
