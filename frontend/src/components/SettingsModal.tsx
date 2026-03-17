@@ -728,18 +728,30 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
                                     <div className="space-y-4">
                                         <h4 className="text-xs font-bold text-text-muted uppercase tracking-widest px-1">Account Actions</h4>
-                                        <div className="p-5 bg-red-50 rounded-3xl border border-red-100 space-y-4">
-                                            <div>
-                                                <h5 className="text-sm font-bold text-red-600">Delete Account</h5>
-                                                <p className="text-xs text-red-500/80 mt-1">Permanently remove your account and all data. This cannot be undone.</p>
+                                        <div className="group relative p-6 bg-red-50/50 dark:bg-red-400/5 rounded-[28px] border border-red-100 dark:border-red-500/20 backdrop-blur-sm transition-all hover:bg-red-50 dark:hover:bg-red-500/10 overflow-hidden">
+                                            {/* Decorative background element */}
+                                            <div className="absolute -right-6 -top-6 w-24 h-24 bg-red-500/5 dark:bg-white/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
+
+                                            <div className="relative space-y-5">
+                                                <div className="flex items-start gap-4">
+                                                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-red-500/10 flex items-center justify-center shadow-sm border border-red-50 dark:border-red-500/20 shrink-0">
+                                                        <Trash2 className="w-5 h-5 text-red-500 transition-transform group-hover:rotate-12" />
+                                                    </div>
+                                                    <div>
+                                                        <h5 className="text-sm font-bold text-red-600 dark:text-white-400">Delete Account</h5>
+                                                        <p className="text-xs text-white-500/70 dark:text-white-400/60 mt-1 leading-relaxed max-w-[340px]">
+                                                            Permanently remove your account and all associated data. This action is irreversible.
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    onClick={() => setShowDeleteModal(true)}
+                                                    className="w-full h-12 rounded-2xl bg-white dark:bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-bold shadow-sm border border-red-100 dark:border-red-500/20 hover:border-red-600 dark:hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group/btn"
+                                                >
+                                                    Delete My Account
+                                                </button>
                                             </div>
-                                            <button
-                                                onClick={() => setShowDeleteModal(true)}
-                                                className="px-6 py-3 rounded-2xl bg-white text-red-600 text-xs font-bold shadow-sm hover:shadow-md active:scale-95 transition-all w-full flex items-center justify-center gap-2 border border-red-100"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                                Delete My Account
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -752,28 +764,38 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             {/* Delete Account Confirmation */}
             {showDeleteModal && (
                 <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-                    <div className="bg-surface rounded-3xl shadow-2xl border border-gray-100 max-w-sm w-full p-8 animate-in zoom-in duration-200">
-                        <div className="flex items-center justify-center w-16 h-16 rounded-3xl bg-red-50 mx-auto mb-6 shadow-sm">
-                            <Trash2 className="w-8 h-8 text-primary" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-text-main text-center mb-3">Wait! Are you sure?</h2>
-                        <p className="text-text-muted text-sm text-center mb-8 leading-relaxed">
-                            This will permanently delete your account and all associated data. This action <strong>cannot be undone</strong>.
-                        </p>
-                        <div className="flex flex-col gap-3">
-                            <button
-                                onClick={handleDeleteAccount}
-                                disabled={deleting}
-                                className="w-full py-4 rounded-2xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-[#E0484D] active:scale-95 transition-all disabled:opacity-60"
-                            >
-                                {deleting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Yes, Delete My Account'}
-                            </button>
-                            <button
-                                onClick={() => setShowDeleteModal(false)}
-                                className="w-full py-4 rounded-2xl border border-gray-100 text-sm font-bold text-text-muted hover:text-text-main hover:bg-gray-50 transition-all font-semibold"
-                            >
-                                Nevermind, keep it
-                            </button>
+                    <div className="bg-surface rounded-[32px] shadow-2xl border border-white/10 max-w-sm w-full p-8 animate-in zoom-in duration-300 relative overflow-hidden">
+                        {/* Decorative background element */}
+                        <div className="absolute -right-12 -top-12 w-48 h-48 bg-red-500/5 dark:bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                        <div className="relative">
+                            <div className="flex items-center justify-center w-20 h-20 rounded-[24px] bg-red-50 dark:bg-red-500/10 mx-auto mb-6 shadow-sm border border-red-100 dark:border-red-500/20">
+                                <Trash2 className="w-10 h-10 text-red-500 transition-transform hover:scale-110 duration-300" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-text-main text-center mb-3">Wait! Are you sure?</h2>
+                            <p className="text-text-muted text-sm text-center mb-8 leading-relaxed">
+                                This will permanently delete your account and all associated data. This action <strong>cannot be undone</strong>.
+                            </p>
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={handleDeleteAccount}
+                                    disabled={deleting}
+                                    className="w-full py-4 rounded-2xl bg-red-600 dark:bg-red-500 text-white text-sm font-bold shadow-lg shadow-red-500/20 hover:bg-[#E0484D] dark:hover:bg-red-400 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                                >
+                                    {deleting ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                                        <>
+                                            <Trash2 className="w-4 h-4" />
+                                            Yes, Delete My Account
+                                        </>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => setShowDeleteModal(false)}
+                                    className="w-full py-4 rounded-2xl border border-gray-100 dark:border-white/10 text-sm font-bold text-text-muted hover:text-text-main hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+                                >
+                                    Nevermind, keep it
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
