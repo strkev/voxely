@@ -10,7 +10,7 @@ import { PRESET_COLORS, getContrastColor } from '@/lib/colors';
 import { 
     X, Settings, Mic, Monitor, Palette, Bell, User, Lock, Trash2, 
     ChevronUp, VolumeX, Volume2, ImageIcon, Check, Pencil, Loader2,
-    Sun, Moon, ScreenShare
+    Sun, Moon, ScreenShare, CircleSlash, MonitorPlay, Upload
 } from 'lucide-react';
 import { SettingsNavButton } from '@/components/ui/SettingsNavButton';
 import { SettingsOptionButton } from '@/components/ui/SettingsOptionButton';
@@ -39,22 +39,22 @@ const SOUND_LABELS: { key: SoundName; label: string }[] = [
 
 interface SettingsModalProps {
     onClose: () => void;
-    onOpenVirtualBackground?: () => void;
 }
 
-export function SettingsModal({ onClose, onOpenVirtualBackground }: SettingsModalProps) {
+export function SettingsModal({ onClose }: SettingsModalProps) {
     const router = useRouter();
     const { user, token, setAuth, deleteAccount } = useAuthStore();
     const {
         soundsEnabled, soundVolume, videoQuality, showDevInfo, autoHideControlBar, noiseSuppressionMode,
-        screenShareResolution, screenShareFps, theme, setTheme,
+        screenShareResolution, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius, theme,
         setSoundsEnabled, setSoundVolume, setVideoQuality, setShowDevInfo, setAutoHideControlBar, setNoiseSuppressionMode,
-        setScreenShareResolution, setScreenShareFps,
+        setScreenShareResolution, setScreenShareFps, setVirtualBackground, setVirtualBackgroundImage, setBlurRadius, setTheme,
     } = useSettingsStore();
 
     const [activeTab, setActiveTab] = useState<TabId>('audio-video');
     const [isNavExpanded, setIsNavExpanded] = useState(false);
     const backdropRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Profile Edit State
     const [editName, setEditName] = useState(user?.name || '');
@@ -88,7 +88,7 @@ export function SettingsModal({ onClose, onOpenVirtualBackground }: SettingsModa
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
-    const handleProfileUpdate = async (e: React.FormEvent) => {
+    const handleProfileUpdate = async (e: React.SyntheticEvent) => {
         e.preventDefault();
         setProfileLoading(true);
         setProfileError('');
@@ -137,6 +137,49 @@ export function SettingsModal({ onClose, onOpenVirtualBackground }: SettingsModa
         setShowDeleteModal(false);
         onClose();
         router.push('/');
+    };
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Max resolution 1280x720
+                const MAX_WIDTH = 1280;
+                const MAX_HEIGHT = 720;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = Math.round(width);
+                canvas.height = Math.round(height);
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return;
+                
+                ctx.drawImage(img, 0, 0, width, height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.85); // Compress as JPEG
+                setVirtualBackgroundImage(dataUrl);
+                setVirtualBackground('image');
+            };
+            img.src = event.target?.result as string;
+        };
+        reader.readAsDataURL(file);
     };
 
     const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
@@ -230,34 +273,133 @@ export function SettingsModal({ onClose, onOpenVirtualBackground }: SettingsModa
                                         </p>
                                     </div>
 
-                                    {onOpenVirtualBackground && (
-                                        <>
-                                            <div className="h-px bg-gray-100 my-8" />
-                                            {/* Virtual Background */}
-                                            <div className="space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-2xl bg-primary/5 flex items-center justify-center">
-                                                            <ImageIcon className="w-5 h-5 text-primary" />
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="text-sm font-bold text-text-main">Virtual Background</h4>
-                                                            <p className="text-xs text-text-muted">Blur background or use an image</p>
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => {
-                                                            onClose();
-                                                            onOpenVirtualBackground();
-                                                        }}
-                                                        className="bg-primary text-white px-5 py-2.5 rounded-2xl text-xs font-bold shadow-lg shadow-primary/20 hover:bg-[#E0484D] active:scale-95 transition-all"
-                                                    >
-                                                        Configure
-                                                    </button>
-                                                </div>
+                                    <div className="h-px bg-gray-100 my-8" />
+                                    {/* Virtual Background */}
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-2xl bg-primary/5 flex items-center justify-center">
+                                                <ImageIcon className="w-5 h-5 text-primary" />
                                             </div>
-                                        </>
-                                    )}
+                                            <div>
+                                                <h4 className="text-sm font-bold text-text-main">Virtual Background</h4>
+                                                <p className="text-xs text-text-muted">Blur background or use an image</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <button
+                                                onClick={() => setVirtualBackground('none')}
+                                                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${
+                                                    virtualBackground === 'none' 
+                                                        ? 'border-primary bg-primary/5 text-primary shadow-sm' 
+                                                        : 'border-gray-50 hover:border-gray-200 hover:bg-gray-50 text-text-main'
+                                                }`}
+                                            >
+                                                <CircleSlash className="w-5 h-5 text-current opacity-70" />
+                                                <span className="text-[11px] font-bold">None</span>
+                                            </button>
+
+                                            <button
+                                                onClick={() => setVirtualBackground('blur')}
+                                                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${
+                                                    virtualBackground === 'blur' 
+                                                        ? 'border-primary bg-primary/5 text-primary shadow-sm' 
+                                                        : 'border-gray-50 hover:border-gray-200 hover:bg-gray-50 text-text-main'
+                                                }`}
+                                            >
+                                                <MonitorPlay className="w-5 h-5 text-current opacity-70" />
+                                                <span className="text-[11px] font-bold">Blur</span>
+                                            </button>
+
+                                            <button
+                                                onClick={() => setVirtualBackground('image')}
+                                                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${
+                                                    virtualBackground === 'image' 
+                                                        ? 'border-primary bg-primary/5 text-primary shadow-sm' 
+                                                        : 'border-gray-50 hover:border-gray-200 hover:bg-gray-50 text-text-main'
+                                                }`}
+                                            >
+                                                <ImageIcon className="w-5 h-5 text-current opacity-70" />
+                                                <span className="text-[11px] font-bold">Image</span>
+                                            </button>
+                                        </div>
+
+                                        {/* Blur Settings */}
+                                        {virtualBackground === 'blur' && (
+                                            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                <div className="mb-3 px-1 text-xs font-bold text-text-muted uppercase tracking-wider">
+                                                    Blur Intensity
+                                                </div>
+                                                <SettingsSlider
+                                                    value={blurRadius}
+                                                    onChange={setBlurRadius}
+                                                    min={5}
+                                                    max={30}
+                                                    step={1}
+                                                    label={`${Math.round(((blurRadius - 5) / 25) * 100)}%`}
+                                                    className="px-0"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* Image Options */}
+                                        {virtualBackground === 'image' && (
+                                            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    ref={fileInputRef}
+                                                    onChange={handleImageUpload}
+                                                    className="hidden"
+                                                />
+                                                
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <button
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-primary hover:bg-primary/5 text-text-muted hover:text-primary transition-all aspect-video group"
+                                                    >
+                                                        <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                                                            <Upload className="w-4 h-4" />
+                                                        </div>
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider">Upload Image</span>
+                                                    </button>
+
+                                                    {virtualBackgroundImage && (
+                                                        <div className={`relative group aspect-video rounded-2xl overflow-hidden border-2 transition-all ${
+                                                            virtualBackground === 'image'
+                                                                ? 'border-primary shadow-md' 
+                                                                : 'border-transparent hover:border-gray-200'
+                                                        }`}>
+                                                            <button
+                                                                onClick={() => setVirtualBackground('image')}
+                                                                className="w-full h-full text-left"
+                                                            >
+                                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                                <img 
+                                                                    src={virtualBackgroundImage} 
+                                                                    alt="Custom background"
+                                                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                                />
+                                                                <div className={`absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors ${virtualBackground === 'image' ? 'bg-black/0' : ''}`} />
+                                                            </button>
+                                                            
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setVirtualBackgroundImage(null);
+                                                                    if (virtualBackground === 'image') setVirtualBackground('none');
+                                                                }}
+                                                                className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-primary text-white rounded-xl backdrop-blur-md transition-all opacity-0 group-hover:opacity-100"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <p className="text-[10px] text-text-muted text-center italic">Images stay on your device for privacy. Max resolution 720p.</p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
 
@@ -569,7 +711,7 @@ export function SettingsModal({ onClose, onOpenVirtualBackground }: SettingsModa
 
                                                     <button
                                                         type="button"
-                                                        onClick={(e) => handleProfileUpdate(e as any)}
+                                                        onClick={(e) => handleProfileUpdate(e)}
                                                         disabled={profileLoading || !currentPassword}
                                                         className="w-full h-12 mt-4 rounded-2xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-[#E0484D] active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
                                                     >

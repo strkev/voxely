@@ -8,7 +8,6 @@ import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { ChevronDown, LogOut, Trash2, LayoutDashboard, Settings, Users } from 'lucide-react';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { SettingsModal } from '@/components/SettingsModal';
-import { VirtualBackgroundModal } from '@/components/VirtualBackgroundModal';
 import { useFriendsStore } from '@/store/useFriendsStore';
 import { getContrastColor } from '@/lib/colors';
 import Image from 'next/image';
@@ -25,7 +24,6 @@ export function Header() {
     const isInRoom = pathname?.startsWith('/room/');
     const [showFriendsModal, setShowFriendsModal] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
-    const [showVirtualBackground, setShowVirtualBackground] = useState(false);
     const { incomingRequests } = useFriendsStore();
     const { active: leaveGuardActive, requestLeave } = useLeaveGuardStore();
 
@@ -247,13 +245,7 @@ export function Header() {
             {showSettings && (
                 <SettingsModal 
                     onClose={() => setShowSettings(false)} 
-                    onOpenVirtualBackground={isInRoom ? () => setShowVirtualBackground(true) : undefined} 
                 />
-            )}
-
-            {/* Virtual Background Modal (only if opened from settings) */}
-            {showVirtualBackground && (
-                <VirtualBackgroundModal onClose={() => setShowVirtualBackground(false)} />
             )}
         </>
     );
