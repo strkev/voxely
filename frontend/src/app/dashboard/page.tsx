@@ -12,6 +12,7 @@ import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { RoomInviteBanner } from '@/components/RoomInviteBanner';
 import { getContrastColor } from '@/lib/colors';
 import { Users, ShieldCheck, Clock, Video, DoorOpen } from 'lucide-react';
+import { Mascot } from '@/components/voxy';
 
 export default function DashboardPage() {
     const [joinRoomId, setJoinRoomId] = useState('');
@@ -99,9 +100,18 @@ export default function DashboardPage() {
             </button>
 
             <div className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-6 md:p-12 lg:p-16 overflow-y-auto">
-                <div className="mb-8 sm:mb-12 animate-slide-up">
-                    <h1 className="text-2xl sm:text-3xl font-semibold text-text-main mb-2">Welcome, {user.name}</h1>
-                    <p className="text-text-muted">Create a new space or join an existing one to start chatting.</p>
+                <div className="flex items-center justify-between mb-8 sm:mb-12 animate-slide-up overflow-visible">
+                    <div className="min-w-0">
+                        <h1 className="text-2xl sm:text-3xl font-semibold text-text-main mb-2 truncate">Welcome, {user.name}</h1>
+                        <p className="text-text-muted">Create a new space or join an existing one to start chatting.</p>
+                    </div>
+                    <div className="hidden md:block transform scale-[0.45] origin-right -mr-6 -my-20">
+                        <Mascot
+                            state="waving"
+                            trigger="hover"
+                            message={`Hello ${user.name}! Welcome to your dashboard. Great to see you!`}
+                        />
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -192,9 +202,9 @@ export default function DashboardPage() {
                                                     {room.totalParticipantCount} in room
                                                 </h3>
                                             </div>
-                                            <Button 
-                                                variant="primary" 
-                                                size="sm" 
+                                            <Button
+                                                variant="primary"
+                                                size="sm"
                                                 className="shrink-0"
                                                 onClick={() => router.push(`/room/${room.roomId}`)}
                                             >
@@ -203,8 +213,8 @@ export default function DashboardPage() {
                                         </div>
                                         <div className="flex -space-x-2 overflow-hidden items-center mt-auto">
                                             {participantFriends.slice(0, 5).map(f => (
-                                                <div 
-                                                    key={f.id} 
+                                                <div
+                                                    key={f.id}
                                                     className="shrink-0 relative flex h-8 w-8 rounded-full items-center justify-center text-xs font-bold"
                                                     style={{ backgroundColor: f.avatarColor || '#FF5A5F', color: getContrastColor(f.avatarColor || '#FF5A5F') }}
                                                     title={f.name}

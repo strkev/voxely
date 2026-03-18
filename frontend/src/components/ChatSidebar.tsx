@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { MessageSquare, ChevronRight, ChevronDown, Send, SmilePlus } from 'lucide-react';
 import { ChatMessage, TypingUser } from '@/hooks/useChatSocket';
 import DOMPurify from 'isomorphic-dompurify';
+import { Mascot } from '@/components/voxy';
 
 // ── URL parser: splits text into plain segments and URL segments ───────────────
 function parseLinks(text: string): React.ReactNode[] {
@@ -492,9 +493,29 @@ export function ChatSidebar({
                     onScroll={handleScroll}
                     className="flex-1 overflow-y-auto px-3 py-4 space-y-3 scroll-smooth relative"
                 >
-                    {messages.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center text-text-muted gap-2 py-8">
-                            <MessageSquare className="w-8 h-8 opacity-25" />
+                    {!connected ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center text-text-muted">
+                            <div className="h-40 flex items-center justify-center">
+                                <Mascot 
+                                    state="locking" 
+                                    trigger="always" 
+                                    message="Connecting to secure chat..."
+                                    className="scale-[0.5]"
+                                />
+                            </div>
+                            <p className="text-sm font-medium">Connecting...</p>
+                            <p className="text-xs opacity-60">Establishing a secure connection.</p>
+                        </div>
+                    ) : messages.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center text-text-muted">
+                            <div className="h-40 flex items-center justify-center">
+                                <Mascot 
+                                    state="typing" 
+                                    trigger="always" 
+                                    message="No messages yet. Why not say hello?"
+                                    className="scale-[0.5]"
+                                />
+                            </div>
                             <p className="text-sm font-medium">No messages yet</p>
                             <p className="text-xs opacity-60">Be the first to say something!</p>
                         </div>

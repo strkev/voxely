@@ -280,8 +280,9 @@ body {
 }
 
 .lk-button:hover {
-  background-color: rgba(247, 247, 247, 0.98);
-  border-color: #DDDDDD;
+  background-color: rgba(247, 247, 247, 0.98) !important;
+  border-color: #DDDDDD !important;
+  color: var(--color-text-main) !important;
 }
 
 /* When button is ON — keep neutral, no background change */
@@ -433,11 +434,11 @@ body {
 
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4);
+    box-shadow: 0 0 0 0 rgba(255, 90, 95, 0.4);
   }
 
   50% {
-    box-shadow: 0 0 0 8px rgba(251, 191, 36, 0);
+    box-shadow: 0 0 0 8px rgba(255, 90, 95, 0);
   }
 }
 
@@ -1551,10 +1552,10 @@ body {
   border-color: #E0607A !important;
 }
 
-/* Ensure active device in device selection menu retains its accent color in dark mode */
-.dark .lk-media-device-select [data-lk-active="true"]>.lk-button {
-  background-color: var(--lk-accent-bg) !important;
-  color: var(--lk-accent-fg) !important;
+/* Ensure active device in device selection menu uses primary color */
+.lk-media-device-select [data-lk-active="true"]>.lk-button {
+  background-color: var(--color-primary) !important;
+  color: white !important;
 }
 
 /* Speaking border — use dark primary */

@@ -5,6 +5,7 @@ import { useFriendsStore, Friend } from '@/store/useFriendsStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Search, UserPlus, X, UserMinus, Mail, ChevronLeft, Check, Lock, Unlock, Phone } from 'lucide-react';
 import { getContrastColor } from '@/lib/colors';
+import { Mascot } from '@/components/voxy';
 
 interface FriendsSidebarProps {
     /** Current room ID when user is in a room — enables invite buttons */
@@ -171,11 +172,26 @@ export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequ
             </div>
 
             {/* Friends list */}
-            <div className="friends-sidebar__list scrollbar-hide">
+            <div className="friends-sidebar__list scrollbar-hide flex-1 flex flex-col">
                 {sortedFriends.length === 0 ? (
-                    <div className="friends-sidebar__empty">
+                    <div className="friends-sidebar__empty flex-1">
                         {friends.length === 0
-                            ? <><UserPlus className="w-8 h-8 text-text-muted opacity-40 mb-2" /><p>No friends yet</p><p className="text-xs">Add friends from the menu above</p></>
+                            ? (
+                                <div className="flex-1 flex flex-col items-center justify-center py-8">
+                                    <div className="h-44 flex items-center justify-center">
+                                        <Mascot 
+                                            state="friends" 
+                                            trigger="always" 
+                                            message="It's a bit empty here. Why not invite some friends?"
+                                            className="scale-[0.55]"
+                                        />
+                                    </div>
+                                    <div className="mt-4 text-center">
+                                        <p className="text-sm font-semibold text-text-main">No friends yet</p>
+                                        <p className="text-xs text-text-muted mt-1">Add friends from the menu above</p>
+                                    </div>
+                                </div>
+                            )
                             : <p>No matching friends</p>
                         }
                     </div>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useFriendsStore } from '@/store/useFriendsStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { X, UserPlus, Inbox, Send, Loader2 } from 'lucide-react';
+import { Mascot } from '@/components/voxy';
 
 interface FriendRequestsModalProps {
     onClose: () => void;
@@ -138,9 +139,14 @@ export function FriendRequestsModal({ onClose }: FriendRequestsModalProps) {
                     {tab === 'incoming' && (
                         <div className="friend-modal__list">
                             {incomingRequests.length === 0 ? (
-                                <div className="friend-modal__empty">
-                                    <Inbox className="w-8 h-8 text-text-muted opacity-40 mb-2" />
-                                    <p>No incoming requests</p>
+                                <div className="friend-modal__empty flex flex-col items-center">
+                                    <Mascot 
+                                        state="friends" 
+                                        trigger="always" 
+                                        message="No pending requests. Time to make some new connections!"
+                                        className="scale-[0.5] -my-20"
+                                    />
+                                    <p className="mt-2">No incoming requests</p>
                                 </div>
                             ) : (
                                 incomingRequests.map(req => (
@@ -179,9 +185,14 @@ export function FriendRequestsModal({ onClose }: FriendRequestsModalProps) {
                     {tab === 'outgoing' && (
                         <div className="friend-modal__list">
                             {outgoingRequests.length === 0 ? (
-                                <div className="friend-modal__empty">
-                                    <Send className="w-8 h-8 text-text-muted opacity-40 mb-2" />
-                                    <p>No pending requests</p>
+                                <div className="friend-modal__empty flex flex-col items-center">
+                                    <Mascot 
+                                        state="friends" 
+                                        trigger="always" 
+                                        message="No pending requests. Time to make some new connections!"
+                                        className="scale-[0.5] -my-20"
+                                    />
+                                    <p className="mt-2">No pending requests</p>
                                 </div>
                             ) : (
                                 outgoingRequests.map(req => (

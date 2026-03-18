@@ -19,7 +19,7 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track, LocalTrackPublication, RemoteAudioTrack } from 'livekit-client';
-import { AlertCircle, Star, Link2, Check, Volume2, VolumeX, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, LogOut, Lock, Unlock } from 'lucide-react';
+import { AlertCircle, Star, Link2, Check, Volume2, VolumeX, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, LogOut, Lock, Unlock, Maximize } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
@@ -34,6 +34,7 @@ import { useFriends } from '@/components/FriendsProvider';
 import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { useFriendsStore } from '@/store/useFriendsStore';
 import { getContrastColor } from '@/lib/colors';
+import { Mascot } from '@/components/voxy';
 
 // ─── Auto-start audio ─────────────────────────────────────────────────────────
 function AutoStartAudio() {
@@ -103,7 +104,7 @@ function SpotlightableTile({
 }) {
     const { theme } = useSettingsStore();
     const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    
+
     const isSpeaking = useIsSpeaking(trackRef?.participant ?? undefined);
     const isScreenShare = trackRef?.source === Track.Source.ScreenShare;
 
@@ -199,7 +200,7 @@ function SpotlightableTile({
             {/* LIVEKIT TILE: Wird in z-10 gewrappt. */}
             <div className={`relative w-full h-full z-10 lk-custom-tile-wrapper ${isTrackMuted && !isScreenShare ? 'is-muted' : ''}`}>
                 <ParticipantTile trackRef={trackRef} />
-                
+
                 {/* Custom Participant Name & Status Badge */}
                 <div className={`absolute bottom-1.5 left-1.5 z-20 flex items-center gap-2 backdrop-blur-md px-2 py-1 rounded-md border pointer-events-none ${isDark ? 'bg-black/55 border-white/5' : 'bg-white/80 border-black/5 shadow-sm'}`}>
                     {!isScreenShare && (
@@ -222,25 +223,25 @@ function SpotlightableTile({
                         absolute top-2 right-2 z-20 p-1.5 rounded-lg backdrop-blur-md
                         transition-all duration-200
                         ${isSpotlit
-                            ? 'bg-amber-400/90 text-white opacity-100 shadow-md'
+                            ? 'bg-primary/90 text-white opacity-100 shadow-md'
                             : 'bg-black/40 text-white/70 opacity-100 hover:bg-black/60 hover:text-white'}
                     `}
                 >
-                    <Star className={`w-4 h-4 ${isSpotlit ? 'fill-white' : ''}`} />
+                    <Maximize className={`w-4 h-4 ${isSpotlit ? 'fill-white' : ''}`} />
                 </button>
             )}
 
             {/* Spotlight badge when pinned */}
             {isSpotlit && (
-                <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-amber-400/90 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm pointer-events-none shadow-md">
-                    <Star className="w-3 h-3 fill-white" />
+                <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-primary/90 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm pointer-events-none shadow-md">
+                    <Maximize className="w-3 h-3 fill-white" />
                     Spotlight
                 </div>
             )}
 
             {/* Audio Controls (Volume & Mute) — Only for remote participants */}
             {trackRef?.participant && !trackRef.participant.isLocal && (
-                <div 
+                <div
                     className={`
                         absolute top-2 left-2 z-20 flex items-center p-1.5 rounded-lg backdrop-blur-md shadow-md transition-opacity duration-200
                         ${isDark ? 'bg-black/40' : 'bg-white/60'}
@@ -268,29 +269,29 @@ function SpotlightableTile({
                     )}
 
                     <div className={`flex items-center overflow-hidden transition-all duration-300 ${isVolumeExpanded ? 'w-44 ml-2 opacity-100' : 'w-0 opacity-0'} sm:w-0 sm:ml-0 sm:opacity-0 sm:group-hover/volume:w-36 sm:group-hover/volume:ml-2 sm:group-hover/volume:opacity-100 focus-within:w-44 focus-within:ml-2 focus-within:opacity-100`}>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="100"
-                                    step="1"
-                                    value={isLocallyMuted ? 0 : volume}
-                                    onChange={(e) => {
-                                        const val = parseInt(e.target.value);
-                                        setVolume(val);
-                                        if (val > 0 && isLocallyMuted) setIsLocallyMuted(false);
-                                    }}
-                                    className={`w-20 sm:w-24 h-1.5 rounded-full appearance-none cursor-pointer shrink-0 ${isDark ? 'bg-white/30' : 'bg-black/20'}`}
-                                    style={{
-                                        background: `linear-gradient(to right, #FF5A5F ${(isLocallyMuted ? 0 : volume)}%, ${isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)'} ${(isLocallyMuted ? 0 : volume)}%)`
-                                    }}
-                                    title="Adjust volume locally (0-100%)"
-                                />
-                                <span className={`text-[10px] font-mono w-10 text-right shrink-0 ${isDark ? 'text-white/90' : 'text-text-main'}`}>
-                                    {isLocallyMuted ? '0%' : `${Math.round(volume)}%`}
-                                </span>
-                        
+                        <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={isLocallyMuted ? 0 : volume}
+                            onChange={(e) => {
+                                const val = parseInt(e.target.value);
+                                setVolume(val);
+                                if (val > 0 && isLocallyMuted) setIsLocallyMuted(false);
+                            }}
+                            className={`w-20 sm:w-24 h-1.5 rounded-full appearance-none cursor-pointer shrink-0 ${isDark ? 'bg-white/30' : 'bg-black/20'}`}
+                            style={{
+                                background: `linear-gradient(to right, #FF5A5F ${(isLocallyMuted ? 0 : volume)}%, ${isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)'} ${(isLocallyMuted ? 0 : volume)}%)`
+                            }}
+                            title="Adjust volume locally (0-100%)"
+                        />
+                        <span className={`text-[10px] font-mono w-10 text-right shrink-0 ${isDark ? 'text-white/90' : 'text-text-main'}`}>
+                            {isLocallyMuted ? '0%' : `${Math.round(volume)}%`}
+                        </span>
+
                         <div className="flex-1 sm:hidden" />
-                        
+
                         {isVolumeExpanded && (
                             <button
                                 onClick={() => setIsVolumeExpanded(false)}
@@ -531,7 +532,7 @@ function VirtualBackgroundHook({
                 (p) => p.source === Track.Source.Camera && p.track
             );
             const camTrack = camPub?.videoTrack;
-            
+
             if (!camTrack || camTrack.mediaStreamTrack.readyState !== 'live') {
                 lastTrackSidRef.current = undefined;
                 return;
@@ -548,7 +549,7 @@ function VirtualBackgroundHook({
                 // If the track SID changed, we MUST recreate the processor to avoid WebGL context issues
                 if (lastTrackSidRef.current !== camTrack.sid) {
                     console.log('[VirtualBackground] Track changed. Recreating processor for:', camTrack.sid);
-                    
+
                     if (processorRef.current) {
                         try {
                             await processorRef.current.destroy();
@@ -560,7 +561,7 @@ function VirtualBackgroundHook({
 
                     const { BackgroundProcessor } = await import('@livekit/track-processors');
                     processorRef.current = BackgroundProcessor({ mode: 'disabled' });
-                    
+
                     await camTrack.setProcessor(processorRef.current);
                     lastTrackSidRef.current = camTrack.sid;
                 }
@@ -604,7 +605,7 @@ function VirtualBackgroundHook({
         return () => {
             if (processorRef.current) {
                 console.log('[VirtualBackground] Cleaning up processor on unmount');
-                processorRef.current.destroy().catch(() => {});
+                processorRef.current.destroy().catch(() => { });
                 processorRef.current = null;
                 lastTrackSidRef.current = undefined;
             }
@@ -774,7 +775,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const incomingRequests = useFriendsStore(s => s.incomingRequests);
     const { sendRoomInvite, toggleRoomOpen, initiateCall } = useFriends();
     const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
- 
+
     const handleToggleOpenRoom = useCallback((isOpen: boolean) => {
         const roomName = decodeURIComponent(roomId)
             .replace(/-\d{1,5}$/, '')
@@ -782,7 +783,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             .replace(/\b\w/g, c => c.toUpperCase());
         toggleRoomOpen(roomId, isOpen, roomName);
     }, [toggleRoomOpen, roomId]);
- 
+
     const handleInviteFriend = useCallback((friendId: string) => {
         // Get human-readable room name from slug
         const roomName = decodeURIComponent(roomId)
@@ -885,11 +886,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         if (typeof document === 'undefined') return;
         const bodyBg = document.body.style.backgroundColor;
         const htmlBg = document.documentElement.style.backgroundColor;
-        
+
         // Use theme-aware background colors
         const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         const bgVal = isDark ? '#030712' : '#F7F7F7';
-        
+
         document.body.style.setProperty('background-color', bgVal, 'important');
         document.documentElement.style.setProperty('background-color', bgVal, 'important');
         return () => {
@@ -984,9 +985,13 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     if (!livekitToken) {
         return (
             <div className="flex-1 flex items-center justify-center min-h-[50vh]">
-                <div className="animate-pulse flex flex-col items-center">
-                    <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin mb-4" />
-                    <p className="text-text-muted font-medium">Connecting to room…</p>
+                <div className="flex flex-col items-center">
+                    <Mascot
+                        state="locking"
+                        trigger="always"
+                        message="Establishing a secure connection..."
+                    />
+                    <p className="text-text-muted font-medium mt-4">Connecting to room…</p>
                 </div>
             </div>
         );
@@ -1194,7 +1199,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
             {/* Leave confirmation modal overlay — portaled to body to ensure it stays above all other UI */}
             {pendingTarget && typeof document !== 'undefined' && createPortal(
-                <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-transparent backdrop-blur-sm p-4"  style={{ backgroundColor: 'rgba(0,0,0,0.4)', pointerEvents: 'auto' }}>
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-transparent backdrop-blur-sm p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)', pointerEvents: 'auto' }}>
                     <div className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-3 text-red-500 mb-3">
                             <LogOut className="w-6 h-6" />
