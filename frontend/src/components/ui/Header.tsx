@@ -76,12 +76,12 @@ export function Header() {
                         onClick={() => navigateOrGuard(user ? '/dashboard' : '/')}
                         className="text-xl font-semibold text-text-main flex items-center gap-2"
                     >
-                        <Image src="/logo.png" alt="Voxely Logo" width={40} height={40} className="w-10 h-10 object-contain logo-dark-mode" />
+                        <Image src="/logo.png" alt="Voxely Logo" width={40} height={40} priority className="w-10 h-10 object-contain logo-dark-mode" />
                         Voxely
                     </button>
                 ) : (
                     <Link href={user ? '/dashboard' : '/'} className="text-xl font-semibold text-text-main flex items-center gap-2">
-                        <Image src="/logo.png" alt="Voxely Logo" width={40} height={40} className="w-10 h-10 object-contain logo-dark-mode" />
+                        <Image src="/logo.png" alt="Voxely Logo" width={40} height={40} priority className="w-10 h-10 object-contain logo-dark-mode" />
                         Voxely
                     </Link>
                 )}

@@ -85,7 +85,7 @@ function RegisterForm() {
             <div className="w-full max-w-md bg-surface p-8 rounded-video shadow-flat border border-gray-100">
                 <div className="text-center mb-8">
                     <div className="flex justify-center mb-6">
-                        <Image src="/logo.png" alt="Voxely Logo" width={64} height={64} className="w-16 h-16 object-contain logo-dark-mode" />
+                        <Image src="/logo.png" alt="Voxely Logo" width={64} height={64} priority className="w-16 h-16 object-contain logo-dark-mode" />
                     </div>
                     <h1 className="text-2xl font-semibold text-text-main mb-2">Create an account</h1>
                     <p className="text-text-muted text-sm">Join to start your real-time communication</p>
