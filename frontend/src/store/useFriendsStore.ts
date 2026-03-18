@@ -59,6 +59,7 @@ interface FriendsState {
     openRooms: OpenRoom[];
     incomingCall: IncomingCall | null;
     outgoingCall: OutgoingCall | null;
+    isSidebarCollapsed: boolean;
 
     // Data fetching
     fetchFriends: (token: string) => Promise<void>;
@@ -99,6 +100,7 @@ interface FriendsState {
     addFriend: (friend: Friend) => void;
     removeFriendById: (friendId: string) => void;
     updateFriendProfile: (friendId: string, data: Partial<Friend>) => void;
+    setSidebarCollapsed: (collapsed: boolean) => void;
 }
 
 export const useFriendsStore = create<FriendsState>()((set, get) => ({
@@ -110,6 +112,7 @@ export const useFriendsStore = create<FriendsState>()((set, get) => ({
     openRooms: [],
     incomingCall: null,
     outgoingCall: null,
+    isSidebarCollapsed: false,
 
     fetchFriends: async (token) => {
         try {
@@ -291,4 +294,5 @@ export const useFriendsStore = create<FriendsState>()((set, get) => ({
                 f.id === friendId ? { ...f, ...data } : f
             ),
         })),
+    setSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
 }));

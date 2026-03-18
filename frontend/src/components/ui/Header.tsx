@@ -95,6 +95,7 @@ export function Header() {
                                 className="flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-gray-200 bg-surface hover:bg-gray-50 transition-colors shadow-sm group"
                                 aria-haspopup="true"
                                 aria-expanded={open}
+                                data-tutorial="user-dropdown"
                             >
                                 <div
                                     className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"

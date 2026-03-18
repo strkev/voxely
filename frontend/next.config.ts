@@ -30,6 +30,13 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  ...(process.env.NODE_ENV === 'development' ? {
+    allowedDevOrigins: [
+      'localhost:3000',
+      '0.0.0.0:3000',
+      process.env.NEXT_PUBLIC_API_URL ? new URL(process.env.NEXT_PUBLIC_API_URL).hostname : 'localhost'
+    ],
+  } : {}),
 };
 
 export default nextConfig;

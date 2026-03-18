@@ -13,6 +13,8 @@ import { RoomInviteBanner } from '@/components/RoomInviteBanner';
 import { getContrastColor } from '@/lib/colors';
 import { Users, ShieldCheck, Clock, Video, DoorOpen } from 'lucide-react';
 import { Mascot } from '@/components/voxy';
+import { useTutorialStore } from '@/store/useTutorialStore';
+import { TutorialSpotlight } from '@/components/TutorialSpotlight';
 
 export default function DashboardPage() {
     const [joinRoomId, setJoinRoomId] = useState('');
@@ -23,6 +25,9 @@ export default function DashboardPage() {
     const { user, isLoading } = useAuthStore();
     const router = useRouter();
     const { friends, openRooms, incomingRequests } = useFriendsStore();
+
+    const { isActive, currentStep, steps, nextStep, prevStep, endTutorial } = useTutorialStore();
+    const currentTutorialStep = steps[currentStep];
 
     // Use friends context for online presence & invitations (connected via global provider)
     const { initiateCall } = useFriends();
@@ -37,6 +42,14 @@ export default function DashboardPage() {
             router.push('/login?redirect=' + encodeURIComponent(window.location.pathname));
         }
     }, [user, router, mounted, isLoading]);
+
+    // Handle tutorial logic: expand sidebar if it's the friends step
+    const { setSidebarCollapsed } = useFriendsStore();
+    useEffect(() => {
+        if (isActive && steps[currentStep]?.targetSelector === '[data-tutorial="friends-sidebar"]') {
+            setSidebarCollapsed(false);
+        }
+    }, [isActive, currentStep, steps, setSidebarCollapsed]);
 
     // Don't render until mounted and auth check is done
     if (!mounted || isLoading) return (
@@ -104,12 +117,31 @@ export default function DashboardPage() {
                     <div className="min-w-0">
                         <h1 className="text-2xl sm:text-3xl font-semibold text-text-main mb-2 truncate">Welcome, {user.name}</h1>
                         <p className="text-text-muted">Create a new space or join an existing one to start chatting.</p>
+                        
+                        {/* Tutorial Button - hidden on mobile */}
+                        <div className="mt-4 hidden md:block">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="rounded-full border-primary/30 text-primary hover:bg-primary/5 transition-all text-xs flex items-center gap-2 group"
+                                onClick={() => useTutorialStore.getState().startTutorial()}
+                            >
+                                <Video className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
+                                Interactive Tutorial
+                            </Button>
+                        </div>
                     </div>
-                    <div className="hidden md:block transform scale-[0.45] origin-right -mr-6 -my-20">
+                    <div className="hidden md:block transform scale-[0.45] origin-right -mr-6 -my-20" data-tutorial="mascot-welcome">
                         <Mascot
-                            state="waving"
-                            trigger="hover"
-                            message={`Hello ${user.name}! Welcome to your dashboard. Great to see you!`}
+                            state={isActive ? currentTutorialStep.state : "waving"}
+                            trigger={isActive ? "always" : "hover"}
+                            message={isActive ? currentTutorialStep.message : `Hello ${user.name}! Welcome to your dashboard. Great to see you!`}
+                            isTutorial={isActive}
+                            currentStep={currentStep}
+                            totalSteps={steps.length}
+                            onNext={nextStep}
+                            onBack={prevStep}
+                            onEnd={endTutorial}
                         />
                     </div>
                 </div>
@@ -117,7 +149,7 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
                     {/* Create Room Card */}
-                    <div className="bg-surface p-5 sm:p-8 rounded-video shadow-flat border border-gray-100 flex flex-col h-full animate-slide-up animation-delay-100">
+                    <div className="bg-surface p-5 sm:p-8 rounded-video shadow-flat border border-gray-100 flex flex-col h-full animate-slide-up animation-delay-100" data-tutorial="create-room">
                         <div className="mb-6">
                             <h2 className="text-xl font-medium text-text-main mb-2">Create a Space</h2>
                             <p className="text-sm text-text-muted">Start a secure real-time channel for your friends or team.</p>
@@ -146,7 +178,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Join Room Card */}
-                    <div className="bg-surface p-5 sm:p-8 rounded-video shadow-flat border border-gray-100 flex flex-col h-full animate-slide-up animation-delay-200">
+                    <div className="bg-surface p-5 sm:p-8 rounded-video shadow-flat border border-gray-100 flex flex-col h-full animate-slide-up animation-delay-200" data-tutorial="join-room-section">
                         <div className="mb-6">
                             <h2 className="text-xl font-medium text-text-main mb-2">Join a Space</h2>
                             <p className="text-sm text-text-muted">Have a room code? Enter it below to join the conversation.</p>
@@ -173,7 +205,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Active Friends' Rooms Widget */}
-                <div className="mt-8 sm:mt-12 animate-slide-up animation-delay-300">
+                <div className="mt-8 sm:mt-12 animate-slide-up animation-delay-300" data-tutorial="open-rooms-section">
                     <h2 className="text-xl font-medium text-text-main mb-4 flex items-center gap-2">
                         <DoorOpen className="w-5 h-5 text-primary" />
                         Active Friends&apos; Rooms
@@ -243,6 +275,9 @@ export default function DashboardPage() {
             {showFriendsModal && (
                 <FriendRequestsModal onClose={() => setShowFriendsModal(false)} />
             )}
+
+            {/* Tutorial Spotlight Overlay */}
+            <TutorialSpotlight />
         </div>
     );
 }

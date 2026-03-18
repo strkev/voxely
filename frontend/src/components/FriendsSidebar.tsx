@@ -27,10 +27,9 @@ interface FriendsSidebarProps {
 }
 
 export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequests, onClose, onToggleOpen, onCall, inRoomUserIds }: FriendsSidebarProps) {
-    const { friends, onlineUserIds, incomingRequests, removeFriend } = useFriendsStore();
+    const { friends, onlineUserIds, incomingRequests, removeFriend, isSidebarCollapsed, setSidebarCollapsed } = useFriendsStore();
     const { token } = useAuthStore();
     const [search, setSearch] = useState('');
-    const [collapsed, setCollapsed] = useState(false);
     const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
     const [invitedFriendIds, setInvitedFriendIds] = useState<Set<string>>(new Set());
 
@@ -79,7 +78,7 @@ export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequ
         if (onClose) {
             onClose();
         } else {
-            setCollapsed(true);
+            setSidebarCollapsed(true);
         }
     };
 
@@ -87,11 +86,11 @@ export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequ
         onToggleOpen?.(!isRoomOpen);
     };
 
-    if (collapsed && !onClose) {
+    if (isSidebarCollapsed && !onClose) {
         return (
             <div className="friends-sidebar friends-sidebar--collapsed">
                 <button
-                    onClick={() => setCollapsed(false)}
+                    onClick={() => setSidebarCollapsed(false)}
                     className="friends-sidebar__toggle"
                     aria-label="Open friends sidebar"
                 >
@@ -105,7 +104,7 @@ export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequ
     }
 
     return (
-        <aside className="friends-sidebar" aria-label="Friends">
+        <aside className="friends-sidebar" aria-label="Friends" data-tutorial="friends-sidebar">
             {/* Header */}
             <div className="friends-sidebar__header">
                 <div className="friends-sidebar__title-row">
@@ -179,9 +178,9 @@ export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequ
                             ? (
                                 <div className="flex-1 flex flex-col items-center justify-center py-8">
                                     <div className="h-44 flex items-center justify-center">
-                                        <Mascot 
-                                            state="friends" 
-                                            trigger="always" 
+                                        <Mascot
+                                            state="friends"
+                                            trigger="hover"
                                             message="It's a bit empty here. Why not invite some friends?"
                                             className="scale-[0.55]"
                                         />
@@ -226,17 +225,17 @@ export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequ
                                 <div className="friends-sidebar__item-actions">
                                     {confirmRemove === friend.id ? (
                                         <div className="friends-sidebar__confirm-remove animate-pop-in">
-                                            <button 
-                                                onClick={() => handleRemoveFriend(friend)} 
-                                                className="friends-sidebar__confirm-yes" 
+                                            <button
+                                                onClick={() => handleRemoveFriend(friend)}
+                                                className="friends-sidebar__confirm-yes"
                                                 aria-label="Confirm remove"
                                                 title="Remove friend"
                                             >
                                                 Remove
                                             </button>
-                                            <button 
-                                                onClick={() => setConfirmRemove(null)} 
-                                                className="friends-sidebar__confirm-no" 
+                                            <button
+                                                onClick={() => setConfirmRemove(null)}
+                                                className="friends-sidebar__confirm-no"
                                                 aria-label="Cancel remove"
                                                 title="Cancel"
                                             >

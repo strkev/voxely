@@ -19,7 +19,7 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track, LocalTrackPublication, RemoteAudioTrack } from 'livekit-client';
-import { AlertCircle, Star, Link2, Check, Volume2, VolumeX, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, LogOut, Lock, Unlock, Maximize } from 'lucide-react';
+import { AlertCircle, Link2, Check, Volume2, VolumeX, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, LogOut, Lock, Unlock, Maximize } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
@@ -34,7 +34,7 @@ import { useFriends } from '@/components/FriendsProvider';
 import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { useFriendsStore } from '@/store/useFriendsStore';
 import { getContrastColor } from '@/lib/colors';
-import { Mascot } from '@/components/voxy';
+
 
 // ─── Auto-start audio ─────────────────────────────────────────────────────────
 function AutoStartAudio() {

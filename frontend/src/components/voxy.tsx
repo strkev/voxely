@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useId } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // --- Typisierung für das Modul ---
 export type MascotState = 'waving' | 'typing' | 'locking' | 'friends';
@@ -10,6 +11,13 @@ interface MascotProps {
     trigger?: MascotTrigger;
     message?: string;
     className?: string;
+    // Tutorial props
+    isTutorial?: boolean;
+    onNext?: () => void;
+    onBack?: () => void;
+    onEnd?: () => void;
+    currentStep?: number;
+    totalSteps?: number;
 }
 
 // --- Das Haupt-Maskottchen-Modul ---
@@ -17,20 +25,28 @@ export const Mascot: React.FC<MascotProps> = ({
     state,
     trigger = 'always',
     message,
-    className = ''
+    className = '',
+    isTutorial,
+    onNext,
+    onBack,
+    onEnd,
+    currentStep = 0,
+    totalSteps = 0
 }) => {
     const [isClicked, setIsClicked] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const mascotRef = useRef<HTMLDivElement>(null);
     const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
-    const [bubbleRect, setBubbleRect] = useState<{ top: number; left: number; width: number } | null>(null);
+    const [bubbleRect, setBubbleRect] = useState<{ top: number; left: number; width: number; viewportTop: number } | null>(null);
     const uId = useId().replace(/:/g, ''); // Remove colons to make it safer for CSS selectors
 
     // Bestimmt, ob die SVG-Pfade animiert werden sollen
-    const isAnimating =
+    const isAnimating = !!(
         trigger === 'always' ||
         (trigger === 'hover' && isHovered) ||
-        (trigger === 'click' && isClicked);
+        (trigger === 'click' && isClicked) ||
+        isTutorial
+    );
 
     // Tooltip Text basierend auf dem Zustand
     const getTooltipText = () => {
@@ -49,22 +65,24 @@ export const Mascot: React.FC<MascotProps> = ({
     };
 
     useEffect(() => {
-        setPortalContainer(document.body);
+        const timer = setTimeout(() => setPortalContainer(document.body), 0);
+        return () => clearTimeout(timer);
     }, []);
 
     const updateBubblePosition = () => {
         if (mascotRef.current) {
             const rect = mascotRef.current.getBoundingClientRect();
             setBubbleRect({
-                top: rect.top + window.scrollY,
-                left: rect.left + window.scrollX,
-                width: rect.width
+                top: rect.top, // Use viewport-relative top for fixed positioning
+                left: rect.left, // Use viewport-relative left for fixed positioning
+                width: rect.width,
+                viewportTop: rect.top
             });
         }
     };
 
     useEffect(() => {
-        if (isHovered || trigger === 'always' || (trigger === 'click' && isClicked)) {
+        if (isHovered || trigger === 'always' || (trigger === 'click' && isClicked) || isTutorial) {
             updateBubblePosition();
             window.addEventListener('scroll', updateBubblePosition, true);
             window.addEventListener('resize', updateBubblePosition);
@@ -73,23 +91,97 @@ export const Mascot: React.FC<MascotProps> = ({
                 window.removeEventListener('resize', updateBubblePosition);
             };
         }
-    }, [isHovered, trigger, isClicked]);
+    }, [isHovered, trigger, isClicked, isTutorial]);
 
-    const showBubble = isHovered || (trigger === 'click' && isClicked);
+    const showBubble = isHovered || (trigger === 'click' && isClicked) || isTutorial;
+
+    // Check if we should flip the bubble to be below the mascot
+    // If mascot is closer than 180px to the top of viewport, show bubble below (ONLY in tutorial mode)
+    const shouldShowBelow = isTutorial && bubbleRect && bubbleRect.viewportTop < 180;
+
+    // Calculate horizontal offset to keep bubble on screen
+    const bubbleWidth = 280; // max-width
+    let horizontalOffset = 0;
+    if (bubbleRect && typeof window !== 'undefined') {
+        const centerX = bubbleRect.left + (bubbleRect.width / 2);
+        const potentialLeft = centerX - (bubbleWidth / 2);
+        const potentialRight = centerX + (bubbleWidth / 2);
+        const screenPadding = 16;
+
+        if (potentialLeft < screenPadding) {
+            horizontalOffset = screenPadding - potentialLeft;
+        } else if (potentialRight > window.innerWidth - screenPadding) {
+            horizontalOffset = (window.innerWidth - screenPadding) - potentialRight;
+        }
+    }
 
     const bubbleContent = (
-        <div
-            className={`fixed mb-3 w-max max-w-[240px] bg-[#313338] text-white text-[16px] font-medium py-2.5 px-4 rounded-3xl rounded-br-sm shadow-[0_8px_25px_rgba(0,0,0,0.12)] border border-zinc-700/50 transition-all duration-300 pointer-events-none z-[10000] flex items-center gap-2 ${showBubble ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
-            style={{
-                top: bubbleRect ? `${bubbleRect.top - 12}px` : '-9999px',
-                left: bubbleRect ? `${bubbleRect.left + bubbleRect.width / 2}px` : '-9999px',
-                transform: 'translate(-50%, -100%)',
-                transitionProperty: 'opacity, transform'
-            }}
-        >
-            <span className="leading-snug text-center w-full">{message || getTooltipText()}</span>
-            {/* Chat Tail */}
-        </div>
+        <AnimatePresence>
+            {showBubble && bubbleRect && (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: shouldShowBelow ? -10 : 10, x: '-50%' }}
+                    animate={{
+                        opacity: 1,
+                        scale: 1,
+                        y: 0,
+                        x: `calc(-50% + ${horizontalOffset}px)`,
+                        transition: { type: 'spring', damping: 20, stiffness: 300 }
+                    }}
+                    exit={{
+                        opacity: 0,
+                        scale: 0.9,
+                        y: shouldShowBelow ? -5 : 5,
+                        transition: { duration: 0.2 }
+                    }}
+                    className={`fixed w-max max-w-[280px] bg-[#313338] text-white shadow-[0_8px_25px_rgba(0,0,0,0.25)] border border-zinc-700/50 z-[10001] flex flex-col items-center gap-3 ${isTutorial ? 'p-4 rounded-[24px]' : 'py-2.5 px-4 rounded-3xl rounded-br-sm pointer-events-none'} ${shouldShowBelow ? 'mt-3 mb-0' : 'mb-3 mt-0'}`}
+                    style={{
+                        top: shouldShowBelow ? `${bubbleRect.top + 120}px` : `${bubbleRect.top - 70}px`,
+                        left: `${bubbleRect.left + bubbleRect.width / 2}px`,
+                        transformOrigin: shouldShowBelow ? 'top center' : 'bottom center'
+                    }}
+                >
+                    <span className={`leading-snug text-center w-full ${isTutorial ? 'text-[15px] font-medium' : 'text-[16px] font-medium'}`}>
+                        {message || getTooltipText()}
+                    </span>
+
+                    {isTutorial && (
+                        <div className="flex items-center justify-between w-full mt-1 gap-3">
+                            <div className="flex gap-2">
+                                {currentStep > 0 && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onBack?.(); }}
+                                        className="px-3 py-1.5 rounded-xl bg-zinc-700 hover:bg-zinc-600 text-xs font-bold transition-colors cursor-pointer"
+                                    >
+                                        Back
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-zinc-400 font-bold mr-1">
+                                    {currentStep + 1} / {totalSteps}
+                                </span>
+                                {currentStep < totalSteps - 1 ? (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onNext?.(); }}
+                                        className="px-4 py-1.5 rounded-xl bg-primary hover:bg-[#E0484D] text-xs font-bold transition-colors cursor-pointer"
+                                    >
+                                        Next
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onEnd?.(); }}
+                                        className="px-4 py-1.5 rounded-xl bg-primary hover:bg-[#E0484D] text-xs font-bold transition-colors cursor-pointer"
+                                    >
+                                        Done
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 
     return (
@@ -103,9 +195,9 @@ export const Mascot: React.FC<MascotProps> = ({
             {portalContainer && createPortal(bubbleContent, portalContainer)}
 
             {/* Maskottchen Container - Drop-Shadow erscheint IMMER bei Hover */}
-            <div className="w-64 h-64 flex items-center justify-center transition-all duration-300 cursor-pointer overflow-visible relative group-hover:scale-105 transition-transform duration-500">
+            <div className={`w-64 h-64 flex items-center justify-center transition-all duration-300 cursor-pointer overflow-visible relative group-hover:scale-105 transition-transform duration-500 ${isTutorial ? 'scale-105' : ''}`}>
                 {/* Der Rote Glow-Effekt im Hintergrund - Verkleinert und Unschärfe reduziert um Clipping zu vermeiden */}
-                <div className="absolute inset-8 bg-[#FF5A5F] opacity-0 group-hover:opacity-20 blur-[30px] rounded-full transition-opacity duration-500 pointer-events-none"></div>
+                <div className={`absolute inset-8 bg-[#FF5A5F] blur-[30px] rounded-full transition-opacity duration-500 pointer-events-none ${isTutorial ? 'opacity-30' : 'opacity-0 group-hover:opacity-20'}`}></div>
                 {state === 'waving' && <WavingMascot isAnimating={isAnimating} id={uId} />}
                 {state === 'typing' && <TypingMascot isAnimating={isAnimating} id={uId} />}
                 {state === 'locking' && <LockingMascot isAnimating={isAnimating} id={uId} />}
