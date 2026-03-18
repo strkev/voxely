@@ -22,7 +22,8 @@ Voxely ist in ein Backend und ein Frontend unterteilt und nutzt modernste Web-Te
 - **State Management:** Zustand 5
 - **Echtzeit & Medien:** LiveKit Components React & Socket.io-client
 - **Icons:** Lucide React
-- **Animationen:** Framer Motion
+- **Animationen:** Framer Motion (Mascot-Bubbles, UI-Effekte)
+- **Monitoring:** `./security-test.sh` (Automatisierte Sicherheits- & Qualitätsaudits)
 
 ## 2. Komponenten und Pages
 
@@ -39,6 +40,8 @@ Die Struktur des **Frontends** ist wie folgt aufgeteilt:
 - `AuthProvider.tsx`: Sicherstellung der Session-Konsistenz.
 - `ChatSidebar.tsx`: Echtzeit-Textnachrichten mit XSS-Schutz.
 - `FriendsSidebar.tsx`: Management von Online-Status und Interaktionen.
+- `voxy.tsx`: Interaktives Maskottchen "Voxy".
+- `TutorialSpotlight.tsx`: System für die geführte Dashboard-Tour.
 - `sw.js` & `manifest.json`: Ermöglichen den PWA-Betrieb.
 
 ## 3. Sicherheitsmaßnahmen
@@ -47,7 +50,8 @@ Die Struktur des **Frontends** ist wie folgt aufgeteilt:
 - **Passwort-Sicherheit:** Hashing mit **Bcrypt** (Salted). Keine Klartext-Speicherung.
 - **Authentifizierung:** **JWT (JSON Web Tokens)** mit sicherem Widerruf (Blacklisting) via Redis bei Logout.
 - **Rate-Limiting:** Schutz vor Brute-Force auf Auth-Endpoints und Spam-Schutz im Chat.
-- **Security Headers:** Einsatz von **Helmet** für CSP, HSTS und XSS-Schutz-Header.
+- **Sicherheits-Audit:** Regelmäßige Prüfung auf veraltete Pakete (CVEs) und Code-Qualität.
+- **Dependency Hardening:** Einsatz von Next.js 16 Security-Features und stabilen Socket.io-Libraries.
 - **Bereinigung:** Umfassender XSS-Schutz durch `sanitize-html` im Backend und `isomorphic-dompurify` im Frontend.
 
 ## 4. Datenmodell

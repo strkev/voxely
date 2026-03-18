@@ -9,7 +9,9 @@ Sichere, Echtzeit-Voice/Video/Chat-Plattform mit minimalistischem UI und PWA-Sup
 ## Features
 
 - 🔒 **Sicherheit:** Ende-zu-Ende verschlüsselte Felder (Prisma Field Encryption), JWT-Blacklisting via Redis, XSS-Schutz.
+- ⚡ **Qualität & Compliance:** Integriertes Security-Audit-System zur Überprüfung von Abhängigkeiten und Code-Qualität.
 - 📱 **PWA:** Installierbar als App auf Desktop und Mobile mit Offline-Caching.
+- 🤖 **Interaktive Hilfe:** Voxy – ein smarter Maskottchen-Guide, der dich durch die App begleitet und Features erklärt.
 - 🎙️ **Echtzeit-Kommunikation:** Hochwertige Video- und Audio-Streams via LiveKit (WebRTC).
 - 💬 **Echtzeit-Chat:** Instant-Messaging mit Socket.IO.
 - 🎨 **Modernes UI:** Minimalistisches Design mit Tailwind CSS 4 und Framer Motion Animationen.
@@ -149,6 +151,9 @@ npm run dev              # Next.js Dev-Server (Port 3000)
 
 Öffne [http://localhost:3000](http://localhost:3000) im Browser.
 
+### 8. Hilfesystem & Tutorial
+Voxely verfügt über ein interaktives Tutorial auf dem Dashboard. Klicke auf den **Tutorial starten** Button (oben rechts), um eine geführte Tour durch die Funktionen zu erhalten. Das Maskottchen **Voxy** erklärt dir dabei die wichtigsten Bereiche.
+
 ---
 
 ## Zugriff von anderen Geräten im LAN
@@ -270,6 +275,10 @@ curl -H "x-admin-secret: DEIN_ADMIN_SECRET" http://localhost:4000/api/admin/user
 
 # Health-Check
 curl http://localhost:4000/health
+
+# Security & Quality Audit (Frontend & Backend)
+chmod +x security-test.sh
+./security-test.sh
 ```
 
 ---

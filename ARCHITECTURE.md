@@ -38,7 +38,8 @@
 | **React** | 19 | UI-Komponentenbibliothek |
 | **TypeScript** | 5 | Typsicherheit |
 | **Tailwind CSS** | 4 | Utility-first CSS für Styling (minimalistisches Design mit Custom-Tokens in `globals.css`) |
-| **Zustand** | 5 | Globaler State-Management (Auth-State, In-Memory-Token) |
+| **Zustand** | 5 | Globaler State-Management (Auth, Friends, Tutorial-Progress) |
+| **Framer Motion** | 12 | Physik-basierte Animationen für Mascot-Bubbles und UI-Übergänge |
 | **LiveKit React** | 2.9 | Fertige React-Komponenten für Video/Audio (Grid, ControlBar, ParticipantTile) |
 | **livekit-client** | 2.17 | WebRTC-Client-Bibliothek für LiveKit |
 | **Socket.IO Client** | 4.8 | Echtzeit-Chat-Verbindung zum Backend |
@@ -91,12 +92,16 @@ voxely/
 │   │   ├── components/
 │   │   │   ├── AuthProvider.tsx   # Session-Wiederherstellung beim App-Start
 │   │   │   ├── ChatSidebar.tsx    # Chat-Sidebar mit Echtzeit-Nachrichten
+│   │   │   ├── voxy.tsx           # Mascot-Komponente mit Portals & Framer Motion
+│   │   │   ├── TutorialSpotlight.tsx # Overlay mit Spotlight-Loch für die geführte Tour
 │   │   │   └── ui/               # Wiederverwendbare UI-Komponenten (Button, Input, Header)
 │   │   ├── hooks/
 │   │   │   ├── useChatSocket.ts   # Socket.IO Chat-Hook
 │   │   │   └── useRoomSounds.ts   # Join/Leave Sound-Effekte
 │   │   ├── store/
-│   │   │   └── useAuthStore.ts    # Zustand Auth-Store (User, Token, checkAuth, logout)
+│   │   │   ├── useAuthStore.ts    # Zustand Auth-Store
+│   │   │   ├── useFriendsStore.ts # Globaler Friends- & Sidebar-State
+│   │   │   └── useTutorialStore.ts # Tutorial-Schritte und Fortschritt
 │   │   └── lib/
 │   │       └── utils.ts           # Hilfsfunktionen (cn, clsx)
 │   └── .env.local                 # Frontend-Umgebungsvariablen
@@ -168,9 +173,12 @@ voxely/
 | **Chat Rate Limiting** | 5 Nachrichten / 5 Sek pro User (in-memory) |
 | **XSS-Schutz** | sanitize-html entfernt alle HTML-Tags aus Chat-Nachrichten |
 | **Security Headers** | Helmet setzt CSP, HSTS, X-Frame-Options etc. |
+| **Security Audits** | Regelmäßige automatisierte Checks auf Schwachstellen und Linting (`security-test.sh`) |
+| **Dependency Hardening** | Next.js 16 Security-Patches (CSRF-Protections) & Socket.io-parser Fixes |
 | **Invite Codes** | Registrierung nur mit gültigem Einladungscode |
 | **Admin-Endpoint** | Timing-safe String-Vergleich für Admin-Secret |
 | **Input-Validierung** | Room-IDs: Regex `^[a-zA-Z0-9_-]{1,100}$`, Chat: 500 Zeichen max |
+| **HMR Security** | Eingeschränkte `allowedDevOrigins` in der Next-Config für Netzwerk-Entwicklung |
 | **Graceful Degradation** | Server startet auch ohne Redis (mit Warnung) |
 
 ---
