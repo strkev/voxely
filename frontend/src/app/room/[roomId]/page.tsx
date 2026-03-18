@@ -88,7 +88,7 @@ function ChevronRotationFix() {
 // ─── Unique key for each track (identity + source avoids duplicates on screen share) ──
 function trackKey(track: TrackReferenceOrPlaceholder, fallback: number): string {
     const identity = track.participant?.identity ?? `p-${fallback}`;
-    const source = track.source ?? 'unknown';
+    const source = track.source ?? '';
     return `${identity}-${source}`;
 }
 
@@ -108,7 +108,7 @@ function SpotlightableTile({
     const isSpeaking = useIsSpeaking(trackRef?.participant ?? undefined);
     const isScreenShare = trackRef?.source === Track.Source.ScreenShare;
 
-    const participantName = trackRef?.participant?.name || trackRef?.participant?.identity || 'Unknown';
+    const participantName = trackRef?.participant?.name || trackRef?.participant?.identity || '';
     const initial = participantName.charAt(0).toUpperCase();
     const isCameraTrack = trackRef?.source === Track.Source.Camera;
     const isMicMuted = useIsMuted({ participant: trackRef?.participant, source: Track.Source.Microphone } as TrackReferenceOrPlaceholder);
