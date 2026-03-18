@@ -982,21 +982,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         );
     }
 
-    if (!livekitToken) {
-        return (
-            <div className="flex-1 flex items-center justify-center min-h-[50vh]">
-                <div className="flex flex-col items-center">
-                    <Mascot
-                        state="locking"
-                        trigger="always"
-                        message="Establishing a secure connection..."
-                    />
-                    <p className="text-text-muted font-medium mt-4">Connecting to room…</p>
-                </div>
-            </div>
-        );
-    }
-
     if (!isSecureContext) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] px-4">
