@@ -93,7 +93,15 @@ export const Mascot: React.FC<MascotProps> = ({
         }
     }, [isHovered, trigger, isClicked, isTutorial]);
 
-    const showBubble = isHovered || (trigger === 'click' && isClicked) || isTutorial;
+    // Reset interaction state when tutorial ends to prevent stuck bubbles
+    useEffect(() => {
+        if (!isTutorial && portalContainer) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setIsClicked(false);
+        }
+    }, [isTutorial, portalContainer]);
+
+    const showBubble = isHovered || (trigger === 'click' && isClicked) || isTutorial || trigger === 'always';
 
     // Check if we should flip the bubble to be below the mascot
     // If mascot is closer than 180px to the top of viewport, show bubble below (ONLY in tutorial mode)

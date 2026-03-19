@@ -133,6 +133,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="hidden md:block transform scale-[0.45] origin-right -mr-6 -my-20" data-tutorial="mascot-welcome">
                         <Mascot
+                            key={isActive ? 'tutorial' : 'idle'}
                             state={isActive ? currentTutorialStep.state : "waving"}
                             trigger={isActive ? "always" : "hover"}
                             message={isActive ? currentTutorialStep.message : `Hello ${user.name}! Welcome to your dashboard. Great to see you!`}
