@@ -167,7 +167,7 @@ export const getOpenRoomsForUser = async (userId: string) => {
                 if (!visibleOpenRoomsMap.has(roomId)) {
                     // Try to get total participant count from socket.io room
                     const socketRoom = io.sockets.adapter.rooms.get(roomId);
-                    const totalParticipantCount = socketRoom ? socketRoom.size : 1; 
+                    const totalParticipantCount = socketRoom ? socketRoom.size : 1;
 
                     visibleOpenRoomsMap.set(roomId, {
                         roomId,
@@ -233,6 +233,22 @@ const ROOM_ID_RE = /^[a-zA-Z0-9_-]{1,100}$/;
 
 /** Validate UUID format to prevent injection in friend-related events. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Verifies if a user has at least one socket connected to a specific room.
+ * This prevents stale entries in userRooms from causing incorrect behavior.
+ */
+const isUserActuallyInRoom = (userId: string, roomId: string): boolean => {
+    const room = io.sockets.adapter.rooms.get(roomId);
+    if (!room) return false;
+
+    for (const socketId of room) {
+        if (io.sockets.sockets.get(socketId)?.data.userId === userId) {
+            return true;
+        }
+    }
+    return false;
+};
 
 // ── Server-side chat rate limiting (per userId, in memory) ────────────────────
 // Allows max 5 messages per 5 seconds per user
@@ -363,7 +379,16 @@ io.on('connection', async (socket) => {
         if (!caller) return;
         const callerWithColor = { ...caller, avatarColor: caller.avatarColor || '#FF5A5F' };
 
-        const callerRoomId = userRooms.get(uid);
+        let callerRoomId = userRooms.get(uid);
+
+        // CRITICAL: Verify the caller is ACTUALLY in the room they claim to be in.
+        // If they left but the state is stale, we treat them as being in NO room.
+        if (callerRoomId && !isUserActuallyInRoom(uid, callerRoomId)) {
+            console.log(`[WS] Stale room entry detected for user ${uid} (room ${callerRoomId}). Clearing.`);
+            userRooms.delete(uid);
+            callerRoomId = undefined;
+        }
+
         let participants: { id: string; name: string; avatarColor: string }[] = [];
         let roomName = '';
 
@@ -378,7 +403,7 @@ io.on('connection', async (socket) => {
                         participantIds.add(pId);
                     }
                 }
-                
+
                 if (participantIds.size > 0) {
                     const rawParticipants = await prisma.user.findMany({
                         where: { id: { in: Array.from(participantIds) } },
@@ -418,6 +443,14 @@ io.on('connection', async (socket) => {
 
         if (accepted) {
             let roomId = userRooms.get(callerId);
+
+            // Verify caller is still in the room (or it's a valid persistent room)
+            if (roomId && !isUserActuallyInRoom(callerId, roomId)) {
+                console.log(`[WS] Caller ${callerId} is no longer in room ${roomId}. Falling back to private call.`);
+                userRooms.delete(callerId);
+                roomId = undefined;
+            }
+
             if (!roomId) {
                 roomId = `call-${uid.slice(0, 8)}-${callerId.slice(0, 8)}`;
             }
@@ -435,7 +468,7 @@ io.on('connection', async (socket) => {
 
     socket.on('call:terminate', async ({ friendId }: { friendId: string }) => {
         if (typeof friendId !== 'string' || !UUID_RE.test(friendId)) return;
-        
+
         const friendship = await prisma.friendship.findUnique({
             where: { userId_friendId: { userId: uid, friendId } },
         });
@@ -553,7 +586,7 @@ io.on('connection', async (socket) => {
     socket.on('chat:react', async ({ roomId, messageId, emoji }: { roomId: string; messageId: string; emoji: string }) => {
         if (typeof roomId !== 'string' || !ROOM_ID_RE.test(roomId)) return;
         if (typeof messageId !== 'string' || !UUID_RE.test(messageId)) return;
-        
+
         const ALLOWED_EMOJIS = ['👍', '❤️', '😂', '😮', '😢'];
         if (!ALLOWED_EMOJIS.includes(emoji)) return;
 
@@ -572,14 +605,14 @@ io.on('connection', async (socket) => {
             if (!msg || msg.roomId !== roomId) return;
 
             const reactions = (msg.reactions as Record<string, string[]>) || {};
-            
+
             // Initialize array for this emoji if it doesn't exist
             if (!reactions[emoji]) {
                 reactions[emoji] = [];
             }
 
             const userIndex = reactions[emoji].indexOf(userId);
-            
+
             // Toggle reaction: if user already reacted with this emoji, remove them; otherwise, add them
             if (userIndex > -1) {
                 reactions[emoji].splice(userIndex, 1);
@@ -648,11 +681,8 @@ io.on('connection', async (socket) => {
     socket.on('chat:leave', async ({ roomId }: { roomId: string }) => {
         if (typeof roomId === 'string') {
             socket.leave(roomId);
-            const currentRoomId = userRooms.get(uid);
-            if (currentRoomId === roomId) {
-                userRooms.delete(uid);
-                await broadcastOpenRoomsToFriends([uid]);
-            }
+            userRooms.delete(uid);
+            await broadcastOpenRoomsToFriends([uid]);
             cleanupRoomIfEmpty(roomId);
         }
     });
@@ -693,10 +723,11 @@ io.on('connection', async (socket) => {
         // Clean up any room this socket was in
         const roomId = socket.data.roomId as string | undefined;
         const disconnectUid = socket.data.userId as string;
-        
-        const userSockets = onlineUsers.get(disconnectUid);
-        if (userSockets && userSockets.size <= 1) { // Will be 0 soon
-            if (userRooms.has(disconnectUid)) {
+
+        if (disconnectUid) {
+            const currentRoomId = userRooms.get(disconnectUid);
+            if (currentRoomId && !isUserActuallyInRoom(disconnectUid, currentRoomId)) {
+                console.log(`[WS] User ${disconnectUid} has no more sockets in room ${currentRoomId}. Clearing userRooms.`);
                 userRooms.delete(disconnectUid);
                 await broadcastOpenRoomsToFriends([disconnectUid]);
             }
@@ -705,6 +736,8 @@ io.on('connection', async (socket) => {
         if (roomId) {
             cleanupRoomIfEmpty(roomId);
         }
+
+        const userSockets = onlineUsers.get(disconnectUid);
 
         // ── Online presence: remove this socket ──────────────────────────
         if (userSockets) {
