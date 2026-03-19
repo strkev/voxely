@@ -624,7 +624,7 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
                                                         </button>
                                                     ))}
                                                     <div
-                                                        className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-full cursor-pointer flex items-center justify-center border-2 border-[var(--color-surface)] shadow-sm overflow-hidden transition-all duration-200 ${!PRESET_COLORS.map(c => c.toUpperCase()).includes(editColor.toUpperCase()) ? 'ring-2 ring-primary ring-offset-1 ring-offset-[var(--color-surface)]' : ''
+                                                        className={`relative w-10 h-10 rounded-full cursor-pointer flex items-center justify-center border-2 border-[var(--color-surface)] shadow-sm overflow-hidden transition-all duration-200 ${!PRESET_COLORS.map(c => c.toUpperCase()).includes(editColor.toUpperCase()) ? 'ring-2 ring-primary ring-offset-1 ring-offset-[var(--color-surface)]' : ''
                                                             }`}
                                                         style={{
                                                             background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
