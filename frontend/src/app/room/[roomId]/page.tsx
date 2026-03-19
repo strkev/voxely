@@ -794,7 +794,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     // Friends state & socket
     const incomingRequests = useFriendsStore(s => s.incomingRequests);
     const { sendRoomInvite, toggleRoomOpen, initiateCall } = useFriends();
-    const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const isDark = mounted ? (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) : (theme === 'dark');
 
     const handleToggleOpenRoom = useCallback((isOpen: boolean) => {
         const roomName = decodeURIComponent(roomId)
@@ -1028,7 +1028,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     return (
         <div
             className={`fixed inset-0 top-16 overflow-hidden transition-[padding-right] duration-300 ${isDark ? 'bg-gray-950' : 'bg-[#F7F7F7]'}`}
-            style={{ paddingRight: chatOpen && typeof window !== 'undefined' && window.innerWidth >= 640 ? `${chatSidebarWidth}px` : '0px' }}
+            style={{ paddingRight: mounted && chatOpen && window.innerWidth >= 640 ? `${chatSidebarWidth}px` : '0px' }}
         >
             <LiveKitRoom
                 video={false}

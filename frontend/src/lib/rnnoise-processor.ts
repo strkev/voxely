@@ -7,9 +7,13 @@
  * Key design decisions:
  * - Uses ScriptProcessorNode (deprecated but widely supported; AudioWorklet
  *   would require a separate JS file and cannot easily import the WASM module).
- * - Pre-fills output buffer with one frame of latency to prevent silence gaps
- *   while the first input frame accumulates.
- * - Uses a large circular buffer (4800 samples = 100 ms) to avoid overflow.
+ * - Uses a 4096-sample ScriptProcessor buffer to avoid main-thread scheduling
+ *   dropouts that cause crackling (256 was too small and caused frequent underruns).
+ * - Pre-fills output buffer with two frames of silence to provide a safety margin
+ *   while the first input frames accumulate.
+ * - Uses a large circular buffer (48000 samples = 1 second) to absorb timing jitter.
+ * - On underrun, holds the last sample value instead of outputting hard silence
+ *   to avoid audible clicks/pops.
  */
 
 import type { Rnnoise, DenoiseState } from '@shiguredo/rnnoise-wasm';
@@ -42,6 +46,9 @@ export class NoiseSuppressionProcessor {
     private outputCount = 0;
     private bufferCapacity = 0;
 
+    // Last output sample for underrun protection (avoids clicks from hard silence)
+    private lastSample = 0;
+
     private frameSize = 480; // RNNoise default
 
     /**
@@ -61,28 +68,32 @@ export class NoiseSuppressionProcessor {
         this.destNode = this.audioCtx.createMediaStreamDestination();
 
         // --- Buffer setup ---
-        // 4800 samples = 100 ms at 48 kHz — enough headroom for frame alignment
-        this.bufferCapacity = 4800;
+        // 48000 samples = 1 second at 48 kHz — generous headroom for timing jitter
+        this.bufferCapacity = 48000;
         this.inputFrame = new Float32Array(this.frameSize);
         this.outputBuffer = new Float32Array(this.bufferCapacity);
         this.inputPtr = 0;
         this.outputReadPtr = 0;
         this.outputWritePtr = 0;
         this.outputCount = 0;
+        this.lastSample = 0;
 
-        // Pre-fill one frame of silence into the output buffer.
-        // This compensates for the inherent latency: RNNoise needs 480 input
-        // samples before it outputs anything, but the ScriptProcessorNode asks
-        // for output immediately. Without this, the first ~480 output samples
-        // would be 0 (silence), causing an audible click/pop.
-        for (let i = 0; i < this.frameSize; i++) {
+        // Pre-fill TWO frames of silence into the output buffer.
+        // This provides a safety margin: RNNoise needs 480 input samples before
+        // it outputs anything, and the larger ScriptProcessor buffer (4096) means
+        // we need more pre-fill to keep the output fed while the first real
+        // frames accumulate.
+        const preFillSamples = this.frameSize * 2; // 960 samples = 20ms
+        for (let i = 0; i < preFillSamples; i++) {
             this.outputBuffer[this.outputWritePtr] = 0;
             this.outputWritePtr = (this.outputWritePtr + 1) % this.bufferCapacity;
             this.outputCount++;
         }
 
-        // Use 256-sample ScriptProcessorNode buffer for low latency
-        this.scriptNode = this.audioCtx.createScriptProcessor(256, 1, 1);
+        // Use 4096-sample ScriptProcessorNode buffer for reliable main-thread scheduling.
+        // 256 was too small and caused frequent callback starvation → crackling.
+        // 4096 at 48kHz = ~85ms latency, which is acceptable for voice chat.
+        this.scriptNode = this.audioCtx.createScriptProcessor(4096, 1, 1);
 
         this.scriptNode.onaudioprocess = (event) => {
             const input = event.inputBuffer.getChannelData(0);
@@ -101,24 +112,29 @@ export class NoiseSuppressionProcessor {
 
                     // Write processed samples to output circular buffer
                     for (let j = 0; j < this.frameSize; j++) {
-                        this.outputBuffer[this.outputWritePtr] = this.inputFrame[j] / 32768;
-                        this.outputWritePtr = (this.outputWritePtr + 1) % this.bufferCapacity;
-                        this.outputCount = Math.min(this.outputCount + 1, this.bufferCapacity);
+                        // Only write if buffer has space (prevent overflow)
+                        if (this.outputCount < this.bufferCapacity) {
+                            this.outputBuffer[this.outputWritePtr] = this.inputFrame[j] / 32768;
+                            this.outputWritePtr = (this.outputWritePtr + 1) % this.bufferCapacity;
+                            this.outputCount++;
+                        }
                     }
 
                     this.inputPtr = 0;
                 }
             }
 
-            // 2. Read from output buffer (always has data thanks to pre-fill)
+            // 2. Read from output buffer
             for (let i = 0; i < output.length; i++) {
                 if (this.outputCount > 0) {
-                    output[i] = this.outputBuffer[this.outputReadPtr];
+                    this.lastSample = this.outputBuffer[this.outputReadPtr];
+                    output[i] = this.lastSample;
                     this.outputReadPtr = (this.outputReadPtr + 1) % this.bufferCapacity;
                     this.outputCount--;
                 } else {
-                    // Should not happen with proper pre-fill, but safety fallback
-                    output[i] = 0;
+                    // Underrun: hold last sample instead of hard silence to avoid clicks
+                    output[i] = this.lastSample * 0.95; // Gentle fade to minimize artifact
+                    this.lastSample *= 0.95;
                 }
             }
         };
@@ -151,8 +167,9 @@ export class NoiseSuppressionProcessor {
             this.denoiseState = null;
         }
         if (this.audioCtx) {
-            this.audioCtx.close().catch(() => {});
+            this.audioCtx.close().catch(() => { });
             this.audioCtx = null;
         }
     }
 }
+

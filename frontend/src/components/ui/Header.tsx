@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
-import { ChevronDown, LogOut, Trash2, LayoutDashboard, Settings, Users } from 'lucide-react';
+import { ChevronDown, LogOut, LayoutDashboard, Settings, Users } from 'lucide-react';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { SettingsModal } from '@/components/SettingsModal';
 import { useFriendsStore } from '@/store/useFriendsStore';
@@ -13,11 +13,10 @@ import { getContrastColor } from '@/lib/colors';
 import Image from 'next/image';
 
 export function Header() {
-    const { user, logout, deleteAccount } = useAuthStore();
+    const user = useAuthStore(s => s.user);
+    const logout = useAuthStore(s => s.logout);
     const [mounted, setMounted] = useState(false);
     const [open, setOpen] = useState(false);
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deleting, setDeleting] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
     const pathname = usePathname();
@@ -25,7 +24,8 @@ export function Header() {
     const [showFriendsModal, setShowFriendsModal] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const { incomingRequests } = useFriendsStore();
-    const { active: leaveGuardActive, requestLeave } = useLeaveGuardStore();
+    const leaveGuardActive = useLeaveGuardStore(s => s.active);
+    const requestLeave = useLeaveGuardStore(s => s.requestLeave);
 
     useEffect(() => {
         const t = setTimeout(() => setMounted(true), 0);
@@ -43,13 +43,6 @@ export function Header() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleDeleteAccount = async () => {
-        setDeleting(true);
-        await deleteAccount();
-        setDeleting(false);
-        setShowDeleteModal(false);
-        router.push('/');
-    };
 
     /** Navigate or show leave confirmation if in a room */
     const navigateOrGuard = (target: string) => {
@@ -145,13 +138,13 @@ export function Header() {
                                             Dashboard
                                         </button>
 
-                                            <button
-                                                onClick={() => { setOpen(false); setShowSettings(true); }}
-                                                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text-main hover:bg-gray-50 transition-colors"
-                                            >
-                                                <Settings className="w-4 h-4 text-text-muted" />
-                                                Settings
-                                            </button>
+                                        <button
+                                            onClick={() => { setOpen(false); setShowSettings(true); }}
+                                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text-main hover:bg-gray-50 transition-colors"
+                                        >
+                                            <Settings className="w-4 h-4 text-text-muted" />
+                                            Settings
+                                        </button>
 
                                         <button
                                             onClick={() => { setOpen(false); setShowFriendsModal(true); }}
@@ -165,24 +158,16 @@ export function Header() {
                                                 </span>
                                             )}
                                         </button>
-
-                                        <button
-                                            onClick={() => { setOpen(false); logout(); router.push('/'); }}
-                                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-text-main hover:bg-gray-50 transition-colors"
-                                        >
-                                            <LogOut className="w-4 h-4 text-text-muted" />
-                                            Sign out
-                                        </button>
                                     </div>
 
-                                    {/* Destructive zone */}
-                                    <div className="border-t border-gray-100 py-1.5">
+                                    {/* Sign out section */}
+                                    <div className="border-t border-gray-100 mt-1.5">
                                         <button
-                                            onClick={() => { setOpen(false); setShowDeleteModal(true); }}
-                                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-primary hover:bg-red-50 transition-colors"
+                                            onClick={() => { setOpen(false); logout(); router.push('/'); }}
+                                            className="flex items-center gap-3 w-full px-4 py-3 text-sm text-primary hover:bg-red-50 transition-colors"
                                         >
-                                            <Trash2 className="w-4 h-4" />
-                                            Delete Account
+                                            <LogOut className="w-4 h-4" />
+                                            Sign out
                                         </button>
                                     </div>
                                 </div>
@@ -207,35 +192,6 @@ export function Header() {
                 </div>
             </header>
 
-            {/* Delete Account Confirmation Modal */}
-            {showDeleteModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="bg-surface rounded-2xl shadow-xl border border-gray-100 max-w-sm w-full mx-4 p-6">
-                        <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-50 mx-auto mb-4">
-                            <Trash2 className="w-6 h-6 text-primary" />
-                        </div>
-                        <h2 className="text-xl font-semibold text-text-main text-center mb-2">Delete Account</h2>
-                        <p className="text-text-muted text-sm text-center mb-6 leading-relaxed">
-                            This will permanently delete your account and all associated data. This action <strong>cannot be undone</strong>.
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowDeleteModal(false)}
-                                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-text-main hover:bg-gray-50 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleDeleteAccount}
-                                disabled={deleting}
-                                className="flex-1 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-[#E0484D] transition-colors disabled:opacity-60"
-                            >
-                                {deleting ? 'Deleting...' : 'Yes, Delete'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Friend Requests Modal */}
             {showFriendsModal && (
@@ -244,8 +200,8 @@ export function Header() {
 
             {/* Unified Settings Modal */}
             {showSettings && (
-                <SettingsModal 
-                    onClose={() => setShowSettings(false)} 
+                <SettingsModal
+                    onClose={() => setShowSettings(false)}
                 />
             )}
         </>
