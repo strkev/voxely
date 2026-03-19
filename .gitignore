@@ -34,3 +34,4 @@ dist/
 .next/
 out/
 build/
+docker-compose.yml
