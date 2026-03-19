@@ -15,11 +15,12 @@ import {
     useIsSpeaking,
     useIsMuted,
     useParticipants,
+    useLocalParticipant,
     TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track, LocalTrackPublication, RemoteAudioTrack } from 'livekit-client';
-import { AlertCircle, Link2, Check, Volume2, VolumeX, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, LogOut, Lock, Unlock, Maximize } from 'lucide-react';
+import { AlertCircle, Link2, Check, Volume2, VolumeX, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, LogOut, Lock, Unlock, Maximize, ImageIcon } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
@@ -34,6 +35,7 @@ import { useFriends } from '@/components/FriendsProvider';
 import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { useFriendsStore } from '@/store/useFriendsStore';
 import { getContrastColor } from '@/lib/colors';
+import { SettingsModal } from '@/components/SettingsModal';
 
 
 // ─── Auto-start audio ─────────────────────────────────────────────────────────
@@ -358,6 +360,24 @@ function DevInfoOverlay() {
         </div>
     );
 }
+
+// ─── Local Camera Aware Quick Action ─────────────────────────────────────────
+function LocalCameraAwareQuickAction({ onOpenSettings }: { onOpenSettings: () => void }) {
+    const { isCameraEnabled } = useLocalParticipant();
+
+    if (!isCameraEnabled) return null;
+
+    return (
+        <button
+            onClick={onOpenSettings}
+            className="shrink-0 flex items-center justify-center h-[42px] w-[42px] rounded-2xl text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm border bg-white/90 hover:bg-white text-text-main hover:text-primary border-[rgba(220,220,220,0.85)] hover:border-primary/40 relative group"
+            title="Update Background"
+        >
+            <ImageIcon className="w-4 h-4" />
+        </button>
+    );
+}
+
 
 
 // ─── Live Video Quality Sync ─────────────────────────────────────────────────
@@ -800,6 +820,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const bgProcessorRef = useRef<any>(null);
     const [showFriendsModal, setShowFriendsModal] = useState(false);
     const [friendsSidebarOpen, setFriendsSidebarOpen] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+    const [settingsTab, setSettingsTab] = useState<'audio-video' | 'quality' | 'interface' | 'sounds' | 'profile' | 'account'>('audio-video');
     const [toastMessage, setToastMessage] = useState<{ id: string; name: string; text: string } | null>(null);
     const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
     const qPreset = VIDEO_PRESETS[videoQuality];
@@ -1076,6 +1098,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     </button>
 
                     <div className="flex-1 min-w-[8px]" />
+                    <LocalCameraAwareQuickAction onOpenSettings={() => { setSettingsTab('audio-video'); setShowSettings(true); }} />
 
 
                     {/* Chat toggle button lives inside ChatSidebar */}
@@ -1117,6 +1140,14 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 <RoomAudioRenderer />
                 {showDevInfo && <DevInfoOverlay />}
 
+                {/* Unified Settings Modal */}
+                {showSettings && (
+                    <SettingsModal
+                        onClose={() => setShowSettings(false)}
+                        defaultTab={settingsTab}
+                    />
+                )}
+
                 {/* Collapsible control bar */}
                 {controlBarVisible ? (
                     <div
@@ -1136,7 +1167,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                             }
                         }}
                     >
-                        <div className="bg-white/90 backdrop-blur-md border border-white/60 rounded-full shadow-lg px-3 py-1.5 flex items-center">
+                        <div className="bg-white/90 backdrop-blur-md border border-white/60 rounded-full shadow-lg px-3 py-1.5 flex items-center gap-1">
                             <ControlBar
                                 controls={{ camera: true, microphone: true, screenShare: true, chat: false, leave: false }}
                                 saveUserChoices={true}

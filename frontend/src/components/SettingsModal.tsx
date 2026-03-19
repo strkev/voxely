@@ -39,9 +39,10 @@ const SOUND_LABELS: { key: SoundName; label: string }[] = [
 
 interface SettingsModalProps {
     onClose: () => void;
+    defaultTab?: TabId;
 }
 
-export function SettingsModal({ onClose }: SettingsModalProps) {
+export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
     const router = useRouter();
     const { user, token, setAuth, deleteAccount } = useAuthStore();
     const {
@@ -51,7 +52,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
         setScreenShareResolution, setScreenShareFps, setVirtualBackground, setVirtualBackgroundImage, setBlurRadius, setTheme,
     } = useSettingsStore();
 
-    const [activeTab, setActiveTab] = useState<TabId>('audio-video');
+    const [activeTab, setActiveTab] = useState<TabId>(defaultTab || 'audio-video');
     const [isNavExpanded, setIsNavExpanded] = useState(false);
     const backdropRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
