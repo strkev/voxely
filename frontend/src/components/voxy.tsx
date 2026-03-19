@@ -101,7 +101,7 @@ export const Mascot: React.FC<MascotProps> = ({
         }
     }, [isTutorial, portalContainer]);
 
-    const showBubble = isHovered || (trigger === 'click' && isClicked) || isTutorial || trigger === 'always';
+    const showBubble = isHovered || (trigger === 'click' && isClicked) || isTutorial;
 
     // Check if we should flip the bubble to be below the mascot
     // If mascot is closer than 180px to the top of viewport, show bubble below (ONLY in tutorial mode)
