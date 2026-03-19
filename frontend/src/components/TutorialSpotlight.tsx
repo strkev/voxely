@@ -68,7 +68,6 @@ export function TutorialSpotlight() {
         return null;
     }
 
-    const padding = 12;
     const hole = targetRect ? {
         x: targetRect.left,
         y: targetRect.top,
