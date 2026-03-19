@@ -11,7 +11,7 @@ import { FriendsSidebar } from '@/components/FriendsSidebar';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { RoomInviteBanner } from '@/components/RoomInviteBanner';
 import { getContrastColor } from '@/lib/colors';
-import { Users, ShieldCheck, Clock, Video, DoorOpen } from 'lucide-react';
+import { Users, ShieldCheck, Clock, Video, DoorOpen, Info } from 'lucide-react';
 import { Mascot } from '@/components/voxy';
 import { useTutorialStore } from '@/store/useTutorialStore';
 import { TutorialSpotlight } from '@/components/TutorialSpotlight';
@@ -117,16 +117,16 @@ export default function DashboardPage() {
                     <div className="min-w-0">
                         <h1 className="text-2xl sm:text-3xl font-semibold text-text-main mb-2 truncate">Welcome, {user.name}</h1>
                         <p className="text-text-muted">Create a new space or join an existing one to start chatting.</p>
-                        
+
                         {/* Tutorial Button - hidden on mobile */}
                         <div className="mt-4 hidden md:block">
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
+                            <Button
+                                variant="outline"
+                                size="sm"
                                 className="rounded-full border-primary/30 text-primary hover:bg-primary/5 transition-all text-xs flex items-center gap-2 group"
                                 onClick={() => useTutorialStore.getState().startTutorial()}
                             >
-                                <Video className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
+                                <Info className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
                                 Interactive Tutorial
                             </Button>
                         </div>
