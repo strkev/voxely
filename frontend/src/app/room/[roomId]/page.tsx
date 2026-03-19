@@ -19,7 +19,7 @@ import {
     TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { Track, LocalTrackPublication, RemoteAudioTrack } from 'livekit-client';
+import { Track, LocalTrackPublication, RemoteAudioTrack, RoomEvent } from 'livekit-client';
 import { AlertCircle, Link2, Check, Volume2, VolumeX, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, LogOut, Lock, Unlock, Maximize, ImageIcon } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
@@ -41,10 +41,68 @@ import { SettingsModal } from '@/components/SettingsModal';
 // ─── Auto-start audio ─────────────────────────────────────────────────────────
 function AutoStartAudio() {
     const room = useRoomContext();
+    const [isAudioAllowed, setIsAudioAllowed] = useState(true);
+
     useEffect(() => {
-        room.startAudio().catch(() => { });
+        const handleAudioStatusChanged = (playing: boolean) => {
+            console.log('[AutoStartAudio] status changed, playing:', playing);
+            setIsAudioAllowed(playing);
+        };
+
+        room.on(RoomEvent.AudioPlaybackStatusChanged, handleAudioStatusChanged);
+
+        // Initial check/start
+        room.startAudio().catch(() => {
+            console.warn('[AutoStartAudio] initial playback blocked');
+            setIsAudioAllowed(false);
+        });
+
+        return () => {
+            room.off(RoomEvent.AudioPlaybackStatusChanged, handleAudioStatusChanged);
+        };
     }, [room]);
-    return null;
+
+    useEffect(() => {
+        if (isAudioAllowed) return;
+
+        const handleInteraction = () => {
+            console.log('[AutoStartAudio] Interaction detected, trying startAudio');
+            room.startAudio().then(() => {
+                setIsAudioAllowed(true);
+                console.log('[AutoStartAudio] status: allowed after interaction');
+            }).catch(err => {
+                console.error('[AutoStartAudio] failed to start audio on interaction:', err);
+            });
+        };
+
+        const events = ['click', 'mousedown', 'pointerdown', 'touchstart', 'keydown'];
+        events.forEach(e => window.addEventListener(e, handleInteraction, { capture: true }));
+
+        return () => {
+            events.forEach(e => window.removeEventListener(e, handleInteraction, { capture: true }));
+        };
+    }, [isAudioAllowed, room]);
+
+    if (isAudioAllowed) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm pointer-events-none">
+            <button
+                onClick={() => {
+                    room.startAudio().then(() => {
+                        setIsAudioAllowed(true);
+                        console.log('[AutoStartAudio] status: allowed after manual click');
+                    }).catch(err => {
+                        console.error('[AutoStartAudio] manual click failed:', err);
+                    });
+                }}
+                className="pointer-events-auto flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-2xl font-bold shadow-2xl animate-bounce hover:scale-105 transition-transform"
+            >
+                <Volume2 className="w-5 h-5" />
+                Activate Audio
+            </button>
+        </div>
+    );
 }
 
 // ─── Chevron Rotation Fix ─────────────────────────────────────────────────────
