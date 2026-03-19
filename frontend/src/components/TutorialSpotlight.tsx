@@ -70,10 +70,10 @@ export function TutorialSpotlight() {
 
     const padding = 12;
     const hole = targetRect ? {
-        x: targetRect.left - padding,
-        y: targetRect.top - padding + 7,
-        width: targetRect.width + padding * 2,
-        height: targetRect.height + padding - 1 * 2,
+        x: targetRect.left,
+        y: targetRect.top,
+        width: targetRect.width,
+        height: targetRect.height,
         borderRadius: 24,
     } : null;
 
