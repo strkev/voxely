@@ -8,18 +8,15 @@ import { ChatMessage, TypingUser } from '@/hooks/useChatSocket';
 import { User } from '@/store/useAuthStore';
 import { FriendRequestIncoming } from '@/store/useFriendsStore';
 
+import { useUIStore } from '@/store/useUIStore';
+
 interface RoomTopbarProps {
     roomId: string;
     user: User | null;
-    isRoomOpen: boolean;
-    friendsSidebarOpen: boolean;
-    setFriendsSidebarOpen: (val: boolean | ((old: boolean) => boolean)) => void;
     incomingRequests: FriendRequestIncoming[];
     handleCopyLink: () => void;
     copied: boolean;
     handleToggleOpenRoom: (open: boolean) => void;
-    setSettingsTab: (tab: 'audio-video' | 'quality' | 'interface' | 'sounds' | 'profile' | 'account') => void;
-    setShowSettings: (show: boolean) => void;
     isCompact: boolean;
     messages: ChatMessage[];
     typingUsers: TypingUser[];
@@ -27,12 +24,6 @@ interface RoomTopbarProps {
     sendTyping: (isTyping: boolean) => void;
     onReact: (messageId: string, emoji: string) => void;
     chatConnected: boolean;
-    chatOpen: boolean;
-    setChatOpen: (val: boolean | ((old: boolean) => boolean)) => void;
-    unread: number;
-    handleRead: () => void;
-    chatSidebarWidth: number;
-    setChatSidebarWidth: (width: number) => void;
     requestLeave: (target: string) => void;
 }
 
@@ -55,15 +46,10 @@ function LocalCameraAwareQuickAction({ onOpenSettings }: { onOpenSettings: () =>
 export function RoomTopbar({
     roomId,
     user,
-    isRoomOpen,
-    friendsSidebarOpen,
-    setFriendsSidebarOpen,
     incomingRequests,
     handleCopyLink,
     copied,
     handleToggleOpenRoom,
-    setSettingsTab,
-    setShowSettings,
     isCompact,
     messages,
     typingUsers,
@@ -71,14 +57,24 @@ export function RoomTopbar({
     sendTyping,
     onReact,
     chatConnected,
-    chatOpen,
-    setChatOpen,
-    unread,
-    handleRead,
-    chatSidebarWidth,
-    setChatSidebarWidth,
     requestLeave,
 }: RoomTopbarProps) {
+    const friendsSidebarOpen = useUIStore(s => s.friendsSidebarOpen);
+    const setFriendsSidebarOpen = useUIStore(s => s.setFriendsSidebarOpen);
+    const setShowSettings = useUIStore(s => s.setShowSettings);
+    const setSettingsTab = useUIStore(s => s.setSettingsTab);
+    const chatOpen = useUIStore(s => s.chatOpen);
+    const setChatOpen = useUIStore(s => s.setChatOpen);
+    const unread = useUIStore(s => s.unread);
+    const setUnread = useUIStore(s => s.setUnread);
+    const chatSidebarWidth = useUIStore(s => s.chatSidebarWidth);
+    const setChatSidebarWidth = useUIStore(s => s.setChatSidebarWidth);
+    const isRoomOpen = useUIStore(s => s.isRoomOpen);
+
+    const handleRead = React.useCallback(() => {
+        if (unread > 0) setUnread(0);
+    }, [unread, setUnread]);
+
     return (
         <div className="absolute top-4 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-visible py-2 -my-2 flex-wrap sm:flex-nowrap">
             {/* Friends toggle button */}

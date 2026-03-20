@@ -358,8 +358,8 @@ export function ChatSidebar({
 
     // Mark as read when panel opens
     useEffect(() => {
-        if (isOpen) onRead();
-    }, [isOpen, onRead]);
+        if (isOpen && unreadCount > 0) onRead();
+    }, [isOpen, onRead, unreadCount]);
 
     const handleSend = () => {
         const text = draft.trim();

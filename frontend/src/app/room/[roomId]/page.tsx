@@ -16,17 +16,18 @@ import { AlertCircle, Lock, LogOut, ChevronUp } from 'lucide-react';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
 import { playSound } from '@/lib/sounds';
 import { FriendsSidebar } from '@/components/FriendsSidebar';
-import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { RoomInviteBanner } from '@/components/RoomInviteBanner';
 import { useFriends } from '@/components/FriendsProvider';
 import { useFriendsStore } from '@/store/useFriendsStore';
 import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
-import { SettingsModal } from '@/components/SettingsModal';
+import { AutoStartAudio } from '@/components/room/AutoStartAudio';
+import { useUIStore } from '@/store/useUIStore';
+import { ChatToast } from '@/components/room/ChatToast';
+import { RoomModals } from '@/components/room/RoomModals';
 import { RoomTopbar } from '@/components/room/RoomTopbar';
 import { VideoConferenceView } from '@/components/room/VideoConferenceView';
 import { RoomEffects } from '@/components/room/RoomEffects';
 import { DevInfoOverlay } from '@/components/room/DevInfoOverlay';
-import { AutoStartAudio } from '@/components/room/AutoStartAudio';
 
 
 
@@ -96,10 +97,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const roomId = resolvedParams.roomId;
 
     // ── Chat state ────────────────────────────────────────────────────────────
-    const [chatOpen, setChatOpen] = useState(false);
-    const [chatSidebarWidth, setChatSidebarWidth] = useState(320);
-    const [unread, setUnread] = useState(0);
-    const [copied, setCopied] = useState(false);
     const soundsEnabled = useSettingsStore(s => s.soundsEnabled);
     const soundVolume = useSettingsStore(s => s.soundVolume);
     const videoQuality = useSettingsStore(s => s.videoQuality);
@@ -111,6 +108,15 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const audioDeviceId = useSettingsStore(s => s.audioDeviceId);
     const videoDeviceId = useSettingsStore(s => s.videoDeviceId);
     const setControlBarVisible = useSettingsStore(s => s.setControlBarVisible);
+    
+    // UI Store access
+    const { 
+        chatOpen, setChatOpen, chatSidebarWidth,
+        setUnread, showToast,
+        friendsSidebarOpen, setFriendsSidebarOpen,
+        isRoomOpen: uiIsRoomOpen, setIsRoomOpen: setUiIsRoomOpen,
+        setShowFriendsModal
+    } = useUIStore();
 
     // Friends state & socket
     const incomingRequests = useFriendsStore(s => s.incomingRequests);
@@ -137,12 +143,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const handleCallFriend = useCallback((friendId: string) => {
         initiateCall(friendId);
     }, [initiateCall]);
-    const [showFriendsModal, setShowFriendsModal] = useState(false);
-    const [friendsSidebarOpen, setFriendsSidebarOpen] = useState(false);
-    const [showSettings, setShowSettings] = useState(false);
-    const [settingsTab, setSettingsTab] = useState<'audio-video' | 'quality' | 'interface' | 'sounds' | 'profile' | 'account'>('audio-video');
-    const [toastMessage, setToastMessage] = useState<{ id: string; name: string; text: string } | null>(null);
-    const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+    
+    const [copied, setCopied] = useState(false);
     const controlBarTimerRef = useRef<NodeJS.Timeout | null>(null);
     // roomOptions is intentionally stable — device IDs are only initial defaults.
     // LiveKitDeviceSync handles live switching via room.switchActiveDevice().
@@ -196,22 +198,17 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
             // Show visual toast
             if (msg.userId !== user?.id) {
-                setToastMessage({
+                showToast({
                     id: msg.id,
                     name: msg.name,
                     text: msg.text
                 });
-
-                if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-                toastTimerRef.current = setTimeout(() => {
-                    setToastMessage(null);
-                }, 4000);
             }
         }
-    }, [chatOpen, user?.id]);
+    }, [chatOpen, user?.id, setUnread, showToast]);
 
     // Set up real-time chat socket
-    const { messages, typingUsers, sendMessage, sendTyping, sendReaction, connected: chatConnected, isRoomOpen } = useChatSocket({
+    const { messages, typingUsers, sendMessage, sendTyping, sendReaction, connected: chatConnected, isRoomOpen: socketIsRoomOpen } = useChatSocket({
         roomId,
         token: authToken,
         userName: user?.name ?? 'Anonymous',
@@ -219,7 +216,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         onNewMessage: handleNewMessage,
     });
 
-    const handleRead = useCallback(() => setUnread(0), []);
+    // Sync room open status to store
+    useEffect(() => {
+        setUiIsRoomOpen(socketIsRoomOpen);
+    }, [socketIsRoomOpen, setUiIsRoomOpen]);
+
 
     useEffect(() => { setMounted(true); }, []);
     useEffect(() => {
@@ -313,7 +314,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         };
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [chatOpen]);
+    }, [chatOpen, setChatOpen]);
 
     const handleCopyLink = () => {
         navigator.clipboard.writeText(roomId);
@@ -387,15 +388,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 <RoomTopbar
                     roomId={roomId}
                     user={user}
-                    isRoomOpen={isRoomOpen}
-                    friendsSidebarOpen={friendsSidebarOpen}
-                    setFriendsSidebarOpen={setFriendsSidebarOpen}
                     incomingRequests={incomingRequests}
                     handleCopyLink={handleCopyLink}
                     copied={copied}
                     handleToggleOpenRoom={handleToggleOpenRoom}
-                    setSettingsTab={setSettingsTab}
-                    setShowSettings={setShowSettings}
                     isCompact={isCompact}
                     messages={messages}
                     typingUsers={typingUsers}
@@ -403,12 +399,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     sendTyping={sendTyping}
                     onReact={sendReaction}
                     chatConnected={chatConnected}
-                    chatOpen={chatOpen}
-                    setChatOpen={setChatOpen}
-                    unread={unread}
-                    handleRead={handleRead}
-                    chatSidebarWidth={chatSidebarWidth}
-                    setChatSidebarWidth={setChatSidebarWidth}
                     requestLeave={requestLeave}
                 />
                 <AutoStartAudio />
@@ -417,13 +407,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 <RoomAudioRenderer />
                 {showDevInfo && <DevInfoOverlay />}
 
-                {/* Unified Settings Modal */}
-                {showSettings && (
-                    <SettingsModal
-                        onClose={() => setShowSettings(false)}
-                        defaultTab={settingsTab}
-                    />
-                )}
+                <RoomModals />
 
                 {/* Collapsible control bar */}
                 {controlBarVisible ? (
@@ -474,7 +458,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                         <div className="fixed top-16 left-0 bottom-0 z-50 [&_.friends-sidebar]:!static [&_.friends-sidebar]:!h-full">
                             <FriendsSidebarWithPresence
                                 roomId={roomId}
-                                isRoomOpen={isRoomOpen}
+                                isRoomOpen={uiIsRoomOpen}
                                 onInvite={handleInviteFriend}
                                 onOpenRequests={() => setShowFriendsModal(true)}
                                 onClose={() => setFriendsSidebarOpen(false)}
@@ -519,39 +503,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 document.body
             )}
 
-            {/* Friend Requests Modal */}
-            {showFriendsModal && (
-                <FriendRequestsModal onClose={() => setShowFriendsModal(false)} />
-            )}
-
             {/* Message Toast Notification */}
-            <div
-                className={`
-                    fixed top-[120px] z-50 transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]
-                    ${toastMessage ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8 pointer-events-none'}
-                `}
-                style={{
-                    right: chatOpen && typeof window !== 'undefined' && window.innerWidth >= 640 ? `${chatSidebarWidth + 16}px` : '16px'
-                }}
-            >
-                {toastMessage && (
-                    <button
-                        onClick={() => {
-                            setChatOpen(true);
-                            setToastMessage(null);
-                        }}
-                        className="flex flex-col gap-1 items-start bg-white dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl p-4 shadow-2xl dark:shadow-black/40 max-w-[300px] hover:border-primary/40 dark:hover:border-primary/40 transition-all text-left"
-                    >
-                        <div className="flex items-center gap-2">
-                            <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
-                            <span className="text-xs font-bold text-gray-900 dark:text-white truncate">{toastMessage.name}</span>
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 leading-relaxed break-words w-full">
-                            {toastMessage.text}
-                        </p>
-                    </button>
-                )}
-            </div>
+            <ChatToast />
         </div>
     );
 }
