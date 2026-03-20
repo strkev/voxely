@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRoomContext } from '@livekit/components-react';
-import { Track, LocalTrack } from 'livekit-client';
+import { Track, LocalTrackPublication } from 'livekit-client';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
 export function useDeviceSync() {
@@ -11,66 +11,55 @@ export function useDeviceSync() {
     const videoDeviceId = useSettingsStore(s => s.videoDeviceId);
     const audioOutputDeviceId = useSettingsStore(s => s.audioOutputDeviceId);
 
+    // Track state to avoid redundant switches
+    const lastAudioId = useRef<string | null | undefined>(undefined);
+    const lastVideoId = useRef<string | null | undefined>(undefined);
+
     useEffect(() => {
         const sync = async () => {
-            const lp = room.localParticipant;
-            const micPub = Array.from(lp.audioTrackPublications.values()).find(p => p.source === Track.Source.Microphone);
-
-            if (!audioDeviceId) {
-                // If System Default (null), restart the track with no deviceId constraint
-                if (micPub?.track) {
-                    try {
-                        await (micPub.track as LocalTrack).restartTrack({ deviceId: undefined });
-                    } catch (err) {
-                        console.warn('[LiveKitDeviceSync] Failed to restart audio to default:', err);
-                    }
-                }
-                return;
+            if (audioDeviceId === lastAudioId.current) return;
+            
+            console.log('[LiveKitDeviceSync] Switching audio input to:', audioDeviceId || 'default');
+            try {
+                await room.switchActiveDevice('audioinput', audioDeviceId || '');
+                lastAudioId.current = audioDeviceId;
+            } catch (err) {
+                console.warn('[LiveKitDeviceSync] Failed to switch audio input:', err);
             }
-
-            // Explicit device selection
-            room.switchActiveDevice('audioinput', audioDeviceId).catch(err => {
-                if (lp.isMicrophoneEnabled) {
-                    console.warn('[LiveKitDeviceSync] Failed to switch audio input:', err);
-                }
-            });
         };
 
         sync();
-
-        room.localParticipant.on('localTrackPublished', sync);
+        
+        // Also sync on new track publications (e.g. after unmuting)
+        const handleTrackPublished = (pub: LocalTrackPublication) => {
+            if (pub.source === Track.Source.Microphone) sync();
+        };
+        room.localParticipant.on('localTrackPublished', handleTrackPublished);
         return () => {
-            room.localParticipant.off('localTrackPublished', sync);
+            room.localParticipant.off('localTrackPublished', handleTrackPublished);
         };
     }, [room, audioDeviceId]);
 
     useEffect(() => {
         const sync = async () => {
-            const lp = room.localParticipant;
-            const camPub = Array.from(lp.videoTrackPublications.values()).find(p => p.source === Track.Source.Camera);
+            if (videoDeviceId === lastVideoId.current) return;
 
-            if (!videoDeviceId) {
-                if (camPub?.track) {
-                    try {
-                        await (camPub.track as LocalTrack).restartTrack({ deviceId: undefined });
-                    } catch (err) {
-                        console.warn('[LiveKitDeviceSync] Failed to restart video to default:', err);
-                    }
-                }
-                return;
+            console.log('[LiveKitDeviceSync] Switching video input to:', videoDeviceId || 'default');
+            try {
+                await room.switchActiveDevice('videoinput', videoDeviceId || '');
+                lastVideoId.current = videoDeviceId;
+            } catch (err) {
+                console.warn('[LiveKitDeviceSync] Failed to switch video input:', err);
             }
-
-            room.switchActiveDevice('videoinput', videoDeviceId).catch(err => {
-                if (lp.isCameraEnabled) {
-                    console.warn('[LiveKitDeviceSync] Failed to switch video input:', err);
-                }
-            });
         };
 
         sync();
-        room.localParticipant.on('localTrackPublished', sync);
+        const handleTrackPublished = (pub: LocalTrackPublication) => {
+            if (pub.source === Track.Source.Camera) sync();
+        };
+        room.localParticipant.on('localTrackPublished', handleTrackPublished);
         return () => {
-            room.localParticipant.off('localTrackPublished', sync);
+            room.localParticipant.off('localTrackPublished', handleTrackPublished);
         };
     }, [room, videoDeviceId]);
 

@@ -30,6 +30,7 @@ export function useAudioProcessing() {
     
     const appliedModeRef = useRef<NoiseSuppressionMode>('off');
     const appliedGainRef = useRef<number>(1.0);
+    const processedTrackIdRef = useRef<string | null>(null);
     const originalTrackRef = useRef<MediaStreamTrack | null>(null);
 
     useEffect(() => {
@@ -40,12 +41,16 @@ export function useAudioProcessing() {
             const micPub = Array.from(localP.audioTrackPublications.values()).find(
                 (p) => p.source === Track.Source.Microphone && p.track?.mediaStreamTrack
             );
-            if (!micPub?.track?.mediaStreamTrack) {
+
+            const currentTrackId = micPub?.track?.mediaStreamTrack?.id || null;
+
+            if (!currentTrackId) {
                 // If track is gone (muted), we MUST reset the applied state so it reapplies when unmuted
-                if (appliedModeRef.current !== 'off' || appliedGainRef.current !== 1.0) {
-                    console.log('[AudioProcessing] Track gone (muted), resetting applied state');
+                if (appliedModeRef.current !== 'off' || appliedGainRef.current !== 1.0 || processedTrackIdRef.current) {
+                    console.log('[AudioProcessing] Track gone or muted, resetting state');
                     appliedModeRef.current = 'off';
                     appliedGainRef.current = 1.0;
+                    processedTrackIdRef.current = null;
                     originalTrackRef.current = null;
                     if (processorRef.current) {
                         processorRef.current.destroy();
@@ -59,39 +64,35 @@ export function useAudioProcessing() {
                 return;
             }
 
+            // Force re-apply if the track itself changed (ID mismatch)
+            const trackChanged = currentTrackId !== processedTrackIdRef.current;
             const wasApplied = appliedModeRef.current !== 'off' || appliedGainRef.current !== 1.0;
             const wantsApply = mode !== 'off' || gain !== 1.0;
 
-            // If settings changed while processing is active, tear down the old one first
-            if (wasApplied && (mode !== appliedModeRef.current || gain !== appliedGainRef.current)) {
-                console.log('[AudioProcessing] Settings changed, tearing down old processors');
-                // Restore original track before destroying processors
-                if (originalTrackRef.current && micPub.track) {
-                    try {
-                        await micPub.track.replaceTrack(originalTrackRef.current);
-                    } catch (err) {
-                        console.warn('[AudioProcessing] Failed to restore original track:', err);
-                    }
-                }
+            // If settings changed OR track changed while processing is active, tear down the old one first
+            if ((wasApplied || processedTrackIdRef.current) && (mode !== appliedModeRef.current || gain !== appliedGainRef.current || trackChanged)) {
+                console.log('[AudioProcessing] Change detected (track or settings), tearing down');
+                // Note: If track changed, we don't need to replace back on the OLD track as it's likely gone
                 processorRef.current?.destroy();
                 processorRef.current = null;
                 gainProcessorRef.current?.destroy();
                 gainProcessorRef.current = null;
                 originalTrackRef.current = null;
+                processedTrackIdRef.current = null;
                 appliedModeRef.current = 'off';
                 appliedGainRef.current = 1.0;
             }
 
             // Apply new processing if needed
-            if (wantsApply && (appliedModeRef.current === 'off' && appliedGainRef.current === 1.0)) {
+            if (wantsApply && appliedModeRef.current === 'off' && appliedGainRef.current === 1.0) {
                 try {
-                    console.log('[AudioProcessing] Applying new processing to track:', micPub.track.sid);
-                    // Store original track for restoration
-                    originalTrackRef.current = micPub.track.mediaStreamTrack;
+                    console.log('[AudioProcessing] Applying to track:', currentTrackId);
+                    const sourceTrack = micPub!.track!.mediaStreamTrack!;
+                    originalTrackRef.current = sourceTrack;
 
-                    let currentStream = new MediaStream([micPub.track.mediaStreamTrack]);
+                    let currentStream = new MediaStream([sourceTrack]);
 
-                    // 1. Apply Gain (Before Noise Suppression)
+                    // 1. Apply Gain
                     if (gain !== 1.0) {
                         const gp = new GainProcessor();
                         currentStream = await gp.process(currentStream, gain);
@@ -110,28 +111,34 @@ export function useAudioProcessing() {
                     }
 
                     const finalTrack = currentStream.getAudioTracks()[0];
-                    if (finalTrack && micPub.track) {
-                        await micPub.track.replaceTrack(finalTrack);
-                        console.info(`[AudioProcessing] Applied Gain: ${gain}x, Mode: ${mode}`);
+                    if (finalTrack && micPub!.track) {
+                        await micPub!.track.replaceTrack(finalTrack);
+                        processedTrackIdRef.current = finalTrack.id;
+                        console.info(`[AudioProcessing] Done. Native ID: ${sourceTrack.id}, Processed ID: ${finalTrack.id}`);
                     }
                 } catch (err) {
                     console.error('[AudioProcessing] Failed to apply:', err);
                 }
+            } else if (!wantsApply && trackChanged) {
+                // Track changed but we don't want processing -> just mark as "processed" (none)
+                processedTrackIdRef.current = currentTrackId;
             }
         };
 
         applyProcessing();
 
-        // Listen for new mic track publications
+        // Listen for new mic track publications or unmuting
         const handleTrackPublished = () => {
-            if ((mode !== 'off' || gain !== 1.0) && appliedModeRef.current === 'off' && appliedGainRef.current === 1.0) {
-                setTimeout(applyProcessing, 500);
-            }
+            console.log('[AudioProcessing] localTrackPublished detected');
+            setTimeout(applyProcessing, 300);
         };
 
         localP.on('localTrackPublished', handleTrackPublished);
+        localP.on('trackSubscribed', handleTrackPublished); // Sometimes useful for sync
+        
         return () => {
             localP.off('localTrackPublished', handleTrackPublished);
+            localP.off('trackSubscribed', handleTrackPublished);
         };
     }, [room, mode, gain]);
 
