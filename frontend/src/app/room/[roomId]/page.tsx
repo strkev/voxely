@@ -110,7 +110,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const { user, token: authToken, isLoading: authLoading } = useAuthStore();
     const { activate: activateGuard, deactivate: deactivateGuard, pendingTarget, requestLeave, cancelLeave, confirmLeave: storeConfirmLeave } = useLeaveGuardStore();
     const [livekitToken, setLivekitToken] = useState<string>('');
-    const [isSecureContext, setIsSecureContext] = useState<boolean>(true);
+    const [isSecureContext, setIsSecureContext] = useState<boolean | null>(null);
     const [mounted, setMounted] = useState(false);
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
     const [tokenError, setTokenError] = useState(false);
@@ -245,10 +245,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     useEffect(() => { setMounted(true); }, []);
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const isSecure = window.isSecureContext || !!navigator.mediaDevices;
-            setIsSecureContext(isSecure);
-        }
+        const isSecure = typeof window !== 'undefined' && (window.isSecureContext || !!navigator.mediaDevices);
+        setIsSecureContext(isSecure);
     }, []);
 
     // Track window width for topbar responsiveness
@@ -363,7 +361,15 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         );
     }
 
-    if (!isSecureContext) {
+    if (isSecureContext === null || authLoading || !mounted) {
+        return (
+            <div className="flex-1 flex items-center justify-center min-h-[50vh]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    if (isSecureContext === false) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] px-4">
                 <div className="bg-surface shadow-flat border border-gray-100 rounded-2xl p-8 max-w-md w-full text-center flex flex-col items-center">
