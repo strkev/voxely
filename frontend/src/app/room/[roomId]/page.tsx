@@ -522,19 +522,37 @@ function AudioProcessingHook({
             const micPub = Array.from(localP.audioTrackPublications.values()).find(
                 (p) => p.source === Track.Source.Microphone && p.track?.mediaStreamTrack
             );
-            if (!micPub?.track?.mediaStreamTrack) return;
+            if (!micPub?.track?.mediaStreamTrack) {
+                // If track is gone (muted), we MUST reset the applied state so it reapplies when unmuted
+                if (appliedModeRef.current !== 'off' || appliedGainRef.current !== 1.0) {
+                    console.log('[AudioProcessing] Track gone (muted), resetting applied state');
+                    appliedModeRef.current = 'off';
+                    appliedGainRef.current = 1.0;
+                    originalTrackRef.current = null;
+                    if (processorRef.current) {
+                        processorRef.current.destroy();
+                        processorRef.current = null;
+                    }
+                    if (gainProcessorRef.current) {
+                        gainProcessorRef.current.destroy();
+                        gainProcessorRef.current = null;
+                    }
+                }
+                return;
+            }
 
             const wasApplied = appliedModeRef.current !== 'off' || appliedGainRef.current !== 1.0;
             const wantsApply = mode !== 'off' || gain !== 1.0;
 
             // If settings changed while processing is active, tear down the old one first
             if (wasApplied && (mode !== appliedModeRef.current || gain !== appliedGainRef.current)) {
-                // Restore original track
-                if (originalTrackRef.current) {
+                console.log('[AudioProcessing] Settings changed, tearing down old processors');
+                // Restore original track before destroying processors
+                if (originalTrackRef.current && micPub.track) {
                     try {
                         await micPub.track.replaceTrack(originalTrackRef.current);
-                    } catch {
-                        // Original track might be ended
+                    } catch (err) {
+                        console.warn('[AudioProcessing] Failed to restore original track:', err);
                     }
                 }
                 processorRef.current?.destroy();
@@ -549,6 +567,7 @@ function AudioProcessingHook({
             // Apply new processing if needed
             if (wantsApply && (appliedModeRef.current === 'off' && appliedGainRef.current === 1.0)) {
                 try {
+                    console.log('[AudioProcessing] Applying new processing to track:', micPub.track.sid);
                     // Store original track for restoration
                     originalTrackRef.current = micPub.track.mediaStreamTrack;
 
@@ -573,9 +592,9 @@ function AudioProcessingHook({
                     }
 
                     const finalTrack = currentStream.getAudioTracks()[0];
-                    if (finalTrack) {
+                    if (finalTrack && micPub.track) {
                         await micPub.track.replaceTrack(finalTrack);
-                        console.log(`[AudioProcessing] Applied Gain: ${gain}x, Mode: ${mode}`);
+                        console.info(`[AudioProcessing] Applied Gain: ${gain}x, Mode: ${mode}`);
                     }
                 } catch (err) {
                     console.error('[AudioProcessing] Failed to apply:', err);
@@ -626,7 +645,10 @@ function VirtualBackgroundHook({
             const camTrack = camPub?.videoTrack;
 
             if (!camTrack || camTrack.mediaStreamTrack.readyState !== 'live') {
-                lastTrackSidRef.current = undefined;
+                if (lastTrackSidRef.current !== undefined) {
+                    console.log('[VirtualBackground] Track gone or not live, resetting state');
+                    lastTrackSidRef.current = undefined;
+                }
                 return;
             }
 
