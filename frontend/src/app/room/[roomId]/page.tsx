@@ -10,12 +10,10 @@ import {
     RoomAudioRenderer,
     ControlBar,
     useParticipants,
-    useLocalParticipant,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { AlertCircle, Link2, Check, Users, LogOut, Lock, Unlock, ImageIcon, ChevronUp } from 'lucide-react';
+import { AlertCircle, Lock, LogOut, ChevronUp } from 'lucide-react';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
-import { ChatSidebar } from '@/components/ChatSidebar';
 import { playSound } from '@/lib/sounds';
 import { FriendsSidebar } from '@/components/FriendsSidebar';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
@@ -24,6 +22,7 @@ import { useFriends } from '@/components/FriendsProvider';
 import { useFriendsStore } from '@/store/useFriendsStore';
 import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { SettingsModal } from '@/components/SettingsModal';
+import { RoomTopbar } from '@/components/room/RoomTopbar';
 import { VideoConferenceView } from '@/components/room/VideoConferenceView';
 import { RoomEffects } from '@/components/room/RoomEffects';
 import { DevInfoOverlay } from '@/components/room/DevInfoOverlay';
@@ -35,27 +34,6 @@ import { AutoStartAudio } from '@/components/room/AutoStartAudio';
 
 
 
-// ─── Custom tile: speaking glow + spotlight button ───────────────────────────
-
-
-// ─── Dev info overlay ────────────────────────────────────────────────────────
-
-// ─── Local Camera Aware Quick Action ─────────────────────────────────────────
-function LocalCameraAwareQuickAction({ onOpenSettings }: { onOpenSettings: () => void }) {
-    const { isCameraEnabled } = useLocalParticipant();
-
-    if (!isCameraEnabled) return null;
-
-    return (
-        <button
-            onClick={onOpenSettings}
-            className="shrink-0 flex items-center justify-center h-[42px] w-[42px] rounded-2xl text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm border bg-white/90 hover:bg-white text-text-main hover:text-primary border-[rgba(220,220,220,0.85)] hover:border-primary/40 relative group"
-            title="Update Background"
-        >
-            <ImageIcon className="w-4 h-4" />
-        </button>
-    );
-}
 
 
 
@@ -406,77 +384,33 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 options={roomOptions}
             >
                 {/* Top bar */}
-                <div className="absolute top-4 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-visible py-2 -my-2 flex-wrap sm:flex-nowrap">
-                    {/* Friends toggle button */}
-                    <button
-                        onClick={() => setFriendsSidebarOpen(o => !o)}
-                        aria-label="Friends"
-                        className={`shrink-0 flex items-center backdrop-blur-md border rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm ${friendsSidebarOpen
-                            ? 'bg-primary/90 hover:bg-primary border-primary/60 text-white'
-                            : 'bg-white/90 hover:bg-white border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary'
-                            }`}
-                    >
-                        <div className="relative flex items-center justify-center">
-                            <Users className="w-4 h-4" />
-                            {incomingRequests.length > 0 && (
-                                <span className="absolute -top-1.5 -right-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white border border-white/90 sm:border-white shadow-sm pointer-events-none">
-                                    {incomingRequests.length > 9 ? '9+' : incomingRequests.length}
-                                </span>
-                            )}
-                        </div>
-                        <span className={`topbar-btn-inner ${isCompact ? 'topbar-btn-inner--compact' : ''}`}>Friends</span>
-                    </button>
-
-                    {/* Copy link button */}
-                    <button
-                        onClick={handleCopyLink}
-                        aria-label="Copy room link"
-                        className="shrink-0 flex items-center bg-gray-900 hover:bg-gray-800 text-white border border-gray-800 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm"
-                    >
-                        {copied ? <Check className="w-4 h-4 text-green-400" /> : <Link2 className="w-4 h-4" />}
-                        <span className={`topbar-btn-inner ${isCompact ? 'topbar-btn-inner--compact' : ''}`}>{copied ? 'Copied!' : 'Share'}</span>
-                    </button>
-
-                    {/* Open Room Status Indicator */}
-                    <button
-                        onClick={() => handleToggleOpenRoom(!isRoomOpen)}
-                        title={isRoomOpen ? 'Room is open to friends (click to close)' : 'Room is closed (click to open)'}
-                        className={`shrink-0 flex items-center justify-center p-2.5 rounded-2xl text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm border ${isRoomOpen ? 'bg-primary/10 hover:bg-primary/20 text-primary border-primary/20 hover:border-primary/40' : 'bg-white/90 hover:bg-white text-text-muted hover:text-primary border-[rgba(220,220,220,0.85)] hover:border-primary/40'}`}
-                    >
-                        {isRoomOpen ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                    </button>
-
-                    <div className="flex-1 min-w-[8px]" />
-                    <LocalCameraAwareQuickAction onOpenSettings={() => { setSettingsTab('audio-video'); setShowSettings(true); }} />
-
-
-                    {/* Chat toggle button lives inside ChatSidebar */}
-                    <ChatSidebar
-                        roomId={roomId}
-                        currentUserId={user?.id ?? ''}
-                        messages={messages}
-                        typingUsers={typingUsers}
-                        sendMessage={sendMessage}
-                        sendTyping={sendTyping}
-                        onReact={sendReaction}
-                        connected={chatConnected}
-                        isOpen={chatOpen}
-                        onToggle={() => setChatOpen(o => !o)}
-                        unreadCount={unread}
-                        onRead={handleRead}
-                        width={chatSidebarWidth}
-                        onWidthChange={setChatSidebarWidth}
-                        forceCompact={isCompact}
-                    />
-
-                    <button
-                        onClick={() => requestLeave('/dashboard')}
-                        className="shrink-0 flex items-center bg-primary/90 hover:bg-primary border border-primary/60 text-white rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm"
-                    >
-                        <LogOut className="w-4 h-4" />
-                        <span className={`topbar-btn-inner ${isCompact ? 'topbar-btn-inner--compact' : ''}`}>Leave</span>
-                    </button>
-                </div>
+                <RoomTopbar
+                    roomId={roomId}
+                    user={user}
+                    isRoomOpen={isRoomOpen}
+                    friendsSidebarOpen={friendsSidebarOpen}
+                    setFriendsSidebarOpen={setFriendsSidebarOpen}
+                    incomingRequests={incomingRequests}
+                    handleCopyLink={handleCopyLink}
+                    copied={copied}
+                    handleToggleOpenRoom={handleToggleOpenRoom}
+                    setSettingsTab={setSettingsTab}
+                    setShowSettings={setShowSettings}
+                    isCompact={isCompact}
+                    messages={messages}
+                    typingUsers={typingUsers}
+                    sendMessage={sendMessage}
+                    sendTyping={sendTyping}
+                    onReact={sendReaction}
+                    chatConnected={chatConnected}
+                    chatOpen={chatOpen}
+                    setChatOpen={setChatOpen}
+                    unread={unread}
+                    handleRead={handleRead}
+                    chatSidebarWidth={chatSidebarWidth}
+                    setChatSidebarWidth={setChatSidebarWidth}
+                    requestLeave={requestLeave}
+                />
                 <AutoStartAudio />
                 <RoomEffects />
                 <VideoConferenceView />
