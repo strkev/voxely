@@ -14,7 +14,7 @@ interface StatsState {
 export function DevInfoOverlay() {
     const room = useRoomContext();
     const setShowDevInfo = useSettingsStore(s => s.setShowDevInfo);
-    
+
     const [stats, setStats] = useState<StatsState>({
         sentBytes: 0,
         receivedBytes: 0,
@@ -23,7 +23,7 @@ export function DevInfoOverlay() {
     });
 
     const [mounted, setMounted] = useState(false);
-    useEffect(() => { 
+    useEffect(() => {
         const t = setTimeout(() => setMounted(true), 0);
         return () => clearTimeout(t);
     }, []);
@@ -67,16 +67,16 @@ export function DevInfoOverlay() {
             }
 
             const now = Date.now();
-            
+
             if (lastStatsRef.current) {
                 const elapsedSeconds = (now - lastStatsRef.current.time) / 1000;
                 if (elapsedSeconds > 0) {
                     const sentDiff = totalSent - lastStatsRef.current.sent;
                     const receivedDiff = totalReceived - lastStatsRef.current.received;
-                    
+
                     const sentBitrate = Math.round((sentDiff * 8) / (elapsedSeconds * 1000));
                     const receivedBitrate = Math.round((receivedDiff * 8) / (elapsedSeconds * 1000));
-                    
+
                     setStats({
                         sentBytes: totalSent,
                         receivedBytes: totalReceived,
@@ -107,8 +107,8 @@ export function DevInfoOverlay() {
     if (!mounted || typeof document === 'undefined') return null;
 
     return createPortal(
-        <div 
-            className="fixed top-4 left-1/2 -translate-x-1/2 z-[900] flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-white/90 shadow-2xl transition-all cursor-default"
+        <div
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[900] flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-900/90 backdrop-blur-xl border border-white/10 text-white shadow-2xl transition-all cursor-default"
             style={{ userSelect: 'none' }}
         >
             <div className="flex items-center gap-3 text-[11px] font-medium font-mono ml-1">

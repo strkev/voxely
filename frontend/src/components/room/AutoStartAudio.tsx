@@ -64,13 +64,13 @@ export function AutoStartAudio() {
 
     return (
         <div className="fixed inset-0 z-[950] flex items-center justify-center bg-black/40 backdrop-blur-md transition-opacity animate-in fade-in duration-300">
-            <div className="bg-white dark:bg-gray-900 p-8 rounded-[32px] shadow-2xl border border-white/10 flex flex-col items-center gap-6 max-w-sm text-center mx-4">
+            <div className="bg-gray-900/90 backdrop-blur-xl p-8 rounded-[32px] shadow-2xl border border-white/10 flex flex-col items-center gap-6 max-w-sm text-center mx-4">
                 <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center animate-pulse">
                     <Volume2 className="w-10 h-10 text-primary" />
                 </div>
                 <div>
-                    <h2 className="text-2xl font-bold text-text-main mb-2">Audio Required</h2>
-                    <p className="text-text-muted text-sm leading-relaxed">
+                    <h2 className="text-2xl font-bold text-white mb-2">Audio Required</h2>
+                    <p className="text-white/70 text-sm leading-relaxed">
                         To hear others in the room, please click the button below to activate audio.
                     </p>
                 </div>
