@@ -19,7 +19,7 @@ import {
     TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { Track, LocalTrackPublication, RemoteAudioTrack, RoomEvent } from 'livekit-client';
+import { Track, LocalTrackPublication, RemoteAudioTrack, RoomEvent, LocalTrack } from 'livekit-client';
 import { AlertCircle, Link2, Check, Volume2, VolumeX, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, LogOut, Lock, Unlock, Maximize, ImageIcon } from 'lucide-react';
 import { useRoomSounds } from '@/hooks/useRoomSounds';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
@@ -873,24 +873,69 @@ const LiveKitDeviceSync = () => {
     const audioOutputDeviceId = useSettingsStore(s => s.audioOutputDeviceId);
 
     useEffect(() => {
-        // Use 'default' if null, or just don't switch if null and we want browser to decide
-        // Most browsers have a 'default' deviceId for audio
-        const targetId = audioDeviceId || 'default';
-        room.switchActiveDevice('audioinput', targetId).catch(err => {
-            console.warn('[LiveKitDeviceSync] Failed to switch audio input:', err);
-        });
+        const sync = async () => {
+            const lp = room.localParticipant;
+            const micPub = Array.from(lp.audioTrackPublications.values()).find(p => p.source === Track.Source.Microphone);
+
+            if (!audioDeviceId) {
+                // If System Default (null), restart the track with no deviceId constraint
+                if (micPub?.track) {
+                    try {
+                        await (micPub.track as LocalTrack).restartTrack({ deviceId: undefined });
+                    } catch (err) {
+                        console.warn('[LiveKitDeviceSync] Failed to restart audio to default:', err);
+                    }
+                }
+                return;
+            }
+
+            // Explicit device selection
+            room.switchActiveDevice('audioinput', audioDeviceId).catch(err => {
+                if (lp.isMicrophoneEnabled) {
+                    console.warn('[LiveKitDeviceSync] Failed to switch audio input:', err);
+                }
+            });
+        };
+
+        sync();
+
+        room.localParticipant.on('localTrackPublished', sync);
+        return () => {
+            room.localParticipant.off('localTrackPublished', sync);
+        };
     }, [room, audioDeviceId]);
 
     useEffect(() => {
-        if (videoDeviceId) {
+        const sync = async () => {
+            const lp = room.localParticipant;
+            const camPub = Array.from(lp.videoTrackPublications.values()).find(p => p.source === Track.Source.Camera);
+
+            if (!videoDeviceId) {
+                if (camPub?.track) {
+                    try {
+                        await (camPub.track as LocalTrack).restartTrack({ deviceId: undefined });
+                    } catch (err) {
+                        console.warn('[LiveKitDeviceSync] Failed to restart video to default:', err);
+                    }
+                }
+                return;
+            }
+
             room.switchActiveDevice('videoinput', videoDeviceId).catch(err => {
-                console.warn('[LiveKitDeviceSync] Failed to switch video input:', err);
+                if (lp.isCameraEnabled) {
+                    console.warn('[LiveKitDeviceSync] Failed to switch video input:', err);
+                }
             });
-        }
+        };
+
+        sync();
+        room.localParticipant.on('localTrackPublished', sync);
+        return () => {
+            room.localParticipant.off('localTrackPublished', sync);
+        };
     }, [room, videoDeviceId]);
 
     useEffect(() => {
-        // Skip if browser doesn't support setSinkId or is Safari-based (LiveKit rule)
         const isSafariBased = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent) || /iPhone|iPad|iPod/i.test(navigator.userAgent);
         const supportsOutputSwitching = typeof HTMLMediaElement !== 'undefined' && ('setSinkId' in HTMLMediaElement.prototype) && !isSafariBased;
 
@@ -994,7 +1039,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             screenShareSimulcastLayers: [],
         },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }), []);
+    }), [videoDeviceId, audioDeviceId, qPreset, screenShareFps]);
 
 
     // Ensure control bar is always visible on mount + activate leave guard
