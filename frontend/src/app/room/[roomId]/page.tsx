@@ -1,43 +1,33 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useSettingsStore, VIDEO_PRESETS, type NoiseSuppressionMode } from '@/store/useSettingsStore';
+import { useSettingsStore, VIDEO_PRESETS } from '@/store/useSettingsStore';
 import {
     LiveKitRoom,
     RoomAudioRenderer,
     ControlBar,
-    ParticipantTile,
-    useTracks,
     useRoomContext,
-    useIsSpeaking,
-    useIsMuted,
     useParticipants,
     useLocalParticipant,
-    TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { Track, LocalTrackPublication, RemoteAudioTrack, RoomEvent, LocalTrack, RemoteTrackPublication } from 'livekit-client';
-import { AlertCircle, Link2, Check, Volume2, VolumeX, ChevronUp, ChevronLeft, ChevronRight, Mic, MicOff, Users, LogOut, Lock, Unlock, Maximize, ImageIcon, Eye, EyeOff, Expand, Shrink, Play } from 'lucide-react';
-import { useRoomSounds } from '@/hooks/useRoomSounds';
+import { RoomEvent } from 'livekit-client';
+import { AlertCircle, Link2, Check, Volume2, Users, LogOut, Lock, Unlock, ImageIcon, ChevronUp } from 'lucide-react';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
 import { ChatSidebar } from '@/components/ChatSidebar';
 import { playSound } from '@/lib/sounds';
-import { NoiseSuppressionProcessor } from '@/lib/rnnoise-processor';
-import { NativeNoiseProcessor } from '@/lib/native-noise-processor';
-import { FilterNoiseProcessor } from '@/lib/filter-noise-processor';
 import { FriendsSidebar } from '@/components/FriendsSidebar';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { RoomInviteBanner } from '@/components/RoomInviteBanner';
 import { useFriends } from '@/components/FriendsProvider';
-import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { useFriendsStore } from '@/store/useFriendsStore';
-import { getContrastColor } from '@/lib/colors';
+import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { SettingsModal } from '@/components/SettingsModal';
-import { SpotlightableTile } from '@/components/room/SpotlightableTile';
 import { VideoConferenceView } from '@/components/room/VideoConferenceView';
+import { RoomEffects } from '@/components/room/RoomEffects';
 
 
 
@@ -223,296 +213,7 @@ function LocalCameraAwareQuickAction({ onOpenSettings }: { onOpenSettings: () =>
 
 
 
-// ─── Live Video Quality Sync ─────────────────────────────────────────────────
-// Watches the settings store and applies quality changes to the active tracks
-// without requiring a rejoin.
-function LiveVideoQualitySync() {
-    const room = useRoomContext();
-    const videoQuality = useSettingsStore(s => s.videoQuality);
-    const screenShareResolution = useSettingsStore(s => s.screenShareResolution);
-    const screenShareFps = useSettingsStore(s => s.screenShareFps);
 
-    const prevVideoQualityRef = useRef(videoQuality);
-    const prevScreenResRef = useRef(screenShareResolution);
-    const prevScreenFpsRef = useRef(screenShareFps);
-
-    useEffect(() => {
-        if (prevVideoQualityRef.current === videoQuality) return;
-        prevVideoQualityRef.current = videoQuality;
-
-        const localP = room.localParticipant;
-        const qPreset = VIDEO_PRESETS[videoQuality];
-
-        // Update any published camera tracks
-        const cameraPubs = Array.from(localP.videoTrackPublications.values()).filter(
-            p => p.source === Track.Source.Camera && p.track
-        );
-
-        for (const pub of cameraPubs) {
-            if (!pub.track) continue;
-            // Restart the camera track with new constraints
-            pub.track.restartTrack({
-                width: qPreset.width,
-                height: qPreset.height,
-                frameRate: qPreset.frameRate,
-            }).catch(err => console.warn('[LiveQualitySync] Failed to restart camera track:', err));
-        }
-    }, [room, videoQuality]);
-
-    // Track screen share setting changes for next screen share
-    useEffect(() => {
-        prevScreenResRef.current = screenShareResolution;
-    }, [screenShareResolution]);
-
-    useEffect(() => {
-        prevScreenFpsRef.current = screenShareFps;
-    }, [screenShareFps]);
-
-    return null;
-}
-
-// ─── Noise Suppression Hook ──────────────────────────────────────────────────
-type AnyNoiseProcessor = NoiseSuppressionProcessor | NativeNoiseProcessor | FilterNoiseProcessor;
-
-import { GainProcessor } from '@/lib/gain-processor';
-
-function createNoiseProcessor(mode: NoiseSuppressionMode): AnyNoiseProcessor | null {
-    switch (mode) {
-        case 'rnnoise': return new NoiseSuppressionProcessor();
-        case 'native': return new NativeNoiseProcessor();
-        case 'filter': return new FilterNoiseProcessor();
-        default: return null;
-    }
-}
-
-function AudioProcessingHook({
-    processorRef,
-    gainProcessorRef,
-}: {
-    processorRef: React.MutableRefObject<AnyNoiseProcessor | null>;
-    gainProcessorRef: React.MutableRefObject<GainProcessor | null>;
-}) {
-    const room = useRoomContext();
-    const mode = useSettingsStore(s => s.noiseSuppressionMode);
-    const gain = useSettingsStore(s => s.microphoneGain);
-    const appliedModeRef = useRef<NoiseSuppressionMode>('off');
-    const appliedGainRef = useRef<number>(1.0);
-    const originalTrackRef = useRef<MediaStreamTrack | null>(null);
-
-    useEffect(() => {
-        const localP = room.localParticipant;
-
-        const applyProcessing = async () => {
-            // Find the published mic track
-            const micPub = Array.from(localP.audioTrackPublications.values()).find(
-                (p) => p.source === Track.Source.Microphone && p.track?.mediaStreamTrack
-            );
-            if (!micPub?.track?.mediaStreamTrack) {
-                // If track is gone (muted), we MUST reset the applied state so it reapplies when unmuted
-                if (appliedModeRef.current !== 'off' || appliedGainRef.current !== 1.0) {
-                    console.log('[AudioProcessing] Track gone (muted), resetting applied state');
-                    appliedModeRef.current = 'off';
-                    appliedGainRef.current = 1.0;
-                    originalTrackRef.current = null;
-                    if (processorRef.current) {
-                        processorRef.current.destroy();
-                        processorRef.current = null;
-                    }
-                    if (gainProcessorRef.current) {
-                        gainProcessorRef.current.destroy();
-                        gainProcessorRef.current = null;
-                    }
-                }
-                return;
-            }
-
-            const wasApplied = appliedModeRef.current !== 'off' || appliedGainRef.current !== 1.0;
-            const wantsApply = mode !== 'off' || gain !== 1.0;
-
-            // If settings changed while processing is active, tear down the old one first
-            if (wasApplied && (mode !== appliedModeRef.current || gain !== appliedGainRef.current)) {
-                console.log('[AudioProcessing] Settings changed, tearing down old processors');
-                // Restore original track before destroying processors
-                if (originalTrackRef.current && micPub.track) {
-                    try {
-                        await micPub.track.replaceTrack(originalTrackRef.current);
-                    } catch (err) {
-                        console.warn('[AudioProcessing] Failed to restore original track:', err);
-                    }
-                }
-                processorRef.current?.destroy();
-                processorRef.current = null;
-                gainProcessorRef.current?.destroy();
-                gainProcessorRef.current = null;
-                originalTrackRef.current = null;
-                appliedModeRef.current = 'off';
-                appliedGainRef.current = 1.0;
-            }
-
-            // Apply new processing if needed
-            if (wantsApply && (appliedModeRef.current === 'off' && appliedGainRef.current === 1.0)) {
-                try {
-                    console.log('[AudioProcessing] Applying new processing to track:', micPub.track.sid);
-                    // Store original track for restoration
-                    originalTrackRef.current = micPub.track.mediaStreamTrack;
-
-                    let currentStream = new MediaStream([micPub.track.mediaStreamTrack]);
-
-                    // 1. Apply Gain (Before Noise Suppression)
-                    if (gain !== 1.0) {
-                        const gp = new GainProcessor();
-                        currentStream = await gp.process(currentStream, gain);
-                        gainProcessorRef.current = gp;
-                        appliedGainRef.current = gain;
-                    }
-
-                    // 2. Apply Noise Suppression
-                    if (mode !== 'off') {
-                        const processor = createNoiseProcessor(mode);
-                        if (processor) {
-                            currentStream = await processor.process(currentStream);
-                            processorRef.current = processor;
-                            appliedModeRef.current = mode;
-                        }
-                    }
-
-                    const finalTrack = currentStream.getAudioTracks()[0];
-                    if (finalTrack && micPub.track) {
-                        await micPub.track.replaceTrack(finalTrack);
-                        console.info(`[AudioProcessing] Applied Gain: ${gain}x, Mode: ${mode}`);
-                    }
-                } catch (err) {
-                    console.error('[AudioProcessing] Failed to apply:', err);
-                }
-            }
-        };
-
-        applyProcessing();
-
-        // Listen for new mic track publications
-        const handleTrackPublished = () => {
-            if ((mode !== 'off' || gain !== 1.0) && appliedModeRef.current === 'off' && appliedGainRef.current === 1.0) {
-                setTimeout(applyProcessing, 500);
-            }
-        };
-
-        localP.on('localTrackPublished', handleTrackPublished);
-        return () => {
-            localP.off('localTrackPublished', handleTrackPublished);
-        };
-    }, [room, mode, gain, processorRef, gainProcessorRef]);
-
-    return null;
-}
-
-
-// ─── Virtual Background Hook ──────────────────────────────────────────────────
-function VirtualBackgroundHook({
-    processorRef,
-}: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    processorRef: React.MutableRefObject<any>;
-}) {
-    const room = useRoomContext();
-    const bgOption = useSettingsStore(s => s.virtualBackground);
-    const bgImage = useSettingsStore(s => s.virtualBackgroundImage);
-    const blurRadius = useSettingsStore(s => s.blurRadius);
-    const lastTrackSidRef = useRef<string | undefined>(undefined);
-
-    useEffect(() => {
-        const localP = room.localParticipant;
-
-        const applyBackground = async () => {
-            // Find the published camera track
-            const camPub = Array.from(localP.videoTrackPublications.values()).find(
-                (p) => p.source === Track.Source.Camera && p.track
-            );
-            const camTrack = camPub?.videoTrack;
-
-            if (!camTrack || camTrack.mediaStreamTrack.readyState !== 'live') {
-                if (lastTrackSidRef.current !== undefined) {
-                    console.log('[VirtualBackground] Track gone or not live, resetting state');
-                    lastTrackSidRef.current = undefined;
-                }
-                return;
-            }
-
-            // DIMENSION CHECK: Wait for track resolution to be known (means frames are flowing)
-            if (!camTrack.dimensions) {
-                console.log('[VirtualBackground] Waiting for track dimensions...');
-                setTimeout(applyBackground, 300);
-                return;
-            }
-
-            try {
-                // If the track SID changed, we MUST recreate the processor to avoid WebGL context issues
-                if (lastTrackSidRef.current !== camTrack.sid) {
-                    console.log('[VirtualBackground] Track changed. Recreating processor for:', camTrack.sid);
-
-                    if (processorRef.current) {
-                        try {
-                            await processorRef.current.destroy();
-                        } catch (e) {
-                            console.warn('[VirtualBackground] Error destroying old processor:', e);
-                        }
-                        processorRef.current = null;
-                    }
-
-                    const { BackgroundProcessor } = await import('@livekit/track-processors');
-                    processorRef.current = BackgroundProcessor({ mode: 'disabled' });
-
-                    await camTrack.setProcessor(processorRef.current);
-                    lastTrackSidRef.current = camTrack.sid;
-                }
-
-                if (!processorRef.current) return;
-
-                // Switch to the correct mode
-                if (bgOption === 'none') {
-                    await processorRef.current.switchTo({ mode: 'disabled' });
-                } else if (bgOption === 'blur') {
-                    await processorRef.current.switchTo({ mode: 'background-blur', blurRadius });
-                } else if (bgOption === 'image' && bgImage) {
-                    await processorRef.current.switchTo({ mode: 'virtual-background', imagePath: bgImage });
-                }
-            } catch (err) {
-                console.error('[VirtualBackground] Failed to apply:', err);
-                // Reset on error so we try again next time
-                lastTrackSidRef.current = undefined;
-            }
-        };
-
-        applyBackground();
-
-        const handleTrackPublished = (pub: LocalTrackPublication) => {
-            if (pub.source === Track.Source.Camera) {
-                // Larger delay to let the track fully initialize and avoid "no video frame" error
-                // Especially important during quality switches where the underlying stream changes
-                setTimeout(applyBackground, 1200);
-            }
-        };
-
-        localP.on('localTrackPublished', handleTrackPublished);
-
-        return () => {
-            localP.off('localTrackPublished', handleTrackPublished);
-        };
-    }, [room, bgOption, bgImage, blurRadius, processorRef]);
-
-    // Final cleanup when component unmounts
-    useEffect(() => {
-        return () => {
-            if (processorRef.current) {
-                console.log('[VirtualBackground] Cleaning up processor on unmount');
-                processorRef.current.destroy().catch(() => { });
-                processorRef.current = null;
-                lastTrackSidRef.current = undefined;
-            }
-        };
-    }, [processorRef]);
-
-    return null;
-}
 
 
 // ─── Friends Sidebar with Presence Tracking ─────────────────────────────────
@@ -556,90 +257,6 @@ function FriendsSidebarWithPresence({
     );
 }
 
-// Helper to sync all devices with store
-const LiveKitDeviceSync = () => {
-    const room = useRoomContext();
-    const audioDeviceId = useSettingsStore(s => s.audioDeviceId);
-    const videoDeviceId = useSettingsStore(s => s.videoDeviceId);
-    const audioOutputDeviceId = useSettingsStore(s => s.audioOutputDeviceId);
-
-    useEffect(() => {
-        const sync = async () => {
-            const lp = room.localParticipant;
-            const micPub = Array.from(lp.audioTrackPublications.values()).find(p => p.source === Track.Source.Microphone);
-
-            if (!audioDeviceId) {
-                // If System Default (null), restart the track with no deviceId constraint
-                if (micPub?.track) {
-                    try {
-                        await (micPub.track as LocalTrack).restartTrack({ deviceId: undefined });
-                    } catch (err) {
-                        console.warn('[LiveKitDeviceSync] Failed to restart audio to default:', err);
-                    }
-                }
-                return;
-            }
-
-            // Explicit device selection
-            room.switchActiveDevice('audioinput', audioDeviceId).catch(err => {
-                if (lp.isMicrophoneEnabled) {
-                    console.warn('[LiveKitDeviceSync] Failed to switch audio input:', err);
-                }
-            });
-        };
-
-        sync();
-
-        room.localParticipant.on('localTrackPublished', sync);
-        return () => {
-            room.localParticipant.off('localTrackPublished', sync);
-        };
-    }, [room, audioDeviceId]);
-
-    useEffect(() => {
-        const sync = async () => {
-            const lp = room.localParticipant;
-            const camPub = Array.from(lp.videoTrackPublications.values()).find(p => p.source === Track.Source.Camera);
-
-            if (!videoDeviceId) {
-                if (camPub?.track) {
-                    try {
-                        await (camPub.track as LocalTrack).restartTrack({ deviceId: undefined });
-                    } catch (err) {
-                        console.warn('[LiveKitDeviceSync] Failed to restart video to default:', err);
-                    }
-                }
-                return;
-            }
-
-            room.switchActiveDevice('videoinput', videoDeviceId).catch(err => {
-                if (lp.isCameraEnabled) {
-                    console.warn('[LiveKitDeviceSync] Failed to switch video input:', err);
-                }
-            });
-        };
-
-        sync();
-        room.localParticipant.on('localTrackPublished', sync);
-        return () => {
-            room.localParticipant.off('localTrackPublished', sync);
-        };
-    }, [room, videoDeviceId]);
-
-    useEffect(() => {
-        const isSafariBased = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent) || /iPhone|iPad|iPod/i.test(navigator.userAgent);
-        const supportsOutputSwitching = typeof HTMLMediaElement !== 'undefined' && ('setSinkId' in HTMLMediaElement.prototype) && !isSafariBased;
-
-        if (!supportsOutputSwitching) return;
-
-        const targetId = audioOutputDeviceId || 'default';
-        room.switchActiveDevice('audiooutput', targetId).catch(err => {
-            console.warn('[LiveKitDeviceSync] Failed to switch audio output:', err);
-        });
-    }, [room, audioOutputDeviceId]);
-
-    return null;
-};
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
@@ -671,8 +288,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const videoDeviceId = useSettingsStore(s => s.videoDeviceId);
     const setControlBarVisible = useSettingsStore(s => s.setControlBarVisible);
 
-    const noiseProcessorRef = useRef<AnyNoiseProcessor | null>(null);
-    const gainProcessorRef = useRef<GainProcessor | null>(null);
     // Friends state & socket
     const incomingRequests = useFriendsStore(s => s.incomingRequests);
     const { sendRoomInvite, toggleRoomOpen, initiateCall } = useFriends();
@@ -698,8 +313,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const handleCallFriend = useCallback((friendId: string) => {
         initiateCall(friendId);
     }, [initiateCall]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const bgProcessorRef = useRef<any>(null);
     const [showFriendsModal, setShowFriendsModal] = useState(false);
     const [friendsSidebarOpen, setFriendsSidebarOpen] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
@@ -729,7 +342,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             },
             screenShareSimulcastLayers: [],
         },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }), [videoDeviceId, audioDeviceId, qPreset, screenShareFps]);
 
 
@@ -748,18 +360,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         (window as unknown as Record<string, unknown>).__controlBarTimer = timer as unknown;
         return () => clearTimeout(timer);
     }, [autoHideControlBar, controlBarVisible, setControlBarVisible]);
-
-    // Clean up processors on unmount
-    useEffect(() => {
-        return () => {
-            noiseProcessorRef.current?.destroy();
-            noiseProcessorRef.current = null;
-            gainProcessorRef.current?.destroy();
-            gainProcessorRef.current = null;
-            bgProcessorRef.current?.destroy();
-            bgProcessorRef.current = null;
-        };
-    }, []);
 
     const handleNewMessage = useCallback((msg: ChatMessage) => {
         if (!chatOpen) {
@@ -948,7 +548,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 onDisconnected={() => router.push('/dashboard')}
                 options={roomOptions}
             >
-                <LiveKitDeviceSync />
                 {/* Top bar */}
                 <div className="absolute top-4 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-visible py-2 -my-2 flex-wrap sm:flex-nowrap">
                     {/* Friends toggle button */}
@@ -1023,12 +622,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 </div>
                 <AutoStartAudio />
                 <ChevronRotationFix />
-                <LiveVideoQualitySync />
-                <AudioProcessingHook
-                    processorRef={noiseProcessorRef}
-                    gainProcessorRef={gainProcessorRef}
-                />
-                <VirtualBackgroundHook processorRef={bgProcessorRef} />
+                <RoomEffects />
                 <VideoConferenceView />
                 <RoomAudioRenderer />
                 {showDevInfo && <DevInfoOverlay />}
