@@ -28,6 +28,7 @@ import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { SettingsModal } from '@/components/SettingsModal';
 import { VideoConferenceView } from '@/components/room/VideoConferenceView';
 import { RoomEffects } from '@/components/room/RoomEffects';
+import { DevInfoOverlay } from '@/components/room/DevInfoOverlay';
 
 
 
@@ -105,55 +106,6 @@ function AutoStartAudio() {
 
 
 // ─── Dev info overlay ────────────────────────────────────────────────────────
-function DevInfoOverlay() {
-    const room = useRoomContext();
-    const [stats, setStats] = useState<{ bitrate: string; resolution: string; codec: string; fps: string }>({ bitrate: '—', resolution: '—', codec: '—', fps: '—' });
-
-    useEffect(() => {
-        const update = async () => {
-            const localP = room.localParticipant;
-            const videoTrack = localP.videoTrackPublications.values().next().value;
-            if (!videoTrack?.track) {
-                setStats({ bitrate: '—', resolution: '—', codec: '—', fps: '—' });
-                return;
-            }
-            try {
-                const report = await videoTrack.track.getRTCStatsReport();
-                let bitrate = '—', codec = '—', fps = '—';
-                const dims = videoTrack.dimensions;
-                const resolution = dims ? `${dims.width}×${dims.height}` : '—';
-                if (report) {
-                    report.forEach((stat) => {
-                        if (stat.type === 'outbound-rtp' && stat.kind === 'video') {
-                            if (stat.bytesSent !== undefined) {
-                                const kbps = Math.round(((stat.bytesSent ?? 0) * 8) / 1000);
-                                bitrate = `${kbps} kbps`;
-                            }
-                            if (stat.framesPerSecond) fps = `${Math.round(stat.framesPerSecond)}`;
-                        }
-                        if (stat.type === 'codec' && stat.mimeType?.startsWith('video/')) {
-                            codec = stat.mimeType.replace('video/', '');
-                        }
-                    });
-                }
-                setStats({ bitrate, resolution, codec, fps });
-            } catch { /* ignore */ }
-        };
-        const interval = setInterval(update, 2000);
-        update();
-        return () => clearInterval(interval);
-    }, [room]);
-
-    return (
-        <div className="absolute top-[56px] right-3 z-20 bg-black/70 backdrop-blur-md text-white/80 text-[10px] font-mono rounded-lg px-3 py-2 space-y-0.5 pointer-events-none">
-            <div className="text-white/50 text-[9px] font-semibold uppercase tracking-wider mb-1">Dev Info</div>
-            <div>RES: {stats.resolution}</div>
-            <div>FPS: {stats.fps}</div>
-            <div>Codec: {stats.codec}</div>
-            <div>Bitrate: {stats.bitrate}</div>
-        </div>
-    );
-}
 
 // ─── Local Camera Aware Quick Action ─────────────────────────────────────────
 function LocalCameraAwareQuickAction({ onOpenSettings }: { onOpenSettings: () => void }) {
