@@ -301,7 +301,7 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
             const updateDevices = async () => {
                 try {
                     let devices = await navigator.mediaDevices.enumerateDevices();
-                    
+
                     // If labels are empty, it's likely permissions haven't been granted.
                     // Requesting a temporary stream will trigger the browser permission prompt
                     // and then populate the device labels.
@@ -641,7 +641,7 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
                                                 </select>
                                             </div>
 
-                                            <div className="h-px bg-gray-100/50" />
+                                            <div className="h-px bg-gray-100" />
 
                                             {/* Gain Slider */}
                                             <div className="space-y-3">
@@ -665,7 +665,7 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
                                                 </p>
                                             </div>
 
-                                            <div className="h-px bg-gray-100/50" />
+                                            <div className="h-px bg-gray-100" />
 
                                             {/* Visualizer / Test */}
                                             <MicTestSection gain={microphoneGain} />
@@ -706,7 +706,7 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
                                                 </select>
                                             </div>
 
-                                            <div className="h-px bg-gray-100/50" />
+                                            <div className="h-px bg-gray-100" />
 
                                             {/* Virtual Background */}
                                             <div className="space-y-3">
