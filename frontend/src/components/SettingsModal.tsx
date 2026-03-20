@@ -13,7 +13,7 @@ import { playSound, type SoundName } from '@/lib/sounds';
 import { PRESET_COLORS, getContrastColor } from '@/lib/colors';
 import {
     X, Settings, Mic, Monitor, Palette, Bell, User, Lock, Trash2,
-    ChevronUp, VolumeX, Volume2, ImageIcon, Check, Pencil, Loader2,
+    ChevronDown, VolumeX, Volume2, ImageIcon, Check, Pencil, Loader2,
     Sun, Moon, ScreenShare, CircleSlash, MonitorPlay, Upload
 } from 'lucide-react';
 import { SettingsNavButton } from '@/components/ui/SettingsNavButton';
@@ -299,11 +299,29 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
         if (!room) {
             const updateDevices = async () => {
                 try {
-                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    let devices = await navigator.mediaDevices.enumerateDevices();
+                    
+                    // If labels are empty, it's likely permissions haven't been granted.
+                    // Requesting a temporary stream will trigger the browser permission prompt
+                    // and then populate the device labels.
+                    const hasLabels = devices.some(d => d.label);
+                    if (!hasLabels && typeof navigator !== 'undefined' && navigator.mediaDevices.getUserMedia) {
+                        try {
+                            // We request both to be sure labels for both are populated
+                            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                            // Immediately stop tracks to release the hardware
+                            stream.getTracks().forEach(track => track.stop());
+                            // Refresh device list now that labels should be available
+                            devices = await navigator.mediaDevices.enumerateDevices();
+                        } catch (e) {
+                            console.warn('SettingsModal: Initial permission request failed or denied', e);
+                        }
+                    }
+
                     setFallbackAudioDevices(devices.filter(d => d.kind === 'audioinput'));
                     setFallbackVideoDevices(devices.filter(d => d.kind === 'videoinput'));
                 } catch (err) {
-                    console.error('Error enumerating devices:', err);
+                    console.error('SettingsModal: Error enumerating devices:', err);
                 }
             };
             updateDevices();
@@ -486,16 +504,17 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
                                 <Settings className="w-5 h-5 text-primary" />
                                 <span className="md:inline">Settings</span>
                             </h2>
-                            {/* Mobile Toggle */}
+                            {/* Close Button on Mobile (Upper Right) */}
                             <button
-                                onClick={() => setIsNavExpanded(!isNavExpanded)}
+                                onClick={onClose}
                                 className="md:hidden p-2 rounded-xl text-text-muted hover:bg-gray-100 transition-colors"
                             >
-                                <ChevronUp className={`w-5 h-5 transition-transform duration-300 ${isNavExpanded ? 'rotate-0' : 'rotate-180'}`} />
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <nav className={`flex-1 px-4 pb-6 space-y-1 overflow-y-auto ${!isNavExpanded ? 'hidden md:block' : 'block'}`}>
+                        {/* Navigation - Hidden on mobile if not expanded */}
+                        <nav className={`flex-1 px-4 pt-2 pb-6 space-y-1 overflow-y-auto hidden md:block`}>
                             {tabs.map((tab) => (
                                 <SettingsNavButton
                                     key={tab.id}
@@ -513,13 +532,46 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
 
                     {/* Content Area */}
                     <div className="flex-1 flex flex-col min-w-0 bg-white min-h-0">
-                        <div className="flex items-center justify-between px-6 md:px-8 py-4 md:py-6 border-b border-gray-50 shrink-0">
-                            <h3 className="text-base font-bold text-text-main">
-                                {tabs.find(t => t.id === activeTab)?.label}
-                            </h3>
-                            <button onClick={onClose} className="p-2 rounded-xl text-text-muted hover:text-text-main hover:bg-gray-100 transition-colors">
-                                <X className="w-5 h-5" />
-                            </button>
+                        <div className="flex flex-col border-b border-gray-50 shrink-0">
+                            <div className="flex items-center justify-between px-6 md:px-8 py-4 md:py-6">
+                                <h3 className="text-base font-bold text-text-main">
+                                    {tabs.find(t => t.id === activeTab)?.label}
+                                </h3>
+                                <div className="flex items-center gap-2">
+                                    {/* Mobile Expand Toggle */}
+                                    <button
+                                        onClick={() => setIsNavExpanded(!isNavExpanded)}
+                                        className="md:hidden p-2 rounded-xl text-primary hover:bg-primary/5 transition-all"
+                                    >
+                                        <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isNavExpanded ? 'rotate-180' : 'rotate-0'}`} />
+                                    </button>
+                                    {/* Desktop Close Button */}
+                                    <button
+                                        onClick={onClose}
+                                        className="hidden md:block p-2 rounded-xl text-text-muted hover:text-text-main hover:bg-gray-100 transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Mobile Navigation List (Expands under active tab) */}
+                            {isNavExpanded && (
+                                <nav className="md:hidden px-4 pt-1 pb-4 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                                    {tabs.map((tab) => (
+                                        <SettingsNavButton
+                                            key={tab.id}
+                                            isActive={activeTab === tab.id}
+                                            onClick={() => {
+                                                setActiveTab(tab.id);
+                                                setIsNavExpanded(false);
+                                            }}
+                                            icon={tab.icon}
+                                            label={tab.label}
+                                        />
+                                    ))}
+                                </nav>
+                            )}
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 scroll-smooth overscroll-contain">
