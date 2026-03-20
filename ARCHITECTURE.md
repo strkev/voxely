@@ -90,11 +90,18 @@ voxely/
 │   │   │   ├── settings/         # Account-Einstellungen
 │   │   │   └── globals.css       # Design-Tokens (Tailwind Custom Properties)
 │   │   ├── components/
-│   │   │   ├── AuthProvider.tsx   # Session-Wiederherstellung beim App-Start
-│   │   │   ├── ChatSidebar.tsx    # Chat-Sidebar mit Echtzeit-Nachrichten
-│   │   │   ├── voxy.tsx           # Mascot-Komponente mit Portals & Framer Motion
+│   │   │   ├── settings/          # Modularisierte Einstellungen (Tabs & Modale)
+│   │   │   │   ├── AudioVideoTab.tsx # Audio-/Video-Konfiguration & LiveKit-Integration
+│   │   │   │   ├── ProfileTab.tsx    # Benutzerprofil (Name, Avatar-Farbe)
+│   │   │   │   ├── AccountTab.tsx    # Konto-Optionen & Abmeldung
+│   │   │   │   ├── QualityTab.tsx    # Video-Qualitätseinstellungen
+│   │   │   │   └── ...               # Weitere Tabs (Sounds, Interface, etc.)
+│   │   │   ├── SettingsModal.tsx   # Haupt-Container für Einstellungen (Tab-Hosting)
+│   │   │   ├── AuthProvider.tsx    # Session-Wiederherstellung beim App-Start
+│   │   │   ├── ChatSidebar.tsx     # Chat-Sidebar mit Echtzeit-Nachrichten
+│   │   │   ├── voxy.tsx            # Mascot-Komponente mit Portals & Framer Motion
 │   │   │   ├── TutorialSpotlight.tsx # Overlay mit Spotlight-Loch für die geführte Tour
-│   │   │   └── ui/               # Wiederverwendbare UI-Komponenten (Button, Input, Header)
+│   │   │   └── ui/                # Wiederverwendbare UI-Komponenten (Button, Input, Header)
 │   │   ├── hooks/
 │   │   │   ├── useChatSocket.ts   # Socket.IO Chat-Hook
 │   │   │   └── useRoomSounds.ts   # Join/Leave Sound-Effekte

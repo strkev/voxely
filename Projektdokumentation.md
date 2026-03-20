@@ -40,6 +40,8 @@ Die Struktur des **Frontends** ist wie folgt aufgeteilt:
 - `AuthProvider.tsx`: Sicherstellung der Session-Konsistenz.
 - `ChatSidebar.tsx`: Echtzeit-Textnachrichten mit XSS-Schutz.
 - `FriendsSidebar.tsx`: Management von Online-Status und Interaktionen.
+- `SettingsModal.tsx`: Zentraler Container für App-Einstellungen.
+- `settings/` (Ordner): Modularisierte Einstellungs-Tabs (Audio/Video, Profil, Account, Qualität).
 - `voxy.tsx`: Interaktives Maskottchen "Voxy".
 - `TutorialSpotlight.tsx`: System für die geführte Dashboard-Tour.
 - `sw.js` & `manifest.json`: Ermöglichen den PWA-Betrieb.
