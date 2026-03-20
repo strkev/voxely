@@ -16,6 +16,7 @@ import {
     ChevronDown, VolumeX, Volume2, ImageIcon, Check, Pencil, Loader2,
     Sun, Moon, ScreenShare, CircleSlash, MonitorPlay, Upload
 } from 'lucide-react';
+import { Room } from 'livekit-client';
 import { SettingsNavButton } from '@/components/ui/SettingsNavButton';
 import { SettingsOptionButton } from '@/components/ui/SettingsOptionButton';
 import { SettingsToggle } from '@/components/ui/SettingsToggle';
@@ -206,7 +207,7 @@ function MicTestSection({ gain }: { gain: number }) {
             stopTest();
             if (recordedUrl) URL.revokeObjectURL(recordedUrl);
         };
-    }, []);
+    }, [recordedUrl]);
 
     return (
         <div className="space-y-4">
@@ -273,9 +274,9 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
     const [fallbackVideoDevices, setFallbackVideoDevices] = useState<MediaDeviceInfo[]>([]);
 
     // Safely try to get LiveKit context
-    let room: any = null;
-    let lkAudioDevices: any[] = [];
-    let lkVideoDevices: any[] = [];
+    let room: Room | null = null;
+    let lkAudioDevices: MediaDeviceInfo[] = [];
+    let lkVideoDevices: MediaDeviceInfo[] = [];
     let lkActiveAudioId: string | undefined;
     let lkActiveVideoId: string | undefined;
 
@@ -290,7 +291,7 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
         lkVideoDevices = vDevices;
         lkActiveAudioId = aId;
         lkActiveVideoId = vId;
-    } catch (e) {
+    } catch {
         // No LiveKit context
     }
 
