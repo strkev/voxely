@@ -16,6 +16,7 @@ import {
     useIsMuted,
     useParticipants,
     useLocalParticipant,
+    useMediaDeviceSelect,
     TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
@@ -845,7 +846,7 @@ function FriendsSidebarWithPresence({
     );
 }
 
-// Helper to sync all devices with store
+// Helper to sync all devices with store (bidirectional)
 const LiveKitDeviceSync = ({
     audioDeviceId,
     videoDeviceId,
@@ -856,10 +857,34 @@ const LiveKitDeviceSync = ({
     audioOutputDeviceId: string | null;
 }) => {
     const room = useRoomContext();
+    const { setAudioDeviceId, setVideoDeviceId, setAudioOutputDeviceId } = useSettingsStore();
+
+    // Read LiveKit's current active devices (updates when user changes via ControlBar)
+    const { activeDeviceId: lkAudioId } = useMediaDeviceSelect({ kind: 'audioinput' });
+    const { activeDeviceId: lkVideoId } = useMediaDeviceSelect({ kind: 'videoinput' });
+    const { activeDeviceId: lkOutputId } = useMediaDeviceSelect({ kind: 'audiooutput' });
+
+    // LiveKit → Store sync (when user changes device via ControlBar)
+    useEffect(() => {
+        if (lkAudioId && lkAudioId !== 'default' && lkAudioId !== audioDeviceId) {
+            setAudioDeviceId(lkAudioId);
+        }
+    }, [lkAudioId, audioDeviceId, setAudioDeviceId]);
 
     useEffect(() => {
-        // Use 'default' if null, or just don't switch if null and we want browser to decide
-        // Most browsers have a 'default' deviceId for audio
+        if (lkVideoId && lkVideoId !== 'default' && lkVideoId !== videoDeviceId) {
+            setVideoDeviceId(lkVideoId);
+        }
+    }, [lkVideoId, videoDeviceId, setVideoDeviceId]);
+
+    useEffect(() => {
+        if (lkOutputId && lkOutputId !== 'default' && lkOutputId !== audioOutputDeviceId) {
+            setAudioOutputDeviceId(lkOutputId);
+        }
+    }, [lkOutputId, audioOutputDeviceId, setAudioOutputDeviceId]);
+
+    // Store → LiveKit sync (when user changes device via Settings modal)
+    useEffect(() => {
         const targetId = audioDeviceId || 'default';
         room.switchActiveDevice('audioinput', targetId).catch(err => {
             console.warn('[LiveKitDeviceSync] Failed to switch audio input:', err);

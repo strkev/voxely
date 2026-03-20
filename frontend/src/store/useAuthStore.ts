@@ -14,6 +14,7 @@ interface AuthState {
     checkAuth: () => Promise<void>;
     logout: () => Promise<void>;
     deleteAccount: () => Promise<void>;
+    updateProfile: (data: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
@@ -80,5 +81,26 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             await logout();
         }
     },
-}));
 
+    updateProfile: async (data) => {
+        const { token } = get();
+        try {
+            const res = await fetch(`${API_URL}/api/auth/me`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                credentials: 'include',
+                body: JSON.stringify(data),
+            });
+            const result = await res.json();
+            if (!res.ok) return { success: false, error: result.error || 'Update failed' };
+
+            set({ user: result.user, token: token! });
+            return { success: true };
+        } catch (err: unknown) {
+            return { success: false, error: err instanceof Error ? err.message : 'Error' };
+        }
+    },
+}));
