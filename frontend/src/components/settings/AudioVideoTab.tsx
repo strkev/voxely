@@ -7,7 +7,7 @@ import { SettingsOptionButton } from '@/components/ui/SettingsOptionButton';
 import { SettingsSlider } from '@/components/ui/SettingsSlider';
 import {
     Mic, Volume2, ImageIcon, CircleSlash, MonitorPlay, Upload, Trash2, Loader2,
-    Volume2 as Volume2Icon,
+    Volume2 as Volume2Icon, AlertCircle,
 } from 'lucide-react';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -254,6 +254,12 @@ export function AudioVideoTab({
     videoDevices,
     audioOutputDevices,
 }: AudioVideoTabProps) {
+    const isOutputSupported = (() => {
+        if (typeof HTMLMediaElement === 'undefined' || !('setSinkId' in HTMLMediaElement.prototype)) return false;
+        // LiveKit rule: Safari/iOS based browsers don't support output switching reliably
+        const isSafariBased = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent) || /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        return !isSafariBased;
+    })();
     const {
         noiseSuppressionMode, microphoneGain,
         audioDeviceId, videoDeviceId, audioOutputDeviceId,
@@ -321,27 +327,41 @@ export function AudioVideoTab({
                     </div>
                 </div>
 
-                <div className="bg-gray-50 p-6 rounded-[28px] border border-gray-100">
+                <div className={`bg-gray-50 p-6 rounded-[28px] border border-gray-100 ${!isOutputSupported ? 'opacity-85' : ''}`}>
                     <div className="space-y-3">
                         <div className="flex items-center justify-between px-1">
                             <label htmlFor="audio-output-select" className="text-[11px] font-bold text-text-muted uppercase tracking-wider">Output Device</label>
                         </div>
-                        <select
-                            id="audio-output-select"
-                            value={audioOutputDeviceId || ''}
-                            onChange={(e) => setAudioOutputDeviceId(e.target.value || null)}
-                            className="w-full bg-white border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-medium text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
-                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
-                        >
-                            <option value="">System Default</option>
-                            {audioOutputDevices.filter(d => d.deviceId !== 'default').map((device) => (
-                                <option key={device.deviceId} value={device.deviceId}>
-                                    {device.label || `Speaker ${device.deviceId.slice(0, 5)}...`}
-                                </option>
-                            ))}
-                        </select>
+
+                        {!isOutputSupported ? (
+                            <div className="flex flex-col gap-2">
+                                <div className="w-full bg-gray-100 border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-medium text-text-muted flex items-center gap-2 italic">
+                                    <AlertCircle className="w-4 h-4 shrink-0 text-amber-500" />
+                                    Not supported in this browser
+                                </div>
+                            </div>
+                        ) : (
+                            <select
+                                id="audio-output-select"
+                                value={audioOutputDeviceId || ''}
+                                onChange={(e) => setAudioOutputDeviceId(e.target.value || null)}
+                                className="w-full bg-white border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-medium text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
+                                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
+                            >
+                                <option value="">System Default</option>
+                                {audioOutputDevices.filter(d => d.deviceId !== 'default').map((device) => (
+                                    <option key={device.deviceId} value={device.deviceId}>
+                                        {device.label || `Speaker ${device.deviceId.slice(0, 5)}...`}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+
                         <p className="text-[10px] text-text-muted italic px-1 pt-1">
-                            Speakers or headphones used for incoming audio.
+                            {!isOutputSupported
+                                ? "Your browser doesn't allow switching speakers. Please use your system settings."
+                                : "Speakers or headphones used for incoming audio."
+                            }
                         </p>
                     </div>
                 </div>

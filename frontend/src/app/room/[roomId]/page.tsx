@@ -868,6 +868,12 @@ const LiveKitDeviceSync = () => {
     }, [room, videoDeviceId]);
 
     useEffect(() => {
+        // Skip if browser doesn't support setSinkId or is Safari-based (LiveKit rule)
+        const isSafariBased = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent) || /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const supportsOutputSwitching = typeof HTMLMediaElement !== 'undefined' && ('setSinkId' in HTMLMediaElement.prototype) && !isSafariBased;
+
+        if (!supportsOutputSwitching) return;
+
         const targetId = audioOutputDeviceId || 'default';
         room.switchActiveDevice('audiooutput', targetId).catch(err => {
             console.warn('[LiveKitDeviceSync] Failed to switch audio output:', err);
