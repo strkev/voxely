@@ -863,7 +863,12 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [chatSidebarWidth, setChatSidebarWidth] = useState(320);
     const [unread, setUnread] = useState(0);
     const [copied, setCopied] = useState(false);
-    const { soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppressionMode, microphoneGain, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius, theme } = useSettingsStore();
+    const {
+        soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, setControlBarVisible,
+        autoHideControlBar, noiseSuppressionMode, microphoneGain, screenShareFps,
+        virtualBackground, virtualBackgroundImage, blurRadius, theme,
+        audioDeviceId, videoDeviceId
+    } = useSettingsStore();
     const noiseProcessorRef = useRef<AnyNoiseProcessor | null>(null);
     const gainProcessorRef = useRef<GainProcessor | null>(null);
     // Friends state & socket
@@ -1117,7 +1122,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 onDisconnected={() => router.push('/dashboard')}
                 options={{
                     videoCaptureDefaults: {
+                        deviceId: videoDeviceId || undefined,
                         resolution: { width: qPreset.width, height: qPreset.height, frameRate: qPreset.frameRate },
+                    },
+                    audioCaptureDefaults: {
+                        deviceId: audioDeviceId || undefined,
                     },
                     publishDefaults: {
                         videoCodec: 'vp9',
