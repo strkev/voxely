@@ -308,14 +308,31 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
                     const hasLabels = devices.some(d => d.label);
                     if (!hasLabels && typeof navigator !== 'undefined' && navigator.mediaDevices.getUserMedia) {
                         try {
-                            // We request both to be sure labels for both are populated
-                            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-                            // Immediately stop tracks to release the hardware
-                            stream.getTracks().forEach(track => track.stop());
+                            const hasAudio = devices.some(d => d.kind === 'audioinput');
+                            const hasVideo = devices.some(d => d.kind === 'videoinput');
+
+                            if (hasAudio) {
+                                try {
+                                    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                                    audioStream.getTracks().forEach(t => t.stop());
+                                } catch (e) {
+                                    console.warn('SettingsModal: Audio permission denied or failed', e);
+                                }
+                            }
+
+                            if (hasVideo) {
+                                try {
+                                    const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                                    videoStream.getTracks().forEach(t => t.stop());
+                                } catch (e) {
+                                    console.warn('SettingsModal: Video permission denied or failed', e);
+                                }
+                            }
+
                             // Refresh device list now that labels should be available
                             devices = await navigator.mediaDevices.enumerateDevices();
                         } catch (e) {
-                            console.warn('SettingsModal: Initial permission request failed or denied', e);
+                            console.warn('SettingsModal: Individual permission requests failed', e);
                         }
                     }
 
