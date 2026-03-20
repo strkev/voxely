@@ -165,6 +165,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [settingsTab, setSettingsTab] = useState<'audio-video' | 'quality' | 'interface' | 'sounds' | 'profile' | 'account'>('audio-video');
     const [toastMessage, setToastMessage] = useState<{ id: string; name: string; text: string } | null>(null);
     const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const controlBarTimerRef = useRef<NodeJS.Timeout | null>(null);
     // roomOptions is intentionally stable — device IDs are only initial defaults.
     // LiveKitDeviceSync handles live switching via room.switchActiveDevice().
     const qPreset = VIDEO_PRESETS[videoQuality];
@@ -202,9 +203,13 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     // Auto-hide control bar after 4s of inactivity
     useEffect(() => {
         if (!autoHideControlBar || !controlBarVisible) return;
-        const timer = setTimeout(() => setControlBarVisible(false), 4000);
-        (window as unknown as Record<string, unknown>).__controlBarTimer = timer as unknown;
-        return () => clearTimeout(timer);
+        
+        if (controlBarTimerRef.current) clearTimeout(controlBarTimerRef.current);
+        controlBarTimerRef.current = setTimeout(() => setControlBarVisible(false), 4000);
+        
+        return () => {
+            if (controlBarTimerRef.current) clearTimeout(controlBarTimerRef.current);
+        };
     }, [autoHideControlBar, controlBarVisible, setControlBarVisible]);
 
     const handleNewMessage = useCallback((msg: ChatMessage) => {
@@ -487,15 +492,16 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                         onMouseEnter={() => {
                             if (autoHideControlBar) {
                                 // Reset timer on hover
-                                if ((window as unknown as Record<string, unknown>).__controlBarTimer) {
-                                    clearTimeout((window as unknown as Record<string, unknown>).__controlBarTimer as number);
-                                    (window as unknown as Record<string, unknown>).__controlBarTimer = undefined;
+                                if (controlBarTimerRef.current) {
+                                    clearTimeout(controlBarTimerRef.current);
+                                    controlBarTimerRef.current = null;
                                 }
                             }
                         }}
                         onMouseLeave={() => {
                             if (autoHideControlBar) {
-                                (window as unknown as Record<string, unknown>).__controlBarTimer = setTimeout(() => setControlBarVisible(false), 4000) as unknown;
+                                if (controlBarTimerRef.current) clearTimeout(controlBarTimerRef.current);
+                                controlBarTimerRef.current = setTimeout(() => setControlBarVisible(false), 4000);
                             }
                         }}
                     >
