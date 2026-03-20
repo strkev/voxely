@@ -99,45 +99,6 @@ function AutoStartAudio() {
     );
 }
 
-// ─── Chevron Rotation Fix ─────────────────────────────────────────────────────
-function ChevronRotationFix() {
-    useEffect(() => {
-        let justSet = false;
-        const closeAll = () => {
-            document.querySelectorAll('.lk-button-menu[data-menu-open]').forEach(el => {
-                el.removeAttribute('data-menu-open');
-            });
-        };
-        const handleChevronClick = (e: Event) => {
-            const btn = e.currentTarget as HTMLElement;
-            const wasOpen = btn.hasAttribute('data-menu-open');
-            closeAll();
-            if (!wasOpen) {
-                btn.setAttribute('data-menu-open', '');
-                justSet = true;
-                requestAnimationFrame(() => { justSet = false; });
-            }
-        };
-        const handleDocumentClick = () => { if (!justSet) closeAll(); };
-        const attachListeners = () => {
-            document.querySelectorAll('.lk-button-menu').forEach(btn => {
-                if (!btn.hasAttribute('data-chevron-patched')) {
-                    btn.setAttribute('data-chevron-patched', '');
-                    btn.addEventListener('click', handleChevronClick);
-                }
-            });
-        };
-        const observer = new MutationObserver(attachListeners);
-        observer.observe(document.body, { childList: true, subtree: true });
-        attachListeners();
-        document.addEventListener('click', handleDocumentClick);
-        return () => {
-            observer.disconnect();
-            document.removeEventListener('click', handleDocumentClick);
-        };
-    }, []);
-    return null;
-}
 
 
 // ─── Custom tile: speaking glow + spotlight button ───────────────────────────
@@ -621,7 +582,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     </button>
                 </div>
                 <AutoStartAudio />
-                <ChevronRotationFix />
                 <RoomEffects />
                 <VideoConferenceView />
                 <RoomAudioRenderer />
