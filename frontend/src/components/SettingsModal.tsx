@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-    useRoomContext,
+    useMaybeRoomContext,
     useMediaDeviceSelect,
 } from '@livekit/components-react';
 import { useRouter } from 'next/navigation';
@@ -16,7 +16,6 @@ import {
     ChevronDown, VolumeX, Volume2, ImageIcon, Check, Pencil, Loader2,
     Sun, Moon, ScreenShare, CircleSlash, MonitorPlay, Upload
 } from 'lucide-react';
-import { Room } from 'livekit-client';
 import { SettingsNavButton } from '@/components/ui/SettingsNavButton';
 import { SettingsOptionButton } from '@/components/ui/SettingsOptionButton';
 import { SettingsToggle } from '@/components/ui/SettingsToggle';
@@ -68,7 +67,7 @@ function VolumeMeter({ level }: { level: number }) {
     );
 }
 
-function MicTestSection({ gain }: { gain: number }) {
+function MicTestSection({ gain, audioOutputDeviceId }: { gain: number; audioOutputDeviceId: string | null }) {
     const [isTesting, setIsTesting] = useState(false);
     const [level, setLevel] = useState(0);
     const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
@@ -194,6 +193,14 @@ function MicTestSection({ gain }: { gain: number }) {
     const handlePlay = () => {
         if (!recordedUrl || !playAudioRef.current) return;
 
+        // Apply sink ID if supported (Chrome, Edge, etc.)
+        if ('setSinkId' in HTMLMediaElement.prototype && audioOutputDeviceId) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (playAudioRef.current as any).setSinkId(audioOutputDeviceId).catch((err: any) => {
+                console.warn('[MicTest] Failed to set sink ID:', err);
+            });
+        }
+
         setIsPlaying(true);
         playAudioRef.current.currentTime = 0;
         playAudioRef.current.play().catch(err => {
@@ -262,38 +269,23 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
     const { user, token, setAuth, deleteAccount } = useAuthStore();
     const {
         soundsEnabled, soundVolume, videoQuality, showDevInfo, autoHideControlBar, noiseSuppressionMode, microphoneGain,
-        audioDeviceId, videoDeviceId,
+        audioDeviceId, videoDeviceId, audioOutputDeviceId,
         screenShareResolution, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius, theme,
         setSoundsEnabled, setSoundVolume, setVideoQuality, setShowDevInfo, setAutoHideControlBar, setNoiseSuppressionMode, setMicrophoneGain,
-        setAudioDeviceId, setVideoDeviceId,
+        setAudioDeviceId, setVideoDeviceId, setAudioOutputDeviceId,
         setScreenShareResolution, setScreenShareFps, setVirtualBackground, setVirtualBackgroundImage, setBlurRadius, setTheme,
     } = useSettingsStore();
 
     // Fallback device list state
     const [fallbackAudioDevices, setFallbackAudioDevices] = useState<MediaDeviceInfo[]>([]);
     const [fallbackVideoDevices, setFallbackVideoDevices] = useState<MediaDeviceInfo[]>([]);
+    const [fallbackAudioOutputDevices, setFallbackAudioOutputDevices] = useState<MediaDeviceInfo[]>([]);
 
-    // Safely try to get LiveKit context
-    let room: Room | null = null;
-    let lkAudioDevices: MediaDeviceInfo[] = [];
-    let lkVideoDevices: MediaDeviceInfo[] = [];
-    let lkActiveAudioId: string | undefined;
-    let lkActiveVideoId: string | undefined;
-
-    try {
-        // eslint-disable-next-line react-hooks/rules-of-hooks
-        room = useRoomContext();
-        // eslint-disable-next-line react-hooks/rules-of-hooks
-        const { devices: aDevices, activeDeviceId: aId } = useMediaDeviceSelect({ kind: 'audioinput' });
-        // eslint-disable-next-line react-hooks/rules-of-hooks
-        const { devices: vDevices, activeDeviceId: vId } = useMediaDeviceSelect({ kind: 'videoinput' });
-        lkAudioDevices = aDevices;
-        lkVideoDevices = vDevices;
-        lkActiveAudioId = aId;
-        lkActiveVideoId = vId;
-    } catch {
-        // No LiveKit context
-    }
+    // LiveKit hooks must be at top level
+    const room = useMaybeRoomContext() || null;
+    const { devices: lkAudioDevices, activeDeviceId: lkActiveAudioId } = useMediaDeviceSelect({ kind: 'audioinput', room: room || undefined });
+    const { devices: lkVideoDevices, activeDeviceId: lkActiveVideoId } = useMediaDeviceSelect({ kind: 'videoinput', room: room || undefined });
+    const { devices: lkAudioOutputDevices, activeDeviceId: lkActiveAudioOutputId } = useMediaDeviceSelect({ kind: 'audiooutput', room: room || undefined });
 
     // Effect for fallback device enumeration
     useEffect(() => {
@@ -338,6 +330,7 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
 
                     setFallbackAudioDevices(devices.filter(d => d.kind === 'audioinput'));
                     setFallbackVideoDevices(devices.filter(d => d.kind === 'videoinput'));
+                    setFallbackAudioOutputDevices(devices.filter(d => d.kind === 'audiooutput'));
                 } catch (err) {
                     console.error('SettingsModal: Error enumerating devices:', err);
                 }
@@ -350,22 +343,11 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
 
     const audioDevices = room ? lkAudioDevices : fallbackAudioDevices;
     const videoDevices = room ? lkVideoDevices : fallbackVideoDevices;
+    const audioOutputDevices = room ? lkAudioOutputDevices : fallbackAudioOutputDevices;
     const activeAudioId = room ? lkActiveAudioId : audioDeviceId;
     const activeVideoId = room ? lkActiveVideoId : videoDeviceId;
+    const activeAudioOutputId = room ? lkActiveAudioOutputId : audioOutputDeviceId;
 
-    const handleAudioDeviceChange = async (deviceId: string) => {
-        setAudioDeviceId(deviceId);
-        if (room) {
-            await room.switchActiveDevice('audioinput', deviceId);
-        }
-    };
-
-    const handleVideoDeviceChange = async (deviceId: string) => {
-        setVideoDeviceId(deviceId);
-        if (room) {
-            await room.switchActiveDevice('videoinput', deviceId);
-        }
-    };
 
     const [activeTab, setActiveTab] = useState<TabId>(defaultTab || 'audio-video');
     const [isNavExpanded, setIsNavExpanded] = useState(false);
@@ -625,6 +607,45 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
 
                                     <div className="h-px bg-gray-100 my-8" />
 
+                                    {/* Audio Output Settings */}
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-2xl bg-primary/5 flex items-center justify-center">
+                                                <Volume2 className="w-5 h-5 text-primary" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-bold text-text-main">Speaker Settings</h4>
+                                                <p className="text-xs text-text-muted">Choose your audio output device</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gray-50 p-6 rounded-[28px] border border-gray-100">
+                                            <div className="space-y-3">
+                                                <div className="flex items-center justify-between px-1">
+                                                    <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">Output Device</label>
+                                                </div>
+                                                <select
+                                                    value={audioOutputDeviceId || ''}
+                                                    onChange={(e) => setAudioOutputDeviceId(e.target.value || null)}
+                                                    className="w-full bg-white border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-medium text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
+                                                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
+                                                >
+                                                    <option value="">System Default</option>
+                                                    {audioOutputDevices.filter(d => d.deviceId !== 'default').map((device) => (
+                                                        <option key={device.deviceId} value={device.deviceId}>
+                                                            {device.label || `Speaker ${device.deviceId.slice(0, 5)}...`}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <p className="text-[10px] text-text-muted italic px-1 pt-1">
+                                                    Speakers or headphones used for incoming audio.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="h-px bg-gray-100 my-8" />
+
                                     {/* Microphone Test & Gain */}
                                     <div className="space-y-6">
                                         <div className="flex items-center gap-3">
@@ -638,23 +659,23 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
                                         </div>
 
                                         <div className="space-y-6 bg-gray-50 p-6 rounded-[28px] border border-gray-100">
-                                            {/* Audio Device Selector */}
+                                            {/* Audio Input Selector */}
                                             <div className="space-y-3">
                                                 <div className="flex items-center justify-between px-1">
                                                     <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">Input Device</label>
                                                 </div>
                                                 <select
-                                                    value={activeAudioId || ''}
-                                                    onChange={(e) => handleAudioDeviceChange(e.target.value)}
+                                                    value={audioDeviceId || ''}
+                                                    onChange={(e) => setAudioDeviceId(e.target.value || null)}
                                                     className="w-full bg-white border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-medium text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
                                                     style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
                                                 >
-                                                    {audioDevices.map((device) => (
+                                                    <option value="">System Default</option>
+                                                    {audioDevices.filter(d => d.deviceId !== 'default').map((device) => (
                                                         <option key={device.deviceId} value={device.deviceId}>
                                                             {device.label || `Microphone ${device.deviceId.slice(0, 5)}...`}
                                                         </option>
                                                     ))}
-                                                    {audioDevices.length === 0 && <option disabled>No microphones found</option>}
                                                 </select>
                                             </div>
 
@@ -685,7 +706,7 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
                                             <div className="h-px bg-gray-100" />
 
                                             {/* Visualizer / Test */}
-                                            <MicTestSection gain={microphoneGain} />
+                                            <MicTestSection gain={microphoneGain} audioOutputDeviceId={audioOutputDeviceId} />
                                         </div>
                                     </div>
 
@@ -709,17 +730,17 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
                                                     <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">Camera</label>
                                                 </div>
                                                 <select
-                                                    value={activeVideoId || ''}
-                                                    onChange={(e) => handleVideoDeviceChange(e.target.value)}
+                                                    value={videoDeviceId || ''}
+                                                    onChange={(e) => setVideoDeviceId(e.target.value || null)}
                                                     className="w-full bg-white border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-medium text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
                                                     style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
                                                 >
+                                                    <option value="">System Default</option>
                                                     {videoDevices.map((device) => (
                                                         <option key={device.deviceId} value={device.deviceId}>
                                                             {device.label || `Camera ${device.deviceId.slice(0, 5)}...`}
                                                         </option>
                                                     ))}
-                                                    {videoDevices.length === 0 && <option disabled>No cameras found</option>}
                                                 </select>
                                             </div>
 
@@ -733,7 +754,7 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
                                                         onClick={() => setVirtualBackground('none')}
                                                         className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${virtualBackground === 'none'
                                                             ? 'border-primary bg-primary/5 text-primary shadow-sm'
-                                                            : 'border-gray-50 hover:border-gray-200 hover:bg-gray-50 text-text-main'
+                                                            : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50 text-text-main'
                                                             }`}
                                                     >
                                                         <CircleSlash className="w-5 h-5 text-current opacity-70" />
@@ -744,7 +765,7 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
                                                         onClick={() => setVirtualBackground('blur')}
                                                         className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${virtualBackground === 'blur'
                                                             ? 'border-primary bg-primary/5 text-primary shadow-sm'
-                                                            : 'border-gray-50 hover:border-gray-200 hover:bg-gray-50 text-text-main'
+                                                            : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50 text-text-main'
                                                             }`}
                                                     >
                                                         <MonitorPlay className="w-5 h-5 text-current opacity-70" />
@@ -755,7 +776,7 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
                                                         onClick={() => setVirtualBackground('image')}
                                                         className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${virtualBackground === 'image'
                                                             ? 'border-primary bg-primary/5 text-primary shadow-sm'
-                                                            : 'border-gray-50 hover:border-gray-200 hover:bg-gray-50 text-text-main'
+                                                            : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50 text-text-main'
                                                             }`}
                                                     >
                                                         <ImageIcon className="w-5 h-5 text-current opacity-70" />

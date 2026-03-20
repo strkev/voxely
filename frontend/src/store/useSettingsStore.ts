@@ -42,6 +42,7 @@ interface SettingsState {
     microphoneGain: number;
     audioDeviceId: string | null;
     videoDeviceId: string | null;
+    audioOutputDeviceId: string | null;
     setSoundsEnabled: (v: boolean) => void;
     setSoundVolume: (v: number) => void;
     setVideoQuality: (v: VideoQuality) => void;
@@ -58,6 +59,7 @@ interface SettingsState {
     setMicrophoneGain: (v: number) => void;
     setAudioDeviceId: (v: string | null) => void;
     setVideoDeviceId: (v: string | null) => void;
+    setAudioOutputDeviceId: (v: string | null) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -79,6 +81,7 @@ export const useSettingsStore = create<SettingsState>()(
             microphoneGain: 1.0,
             audioDeviceId: null,
             videoDeviceId: null,
+            audioOutputDeviceId: null,
             setSoundsEnabled: (v) => set({ soundsEnabled: v }),
             setSoundVolume: (v) => set({ soundVolume: Math.max(0, Math.min(100, v)) }),
             setVideoQuality: (v) => set({ videoQuality: v }),
@@ -95,6 +98,7 @@ export const useSettingsStore = create<SettingsState>()(
             setMicrophoneGain: (v) => set({ microphoneGain: Math.max(0, Math.min(5, v)) }),
             setAudioDeviceId: (v) => set({ audioDeviceId: v }),
             setVideoDeviceId: (v) => set({ videoDeviceId: v }),
+            setAudioOutputDeviceId: (v) => set({ audioOutputDeviceId: v }),
         }),
         { name: 'user-settings' }
     )

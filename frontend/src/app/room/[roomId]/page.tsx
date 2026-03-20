@@ -845,6 +845,45 @@ function FriendsSidebarWithPresence({
     );
 }
 
+// Helper to sync all devices with store
+const LiveKitDeviceSync = ({
+    audioDeviceId,
+    videoDeviceId,
+    audioOutputDeviceId
+}: {
+    audioDeviceId: string | null;
+    videoDeviceId: string | null;
+    audioOutputDeviceId: string | null;
+}) => {
+    const room = useRoomContext();
+
+    useEffect(() => {
+        // Use 'default' if null, or just don't switch if null and we want browser to decide
+        // Most browsers have a 'default' deviceId for audio
+        const targetId = audioDeviceId || 'default';
+        room.switchActiveDevice('audioinput', targetId).catch(err => {
+            console.warn('[LiveKitDeviceSync] Failed to switch audio input:', err);
+        });
+    }, [room, audioDeviceId]);
+
+    useEffect(() => {
+        if (videoDeviceId) {
+            room.switchActiveDevice('videoinput', videoDeviceId).catch(err => {
+                console.warn('[LiveKitDeviceSync] Failed to switch video input:', err);
+            });
+        }
+    }, [room, videoDeviceId]);
+
+    useEffect(() => {
+        const targetId = audioOutputDeviceId || 'default';
+        room.switchActiveDevice('audiooutput', targetId).catch(err => {
+            console.warn('[LiveKitDeviceSync] Failed to switch audio output:', err);
+        });
+    }, [room, audioOutputDeviceId]);
+
+    return null;
+};
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
     const router = useRouter();
@@ -867,8 +906,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, setControlBarVisible,
         autoHideControlBar, noiseSuppressionMode, microphoneGain, screenShareFps,
         virtualBackground, virtualBackgroundImage, blurRadius, theme,
-        audioDeviceId, videoDeviceId
+        audioDeviceId, videoDeviceId, audioOutputDeviceId
     } = useSettingsStore();
+
     const noiseProcessorRef = useRef<AnyNoiseProcessor | null>(null);
     const gainProcessorRef = useRef<GainProcessor | null>(null);
     // Friends state & socket
@@ -1142,6 +1182,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     },
                 }}
             >
+                <LiveKitDeviceSync
+                    audioDeviceId={audioDeviceId}
+                    videoDeviceId={videoDeviceId}
+                    audioOutputDeviceId={audioOutputDeviceId}
+                />
                 {/* Top bar */}
                 <div className="absolute top-4 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-visible py-2 -my-2 flex-wrap sm:flex-nowrap">
                     {/* Friends toggle button */}
