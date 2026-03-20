@@ -486,6 +486,8 @@ function LiveVideoQualitySync() {
 // ─── Noise Suppression Hook ──────────────────────────────────────────────────
 type AnyNoiseProcessor = NoiseSuppressionProcessor | NativeNoiseProcessor | FilterNoiseProcessor;
 
+import { GainProcessor } from '@/lib/gain-processor';
+
 function createNoiseProcessor(mode: NoiseSuppressionMode): AnyNoiseProcessor | null {
     switch (mode) {
         case 'rnnoise': return new NoiseSuppressionProcessor();
@@ -495,32 +497,37 @@ function createNoiseProcessor(mode: NoiseSuppressionMode): AnyNoiseProcessor | n
     }
 }
 
-function NoiseSuppressionHook({
+function AudioProcessingHook({
     processorRef,
+    gainProcessorRef,
     mode,
+    gain,
 }: {
     processorRef: React.MutableRefObject<AnyNoiseProcessor | null>;
+    gainProcessorRef: React.MutableRefObject<GainProcessor | null>;
     mode: NoiseSuppressionMode;
+    gain: number;
 }) {
     const room = useRoomContext();
     const appliedModeRef = useRef<NoiseSuppressionMode>('off');
+    const appliedGainRef = useRef<number>(1.0);
     const originalTrackRef = useRef<MediaStreamTrack | null>(null);
 
     useEffect(() => {
         const localP = room.localParticipant;
 
-        const applyNoiseSuppression = async () => {
+        const applyProcessing = async () => {
             // Find the published mic track
             const micPub = Array.from(localP.audioTrackPublications.values()).find(
                 (p) => p.source === Track.Source.Microphone && p.track?.mediaStreamTrack
             );
             if (!micPub?.track?.mediaStreamTrack) return;
 
-            const wasApplied = appliedModeRef.current !== 'off';
-            const wantsApply = mode !== 'off';
+            const wasApplied = appliedModeRef.current !== 'off' || appliedGainRef.current !== 1.0;
+            const wantsApply = mode !== 'off' || gain !== 1.0;
 
-            // If mode changed while a processor is active, tear down the old one first
-            if (wasApplied && (mode !== appliedModeRef.current)) {
+            // If settings changed while processing is active, tear down the old one first
+            if (wasApplied && (mode !== appliedModeRef.current || gain !== appliedGainRef.current)) {
                 // Restore original track
                 if (originalTrackRef.current) {
                     try {
@@ -531,47 +538,56 @@ function NoiseSuppressionHook({
                 }
                 processorRef.current?.destroy();
                 processorRef.current = null;
+                gainProcessorRef.current?.destroy();
+                gainProcessorRef.current = null;
                 originalTrackRef.current = null;
                 appliedModeRef.current = 'off';
+                appliedGainRef.current = 1.0;
             }
 
-            // Apply new processor if needed
-            if (wantsApply && appliedModeRef.current === 'off') {
+            // Apply new processing if needed
+            if (wantsApply && (appliedModeRef.current === 'off' && appliedGainRef.current === 1.0)) {
                 try {
                     // Store original track for restoration
                     originalTrackRef.current = micPub.track.mediaStreamTrack;
 
-                    const processor = createNoiseProcessor(mode);
-                    if (!processor) return;
+                    let currentStream = new MediaStream([micPub.track.mediaStreamTrack]);
 
-                    const originalStream = new MediaStream([micPub.track.mediaStreamTrack]);
-                    const filteredStream = await processor.process(originalStream);
-                    const filteredTrack = filteredStream.getAudioTracks()[0];
+                    // 1. Apply Gain (Before Noise Suppression)
+                    if (gain !== 1.0) {
+                        const gp = new GainProcessor();
+                        currentStream = await gp.process(currentStream, gain);
+                        gainProcessorRef.current = gp;
+                        appliedGainRef.current = gain;
+                    }
 
-                    if (filteredTrack) {
-                        await micPub.track.replaceTrack(filteredTrack);
-                        processorRef.current = processor;
-                        appliedModeRef.current = mode;
-                        console.log(`[NoiseSuppression] Applied mode: ${mode}`);
+                    // 2. Apply Noise Suppression
+                    if (mode !== 'off') {
+                        const processor = createNoiseProcessor(mode);
+                        if (processor) {
+                            currentStream = await processor.process(currentStream);
+                            processorRef.current = processor;
+                            appliedModeRef.current = mode;
+                        }
+                    }
+
+                    const finalTrack = currentStream.getAudioTracks()[0];
+                    if (finalTrack) {
+                        await micPub.track.replaceTrack(finalTrack);
+                        console.log(`[AudioProcessing] Applied Gain: ${gain}x, Mode: ${mode}`);
                     }
                 } catch (err) {
-                    console.error('[NoiseSuppression] Failed to apply:', err);
+                    console.error('[AudioProcessing] Failed to apply:', err);
                 }
-            }
-
-            // Turning off
-            if (!wantsApply && wasApplied) {
-                // Already cleaned up above
-                console.log('[NoiseSuppression] Disabled');
             }
         };
 
-        applyNoiseSuppression();
+        applyProcessing();
 
         // Listen for new mic track publications
         const handleTrackPublished = () => {
-            if (mode !== 'off' && appliedModeRef.current === 'off') {
-                setTimeout(applyNoiseSuppression, 500);
+            if ((mode !== 'off' || gain !== 1.0) && appliedModeRef.current === 'off' && appliedGainRef.current === 1.0) {
+                setTimeout(applyProcessing, 500);
             }
         };
 
@@ -579,7 +595,7 @@ function NoiseSuppressionHook({
         return () => {
             localP.off('localTrackPublished', handleTrackPublished);
         };
-    }, [room, mode, processorRef]);
+    }, [room, mode, gain, processorRef, gainProcessorRef]);
 
     return null;
 }
@@ -847,8 +863,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [chatSidebarWidth, setChatSidebarWidth] = useState(320);
     const [unread, setUnread] = useState(0);
     const [copied, setCopied] = useState(false);
-    const { soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppressionMode, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius, theme } = useSettingsStore();
+    const { soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, setControlBarVisible, autoHideControlBar, noiseSuppressionMode, microphoneGain, screenShareFps, virtualBackground, virtualBackgroundImage, blurRadius, theme } = useSettingsStore();
     const noiseProcessorRef = useRef<AnyNoiseProcessor | null>(null);
+    const gainProcessorRef = useRef<GainProcessor | null>(null);
     // Friends state & socket
     const incomingRequests = useFriendsStore(s => s.incomingRequests);
     const { sendRoomInvite, toggleRoomOpen, initiateCall } = useFriends();
@@ -906,6 +923,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         return () => {
             noiseProcessorRef.current?.destroy();
             noiseProcessorRef.current = null;
+            gainProcessorRef.current?.destroy();
+            gainProcessorRef.current = null;
             bgProcessorRef.current?.destroy();
             bgProcessorRef.current = null;
         };
@@ -1189,9 +1208,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 <AutoStartAudio />
                 <ChevronRotationFix />
                 <LiveVideoQualitySync />
-                <NoiseSuppressionHook
+                <AudioProcessingHook
                     processorRef={noiseProcessorRef}
+                    gainProcessorRef={gainProcessorRef}
                     mode={noiseSuppressionMode}
+                    gain={microphoneGain}
                 />
                 <VirtualBackgroundHook processorRef={bgProcessorRef} bgOption={virtualBackground} bgImage={virtualBackgroundImage} blurRadius={blurRadius} />
                 <CustomVideoConference />
