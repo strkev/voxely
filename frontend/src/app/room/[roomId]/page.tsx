@@ -16,7 +16,6 @@ import {
     useIsMuted,
     useParticipants,
     useLocalParticipant,
-    useMediaDeviceSelect,
     TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
@@ -444,7 +443,10 @@ function LocalCameraAwareQuickAction({ onOpenSettings }: { onOpenSettings: () =>
 // without requiring a rejoin.
 function LiveVideoQualitySync() {
     const room = useRoomContext();
-    const { videoQuality, screenShareResolution, screenShareFps } = useSettingsStore();
+    const videoQuality = useSettingsStore(s => s.videoQuality);
+    const screenShareResolution = useSettingsStore(s => s.screenShareResolution);
+    const screenShareFps = useSettingsStore(s => s.screenShareFps);
+
     const prevVideoQualityRef = useRef(videoQuality);
     const prevScreenResRef = useRef(screenShareResolution);
     const prevScreenFpsRef = useRef(screenShareFps);
@@ -501,15 +503,13 @@ function createNoiseProcessor(mode: NoiseSuppressionMode): AnyNoiseProcessor | n
 function AudioProcessingHook({
     processorRef,
     gainProcessorRef,
-    mode,
-    gain,
 }: {
     processorRef: React.MutableRefObject<AnyNoiseProcessor | null>;
     gainProcessorRef: React.MutableRefObject<GainProcessor | null>;
-    mode: NoiseSuppressionMode;
-    gain: number;
 }) {
     const room = useRoomContext();
+    const mode = useSettingsStore(s => s.noiseSuppressionMode);
+    const gain = useSettingsStore(s => s.microphoneGain);
     const appliedModeRef = useRef<NoiseSuppressionMode>('off');
     const appliedGainRef = useRef<number>(1.0);
     const originalTrackRef = useRef<MediaStreamTrack | null>(null);
@@ -605,17 +605,14 @@ function AudioProcessingHook({
 // ─── Virtual Background Hook ──────────────────────────────────────────────────
 function VirtualBackgroundHook({
     processorRef,
-    bgOption,
-    bgImage,
-    blurRadius,
 }: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     processorRef: React.MutableRefObject<any>;
-    bgOption: 'none' | 'blur' | 'image';
-    bgImage: string | null;
-    blurRadius: number;
 }) {
     const room = useRoomContext();
+    const bgOption = useSettingsStore(s => s.virtualBackground);
+    const bgImage = useSettingsStore(s => s.virtualBackgroundImage);
+    const blurRadius = useSettingsStore(s => s.blurRadius);
     const lastTrackSidRef = useRef<string | undefined>(undefined);
 
     useEffect(() => {
@@ -846,45 +843,16 @@ function FriendsSidebarWithPresence({
     );
 }
 
-// Helper to sync all devices with store (bidirectional)
-const LiveKitDeviceSync = ({
-    audioDeviceId,
-    videoDeviceId,
-    audioOutputDeviceId
-}: {
-    audioDeviceId: string | null;
-    videoDeviceId: string | null;
-    audioOutputDeviceId: string | null;
-}) => {
+// Helper to sync all devices with store
+const LiveKitDeviceSync = () => {
     const room = useRoomContext();
-    const { setAudioDeviceId, setVideoDeviceId, setAudioOutputDeviceId } = useSettingsStore();
-
-    // Read LiveKit's current active devices (updates when user changes via ControlBar)
-    const { activeDeviceId: lkAudioId } = useMediaDeviceSelect({ kind: 'audioinput' });
-    const { activeDeviceId: lkVideoId } = useMediaDeviceSelect({ kind: 'videoinput' });
-    const { activeDeviceId: lkOutputId } = useMediaDeviceSelect({ kind: 'audiooutput' });
-
-    // LiveKit → Store sync (when user changes device via ControlBar)
-    useEffect(() => {
-        if (lkAudioId && lkAudioId !== 'default' && lkAudioId !== audioDeviceId) {
-            setAudioDeviceId(lkAudioId);
-        }
-    }, [lkAudioId, audioDeviceId, setAudioDeviceId]);
+    const audioDeviceId = useSettingsStore(s => s.audioDeviceId);
+    const videoDeviceId = useSettingsStore(s => s.videoDeviceId);
+    const audioOutputDeviceId = useSettingsStore(s => s.audioOutputDeviceId);
 
     useEffect(() => {
-        if (lkVideoId && lkVideoId !== 'default' && lkVideoId !== videoDeviceId) {
-            setVideoDeviceId(lkVideoId);
-        }
-    }, [lkVideoId, videoDeviceId, setVideoDeviceId]);
-
-    useEffect(() => {
-        if (lkOutputId && lkOutputId !== 'default' && lkOutputId !== audioOutputDeviceId) {
-            setAudioOutputDeviceId(lkOutputId);
-        }
-    }, [lkOutputId, audioOutputDeviceId, setAudioOutputDeviceId]);
-
-    // Store → LiveKit sync (when user changes device via Settings modal)
-    useEffect(() => {
+        // Use 'default' if null, or just don't switch if null and we want browser to decide
+        // Most browsers have a 'default' deviceId for audio
         const targetId = audioDeviceId || 'default';
         room.switchActiveDevice('audioinput', targetId).catch(err => {
             console.warn('[LiveKitDeviceSync] Failed to switch audio input:', err);
@@ -927,12 +895,17 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [chatSidebarWidth, setChatSidebarWidth] = useState(320);
     const [unread, setUnread] = useState(0);
     const [copied, setCopied] = useState(false);
-    const {
-        soundsEnabled, soundVolume, videoQuality, showDevInfo, controlBarVisible, setControlBarVisible,
-        autoHideControlBar, noiseSuppressionMode, microphoneGain, screenShareFps,
-        virtualBackground, virtualBackgroundImage, blurRadius, theme,
-        audioDeviceId, videoDeviceId, audioOutputDeviceId
-    } = useSettingsStore();
+    const soundsEnabled = useSettingsStore(s => s.soundsEnabled);
+    const soundVolume = useSettingsStore(s => s.soundVolume);
+    const videoQuality = useSettingsStore(s => s.videoQuality);
+    const showDevInfo = useSettingsStore(s => s.showDevInfo);
+    const controlBarVisible = useSettingsStore(s => s.controlBarVisible);
+    const autoHideControlBar = useSettingsStore(s => s.autoHideControlBar);
+    const screenShareFps = useSettingsStore(s => s.screenShareFps);
+    const theme = useSettingsStore(s => s.theme);
+    const audioDeviceId = useSettingsStore(s => s.audioDeviceId);
+    const videoDeviceId = useSettingsStore(s => s.videoDeviceId);
+    const setControlBarVisible = useSettingsStore(s => s.setControlBarVisible);
 
     const noiseProcessorRef = useRef<AnyNoiseProcessor | null>(null);
     const gainProcessorRef = useRef<GainProcessor | null>(null);
@@ -969,7 +942,31 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const [settingsTab, setSettingsTab] = useState<'audio-video' | 'quality' | 'interface' | 'sounds' | 'profile' | 'account'>('audio-video');
     const [toastMessage, setToastMessage] = useState<{ id: string; name: string; text: string } | null>(null);
     const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+    // roomOptions is intentionally stable — device IDs are only initial defaults.
+    // LiveKitDeviceSync handles live switching via room.switchActiveDevice().
     const qPreset = VIDEO_PRESETS[videoQuality];
+    const roomOptions = useMemo(() => ({
+        videoCaptureDefaults: {
+            deviceId: videoDeviceId || undefined,
+            resolution: { width: qPreset.width, height: qPreset.height, frameRate: qPreset.frameRate },
+        },
+        audioCaptureDefaults: {
+            deviceId: audioDeviceId || undefined,
+        },
+        publishDefaults: {
+            videoCodec: 'vp9' as const,
+            videoEncoding: {
+                maxBitrate: qPreset.maxBitrate,
+                maxFramerate: qPreset.frameRate,
+            },
+            screenShareEncoding: {
+                maxBitrate: 50_000_000,
+                maxFramerate: screenShareFps,
+            },
+            screenShareSimulcastLayers: [],
+        },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }), []);
 
 
     // Ensure control bar is always visible on mount + activate leave guard
@@ -1185,33 +1182,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 data-lk-theme="default"
                 style={{ height: '100%', width: '100%', background: 'transparent', position: 'relative' }}
                 onDisconnected={() => router.push('/dashboard')}
-                options={{
-                    videoCaptureDefaults: {
-                        deviceId: videoDeviceId || undefined,
-                        resolution: { width: qPreset.width, height: qPreset.height, frameRate: qPreset.frameRate },
-                    },
-                    audioCaptureDefaults: {
-                        deviceId: audioDeviceId || undefined,
-                    },
-                    publishDefaults: {
-                        videoCodec: 'vp9',
-                        videoEncoding: {
-                            maxBitrate: qPreset.maxBitrate,
-                            maxFramerate: qPreset.frameRate,
-                        },
-                        screenShareEncoding: {
-                            maxBitrate: 50_000_000, // Effectively unlimited
-                            maxFramerate: screenShareFps,
-                        },
-                        screenShareSimulcastLayers: [],
-                    },
-                }}
+                options={roomOptions}
             >
-                <LiveKitDeviceSync
-                    audioDeviceId={audioDeviceId}
-                    videoDeviceId={videoDeviceId}
-                    audioOutputDeviceId={audioOutputDeviceId}
-                />
+                <LiveKitDeviceSync />
                 {/* Top bar */}
                 <div className="absolute top-4 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-visible py-2 -my-2 flex-wrap sm:flex-nowrap">
                     {/* Friends toggle button */}
@@ -1290,10 +1263,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 <AudioProcessingHook
                     processorRef={noiseProcessorRef}
                     gainProcessorRef={gainProcessorRef}
-                    mode={noiseSuppressionMode}
-                    gain={microphoneGain}
                 />
-                <VirtualBackgroundHook processorRef={bgProcessorRef} bgOption={virtualBackground} bgImage={virtualBackgroundImage} blurRadius={blurRadius} />
+                <VirtualBackgroundHook processorRef={bgProcessorRef} />
                 <CustomVideoConference />
                 <RoomAudioRenderer />
                 {showDevInfo && <DevInfoOverlay />}
