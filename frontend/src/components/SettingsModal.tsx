@@ -442,7 +442,7 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
 
                                         <div className="space-y-4">
                                             <p className="text-[11px] font-bold text-text-muted uppercase tracking-widest pl-1">Resolution</p>
-                                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                                            <div className="flex gap-2 flex-wrap">
                                                 {SCREEN_RES_OPTIONS.map((r: ScreenShareResolution) => (
                                                     <SettingsOptionButton
                                                         key={r}
