@@ -8,18 +8,18 @@ import {
     TrackReferenceOrPlaceholder,
 } from '@livekit/components-react';
 import { Track, RemoteAudioTrack, RemoteTrackPublication } from 'livekit-client';
-import { 
-    Mic, 
-    MicOff, 
-    Maximize, 
-    EyeOff, 
-    Expand, 
-    Shrink, 
-    Play, 
-    Volume2, 
-    VolumeX, 
-    ChevronRight, 
-    ChevronLeft 
+import {
+    Mic,
+    MicOff,
+    Maximize,
+    EyeOff,
+    Expand,
+    Shrink,
+    Play,
+    Volume2,
+    VolumeX,
+    ChevronRight,
+    ChevronLeft
 } from 'lucide-react';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -172,11 +172,11 @@ export function SpotlightableTile({
                     >
                         {initial}
                     </div>
-                    
+
                     {!isWatching && isScreenShare && (
                         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 bg-black/40 backdrop-blur-md rounded-[16px]">
                             <h3 className="text-white text-xl font-bold tracking-tight drop-shadow-md mb-1">{participantName}</h3>
-                            
+
                             <button
                                 onClick={(e) => { e.stopPropagation(); setIsWatching(true); }}
                                 className="shrink-0 flex items-center gap-2 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-6 py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm pointer-events-auto"
@@ -210,7 +210,7 @@ export function SpotlightableTile({
 
             {/* Top Right Action Buttons — Only visible when watching */}
             {/* Action Bar (Top Right) — Only visible when watching and not focusing another track */}
-            {isWatching && (!isAnythingSpotlit || isSpotlit) && (
+            {(
                 <div className={`absolute top-2 right-2 z-30 flex flex-row gap-0.5 p-1 items-center bg-black/60 backdrop-blur-md border border-white/10 rounded-xl shadow-xl transition-all duration-300 ${isFullScreen ? 'top-4 right-4 p-1.5 gap-1' : ''} opacity-100 sm:opacity-90 sm:hover:opacity-100`}>
                     {/* Spotlight toggle */}
                     {onSpotlight && !isFullScreen && (
