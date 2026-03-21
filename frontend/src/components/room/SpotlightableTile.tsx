@@ -225,7 +225,7 @@ export function SpotlightableTile({
                     <button
                         onClick={toggleFullScreen}
                         title={isFullScreen ? 'Exit Full Screen' : 'Full Screen'}
-                        className={`p-1.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-150 ${!isSpotlit ? 'max-sm:hidden' : ''}`}
+                        className={`p-1.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-150`}
                     >
                         {isFullScreen ? <Shrink className="w-4 h-4" /> : <Expand className="w-4 h-4" />}
                     </button>
@@ -235,7 +235,7 @@ export function SpotlightableTile({
                         <button
                             onClick={(e) => { e.stopPropagation(); setIsWatching(false); }}
                             title="Stop Watching"
-                            className={`p-1.5 rounded-lg text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-all duration-150 ${!isSpotlit ? 'max-sm:hidden' : ''}`}
+                            className={`p-1.5 rounded-lg text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-all duration-150`}
                         >
                             <EyeOff className="w-4 h-4" />
                         </button>
