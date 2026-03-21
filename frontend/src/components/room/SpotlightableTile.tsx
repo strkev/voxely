@@ -60,8 +60,11 @@ export function SpotlightableTile({
     // Source of truth from store
     const volume = participantVolumes[volumeKey] ?? 100;
 
+    const hiddenTracks = useSettingsStore(s => s.hiddenTracks);
+    const toggleHiddenTrack = useSettingsStore(s => s.toggleHiddenTrack);
+    const isWatching = !hiddenTracks[volumeKey];
+
     const [isLocallyMuted, setIsLocallyMuted] = useState(false);
-    const [isWatching, setIsWatching] = useState(true);
     const containerRef = useRef<HTMLDivElement>(null);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [showVolumeModal, setShowVolumeModal] = useState(false);
@@ -176,7 +179,7 @@ export function SpotlightableTile({
                             <h3 className="text-white text-xl font-bold tracking-tight drop-shadow-md mb-1">{participantName}</h3>
 
                             <button
-                                onClick={(e) => { e.stopPropagation(); setIsWatching(true); }}
+                                onClick={(e) => { e.stopPropagation(); toggleHiddenTrack(volumeKey, false); }}
                                 className="shrink-0 flex items-center gap-2 bg-white/90 hover:bg-white border border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary rounded-2xl px-6 py-2.5 text-sm font-medium transition-all duration-150 backdrop-blur-md shadow-sm pointer-events-auto"
                             >
                                 <Play className="w-4 h-4 fill-current" />
@@ -233,7 +236,7 @@ export function SpotlightableTile({
                     {/* Stop Watching toggle (only for remote screen shares) */}
                     {isScreenShare && !trackRef?.participant?.isLocal && !isFullScreen && (
                         <button
-                            onClick={(e) => { e.stopPropagation(); setIsWatching(false); }}
+                            onClick={(e) => { e.stopPropagation(); toggleHiddenTrack(volumeKey, true); }}
                             title="Stop Watching"
                             className={`p-1.5 rounded-lg text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-all duration-150`}
                         >
@@ -282,7 +285,7 @@ export function SpotlightableTile({
                     if (val > 0 && isLocallyMuted) setIsLocallyMuted(false);
                     if (val === 0 && !isLocallyMuted) setIsLocallyMuted(true);
                 }}
-                participantName={participantName}
+                participantName={isScreenShare ? `${participantName} (Screen Share)` : participantName}
             />
         </div>
     );

@@ -44,6 +44,7 @@ interface SettingsState {
     videoDeviceId: string | null;
     audioOutputDeviceId: string | null;
     participantVolumes: Record<string, number>;
+    hiddenTracks: Record<string, boolean>;
     setSoundsEnabled: (v: boolean) => void;
     setSoundVolume: (v: number) => void;
     setVideoQuality: (v: VideoQuality) => void;
@@ -62,6 +63,7 @@ interface SettingsState {
     setVideoDeviceId: (v: string | null) => void;
     setAudioOutputDeviceId: (v: string | null) => void;
     setParticipantVolume: (key: string, volume: number) => void;
+    toggleHiddenTrack: (key: string, isHidden: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -85,6 +87,7 @@ export const useSettingsStore = create<SettingsState>()(
             videoDeviceId: null,
             audioOutputDeviceId: null,
             participantVolumes: {},
+            hiddenTracks: {},
             setSoundsEnabled: (v) => set({ soundsEnabled: v }),
             setSoundVolume: (v) => set({ soundVolume: Math.max(0, Math.min(100, v)) }),
             setVideoQuality: (v) => set({ videoQuality: v }),
@@ -102,8 +105,11 @@ export const useSettingsStore = create<SettingsState>()(
             setAudioDeviceId: (v) => set({ audioDeviceId: v }),
             setVideoDeviceId: (v) => set({ videoDeviceId: v }),
             setAudioOutputDeviceId: (v) => set({ audioOutputDeviceId: v }),
-            setParticipantVolume: (key, v) => set((s) => ({
+            setParticipantVolume: (key, v) => set((s: SettingsState) => ({
                 participantVolumes: { ...s.participantVolumes, [key]: v }
+            })),
+            toggleHiddenTrack: (key: string, isHidden: boolean) => set((s: SettingsState) => ({
+                hiddenTracks: { ...s.hiddenTracks, [key]: isHidden }
             })),
         }),
         { name: 'user-settings' }
