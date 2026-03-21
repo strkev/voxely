@@ -13,7 +13,6 @@ import {
     MicOff,
     Maximize,
     EyeOff,
-    Eye,
     Expand,
     Shrink,
     Play,
@@ -235,13 +234,13 @@ export function SpotlightableTile({
                     </button>
 
                     {/* Stop Watching toggle (only for remote screen shares) */}
-                    {isScreenShare && !trackRef?.participant?.isLocal && !isFullScreen && (
+                    {isWatching && isScreenShare && !trackRef?.participant?.isLocal && !isFullScreen && (
                         <button
-                            onClick={(e) => { e.stopPropagation(); toggleHiddenTrack(volumeKey, !isWatching); }}
-                            title={isWatching ? "Stop Watching" : "Start Watching"}
-                            className={`p-1.5 rounded-lg transition-all duration-150 ${isWatching ? 'text-white/70 hover:bg-red-500/20 hover:text-red-400' : 'bg-primary text-white shadow-sm'}`}
+                            onClick={(e) => { e.stopPropagation(); toggleHiddenTrack(volumeKey, true); }}
+                            title="Stop Watching"
+                            className={`p-1.5 rounded-lg text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-all duration-150`}
                         >
-                            {isWatching ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            <EyeOff className="w-4 h-4" />
                         </button>
                     )}
                 </div>
