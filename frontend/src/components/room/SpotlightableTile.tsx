@@ -17,10 +17,9 @@ import {
     Shrink,
     Play,
     Volume2,
-    VolumeX,
-    ChevronRight,
-    ChevronLeft
+    VolumeX
 } from 'lucide-react';
+import { VolumeModal } from './VolumeModal';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFriendsStore } from '@/store/useFriendsStore';
@@ -36,7 +35,6 @@ interface SpotlightableTileProps {
 export function SpotlightableTile({
     trackRef,
     isSpotlit = false,
-    isAnythingSpotlit = false,
     onSpotlight,
 }: SpotlightableTileProps) {
     const { theme } = useSettingsStore();
@@ -63,10 +61,10 @@ export function SpotlightableTile({
     const volume = participantVolumes[volumeKey] ?? 100;
 
     const [isLocallyMuted, setIsLocallyMuted] = useState(false);
-    const [isVolumeExpanded, setIsVolumeExpanded] = useState(false);
     const [isWatching, setIsWatching] = useState(true);
     const containerRef = useRef<HTMLDivElement>(null);
     const [isFullScreen, setIsFullScreen] = useState(false);
+    const [showVolumeModal, setShowVolumeModal] = useState(false);
 
     // Sync volume via LiveKit's built-in setVolume (0-1 range)
     useEffect(() => {
@@ -265,59 +263,27 @@ export function SpotlightableTile({
                     onClick={(e) => e.stopPropagation()} /* Prevent triggering Spotlight on click */
                 >
                     <button
-                        onClick={() => setIsLocallyMuted(!isLocallyMuted)}
+                        onClick={() => setShowVolumeModal(true)}
                         className={`hover:text-primary transition-colors focus:outline-none shrink-0 ${isDark ? 'text-white' : 'text-text-main'}`}
-                        title={isLocallyMuted ? "Unmute locally" : "Mute locally"}
+                        title={isLocallyMuted || volume === 0 ? "Adjust Volume (Currently Muted)" : "Adjust Volume"}
                     >
                         {isLocallyMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                     </button>
-
-                    {!isVolumeExpanded && (
-                        <button
-                            onClick={() => setIsVolumeExpanded(true)}
-                            className={`ml-2 sm:hidden shrink-0 ${isDark ? 'text-white/70 hover:text-white' : 'text-text-muted hover:text-text-main'}`}
-                            title="Expand volume slider"
-                        >
-                            <ChevronRight className="w-4 h-4" />
-                        </button>
-                    )}
-
-                    <div className={`flex items-center overflow-hidden transition-all duration-300 ${isVolumeExpanded ? 'w-44 ml-2 opacity-100' : 'w-0 opacity-0'} sm:w-0 sm:ml-0 sm:opacity-0 sm:group-hover/volume:w-36 sm:group-hover/volume:ml-2 sm:group-hover/volume:opacity-100 focus-within:w-44 focus-within:ml-2 focus-within:opacity-100`}>
-                        <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            step="1"
-                            value={isLocallyMuted ? 0 : volume}
-                            onChange={(e) => {
-                                const val = parseInt(e.target.value);
-                                setParticipantVolume(volumeKey, val);
-                                if (val > 0 && isLocallyMuted) setIsLocallyMuted(false);
-                            }}
-                            className={`w-20 sm:w-24 h-1.5 rounded-full appearance-none cursor-pointer shrink-0 ${isDark ? 'bg-white/30' : 'bg-black/20'}`}
-                            style={{
-                                background: `linear-gradient(to right, #FF5A5F ${(isLocallyMuted ? 0 : volume)}%, ${isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)'} ${(isLocallyMuted ? 0 : volume)}%)`
-                            }}
-                            title="Adjust volume locally (0-100%)"
-                        />
-                        <span className={`text-[10px] font-mono w-10 text-right shrink-0 ${isDark ? 'text-white/90' : 'text-text-main'}`}>
-                            {isLocallyMuted ? '0%' : `${Math.round(volume)}%`}
-                        </span>
-
-                        <div className="flex-1 sm:hidden" />
-
-                        {isVolumeExpanded && (
-                            <button
-                                onClick={() => setIsVolumeExpanded(false)}
-                                className={`pl-2 sm:hidden shrink-0 ${isDark ? 'text-white/70 hover:text-white' : 'text-text-muted hover:text-text-main'}`}
-                                title="Collapse volume slider"
-                            >
-                                <ChevronLeft className="w-4 h-4" />
-                            </button>
-                        )}
-                    </div>
                 </div>
             )}
+
+            {/* Volume Modal (Unified for Desktop/Mobile) */}
+            <VolumeModal
+                isOpen={showVolumeModal}
+                onClose={() => setShowVolumeModal(false)}
+                volume={volume}
+                onVolumeChange={(val) => {
+                    setParticipantVolume(volumeKey, val);
+                    if (val > 0 && isLocallyMuted) setIsLocallyMuted(false);
+                    if (val === 0 && !isLocallyMuted) setIsLocallyMuted(true);
+                }}
+                participantName={participantName}
+            />
         </div>
     );
 }
