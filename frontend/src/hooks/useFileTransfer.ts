@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { useDataChannel } from '@livekit/components-react';
 import type { ReceivedDataMessage } from '@livekit/components-core';
 
@@ -299,6 +299,7 @@ export function useFileTransfer() {
                     .then(plainData => {
                         const blob = new Blob([plainData.buffer as ArrayBuffer]);
                         const blobUrl = URL.createObjectURL(blob);
+                        trackUrl(blobUrl);
                         updateTransfer(transferId, {
                             status: 'complete',
                             progress: 100,
@@ -320,6 +321,28 @@ export function useFileTransfer() {
     }, [updateTransfer]);
 
     const { send } = useDataChannel('file-transfer', handleMessage);
+
+    // Tracking for cleanup
+    const createdUrlsRef = useRef<Set<string>>(new Set());
+
+    // Cleanup URLs on unmount to free browser memory
+    useEffect(() => {
+        return () => {
+            createdUrlsRef.current.forEach(url => {
+                try {
+                URL.revokeObjectURL(url);
+                } catch (e) {
+                console.error('[FileTransfer] Failed to revoke URL:', e);
+                }
+            });
+            createdUrlsRef.current.clear();
+        };
+    }, []);
+
+    // Helper to add URLs for tracking
+    const trackUrl = useCallback((url: string) => {
+        createdUrlsRef.current.add(url);
+    }, []);
 
     // ── Send a file ──────────────────────────────────────────────────────────
     const sendFile = useCallback(
@@ -392,6 +415,7 @@ export function useFileTransfer() {
                 // Also create a local blob URL for the sender
                 const localBlob = new Blob([fileData.buffer as ArrayBuffer]);
                 const localBlobUrl = URL.createObjectURL(localBlob);
+                trackUrl(localBlobUrl);
 
                 updateTransfer(transferId, {
                     status: 'complete',
@@ -406,7 +430,7 @@ export function useFileTransfer() {
                 });
             }
         },
-        [send, updateTransfer],
+        [send, updateTransfer, trackUrl],
     );
 
     return {
