@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSettingsStore, VIDEO_PRESETS } from '@/store/useSettingsStore';
+import { useWindowWidth, useThemeBackground, usePreventTabClose, useLiveKitToken } from '@/hooks/useRoomHooks';
 import {
     LiveKitRoom,
     RoomAudioRenderer,
@@ -12,7 +13,7 @@ import {
     useParticipants,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { AlertCircle, Lock, LogOut, ChevronUp } from 'lucide-react';
+import { ChevronUp } from 'lucide-react';
 import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
 import { playSound } from '@/lib/sounds';
 import { FriendsSidebar } from '@/components/FriendsSidebar';
@@ -28,6 +29,9 @@ import { RoomTopbar } from '@/components/room/RoomTopbar';
 import { VideoConferenceView } from '@/components/room/VideoConferenceView';
 import { RoomEffects } from '@/components/room/RoomEffects';
 import { DevInfoOverlay } from '@/components/room/DevInfoOverlay';
+import { ConnectionError } from '@/components/room/ConnectionError';
+import { SecureContextWarning } from '@/components/room/SecureContextWarning';
+import { LeaveConfirmModal } from '@/components/room/LeaveConfirmModal';
 
 
 
@@ -86,13 +90,26 @@ function FriendsSidebarWithPresence({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
     const router = useRouter();
-    const { user, token: authToken, isLoading: authLoading } = useAuthStore();
-    const { activate: activateGuard, deactivate: deactivateGuard, pendingTarget, requestLeave, cancelLeave, confirmLeave: storeConfirmLeave } = useLeaveGuardStore();
-    const [livekitToken, setLivekitToken] = useState<string>('');
+    const { user, token: authToken, isLoading: authLoading } = useAuthStore(
+        useShallow(s => ({
+            user: s.user,
+            token: s.token,
+            isLoading: s.isLoading
+        }))
+    );
+    const { activate: activateGuard, deactivate: deactivateGuard, pendingTarget, requestLeave, cancelLeave, confirmLeave: storeConfirmLeave } = useLeaveGuardStore(
+        useShallow(s => ({
+            activate: s.activate,
+            deactivate: s.deactivate,
+            pendingTarget: s.pendingTarget,
+            requestLeave: s.requestLeave,
+            cancelLeave: s.cancelLeave,
+            confirmLeave: s.confirmLeave
+        }))
+    );
     const [isSecureContext, setIsSecureContext] = useState<boolean | null>(null);
     const [mounted, setMounted] = useState(false);
-    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
-    const [tokenError, setTokenError] = useState(false);
+    const windowWidth = useWindowWidth(1200);
     const resolvedParams = React.use(params);
     const roomId = resolvedParams.roomId;
 
@@ -116,29 +133,43 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         friendsSidebarOpen, setFriendsSidebarOpen,
         isRoomOpen: uiIsRoomOpen, setIsRoomOpen: setUiIsRoomOpen,
         setShowFriendsModal
-    } = useUIStore();
+    } = useUIStore(useShallow(s => ({
+        chatOpen: s.chatOpen,
+        setChatOpen: s.setChatOpen,
+        chatSidebarWidth: s.chatSidebarWidth,
+        setUnread: s.setUnread,
+        showToast: s.showToast,
+        friendsSidebarOpen: s.friendsSidebarOpen,
+        setFriendsSidebarOpen: s.setFriendsSidebarOpen,
+        isRoomOpen: s.isRoomOpen,
+        setIsRoomOpen: s.setIsRoomOpen,
+        setShowFriendsModal: s.setShowFriendsModal
+    })));
 
     // Friends state & socket
     const incomingRequests = useFriendsStore(s => s.incomingRequests);
     const { sendRoomInvite, toggleRoomOpen, initiateCall } = useFriends();
     const isDark = mounted ? (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) : (theme === 'dark');
 
-    const handleToggleOpenRoom = useCallback((isOpen: boolean) => {
-        const roomName = decodeURIComponent(roomId)
+    useThemeBackground(theme);
+    const { livekitToken, setLivekitToken, tokenError, setTokenError } = useLiveKitToken(roomId, user, authToken, authLoading, mounted);
+    usePreventTabClose(!!livekitToken);
+
+    const humanReadableRoomName = useMemo(() => {
+        return decodeURIComponent(roomId)
             .replace(/-\d{1,5}$/, '')
             .replace(/-/g, ' ')
             .replace(/\b\w/g, c => c.toUpperCase());
-        toggleRoomOpen(roomId, isOpen, roomName);
-    }, [toggleRoomOpen, roomId]);
+    }, [roomId]);
+
+    const handleToggleOpenRoom = useCallback((isOpen: boolean) => {
+        toggleRoomOpen(roomId, isOpen, humanReadableRoomName);
+    }, [toggleRoomOpen, roomId, humanReadableRoomName]);
 
     const handleInviteFriend = useCallback((friendId: string) => {
         // Get human-readable room name from slug
-        const roomName = decodeURIComponent(roomId)
-            .replace(/-\d{1,5}$/, '')
-            .replace(/-/g, ' ')
-            .replace(/\b\w/g, c => c.toUpperCase());
-        sendRoomInvite(friendId, roomId, roomName);
-    }, [sendRoomInvite, roomId]);
+        sendRoomInvite(friendId, roomId, humanReadableRoomName);
+    }, [sendRoomInvite, roomId, humanReadableRoomName]);
 
     const handleCallFriend = useCallback((friendId: string) => {
         initiateCall(friendId);
@@ -228,44 +259,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         setIsSecureContext(isSecure);
     }, []);
 
-    // Track window width for topbar responsiveness
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const handleResize = () => setWindowWidth(window.innerWidth);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
     const availableWidth = windowWidth - (chatOpen && windowWidth >= 640 ? chatSidebarWidth : 0);
     const isCompact = availableWidth < 700;
 
-    // Prevent white background flash on mobile overscroll
-    useEffect(() => {
-        if (typeof document === 'undefined') return;
-        const bodyBg = document.body.style.backgroundColor;
-        const htmlBg = document.documentElement.style.backgroundColor;
 
-        // Use theme-aware background colors
-        const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        const bgVal = isDark ? '#030712' : '#F7F7F7';
-
-        document.body.style.setProperty('background-color', bgVal, 'important');
-        document.documentElement.style.setProperty('background-color', bgVal, 'important');
-        return () => {
-            document.body.style.backgroundColor = bodyBg;
-            document.documentElement.style.backgroundColor = htmlBg;
-        };
-    }, [theme]);
-
-    // Browser tab close / refresh warning
-    useEffect(() => {
-        if (!livekitToken) return; // Only warn if connected to room
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            e.preventDefault();
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [livekitToken]);
 
     // Confirm leave: navigate to the pending target from the global store
     const handleConfirmLeave = useCallback(() => {
@@ -284,28 +281,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         }
     }, [storeConfirmLeave, router, soundsEnabled, soundVolume]);
 
-    useEffect(() => {
-        if (!mounted) return;
-        if (authLoading) return; // Wait for auth check to complete
-        if (!user) { router.push('/login?redirect=' + encodeURIComponent(window.location.pathname)); return; }
-        setTokenError(false);
-        const fetchToken = async () => {
-            try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/livekit/token`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: JSON.stringify({ roomName: roomId, participantName: user.name, participantId: user.id }),
-                });
-                const data = await res.json();
-                if (data.token) setLivekitToken(typeof data.token === 'string' ? data.token : data.token.token || '');
-                else setTokenError(true);
-            } catch (err) { console.error(err); setTokenError(true); }
-        };
-        fetchToken();
-    }, [user, roomId, router, mounted, authToken, authLoading]);
+
 
     // Escape key closes chat sidebar
     useEffect(() => {
@@ -323,21 +299,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     };
 
     if (tokenError) {
-        return (
-            <div className="flex-1 flex items-center justify-center min-h-[50vh] px-4">
-                <div className="bg-surface shadow-flat border border-gray-100 rounded-2xl p-8 max-w-md w-full text-center flex flex-col items-center gap-4">
-                    <div className="w-14 h-14 bg-red-50 text-primary rounded-full flex items-center justify-center">
-                        <AlertCircle className="w-7 h-7" />
-                    </div>
-                    <h2 className="text-xl font-semibold text-text-main">Connection Failed</h2>
-                    <p className="text-sm text-text-muted">Could not connect to the room. Please check the room code and try again.</p>
-                    <div className="flex gap-3 w-full mt-2">
-                        <button onClick={() => router.push('/dashboard')} className="flex-1 h-11 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors">Dashboard</button>
-                        <button onClick={() => { setTokenError(false); setLivekitToken(''); }} className="flex-1 h-11 rounded-xl bg-primary text-white text-sm font-medium hover:bg-[#E0484D] transition-colors">Retry</button>
-                    </div>
-                </div>
-            </div>
-        );
+        return <ConnectionError onRetry={() => { setTokenError(false); setLivekitToken(''); }} />;
     }
 
     if (isSecureContext === null || authLoading || !mounted) {
@@ -349,22 +311,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     }
 
     if (isSecureContext === false) {
-        return (
-            <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] px-4">
-                <div className="bg-surface shadow-flat border border-gray-100 rounded-2xl p-8 max-w-md w-full text-center flex flex-col items-center">
-                    <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mb-6">
-                        <Lock className="w-8 h-8" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-text-main mb-3">Secure Connection Required</h2>
-                    <p className="text-text-muted mb-6 leading-relaxed">
-                        To protect your privacy, video and audio chats are only available over <strong>HTTPS</strong> or <strong>localhost</strong>.
-                    </p>
-                    <button onClick={() => router.push('/dashboard')} className="w-full py-2.5 px-6 bg-primary text-white rounded-xl font-medium hover:bg-[#E0484D] transition-colors">
-                        Back to Dashboard
-                    </button>
-                </div>
-            </div>
-        );
+        return <SecureContextWarning />;
     }
 
     const serverUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || 'ws://localhost:7880';
@@ -475,33 +422,12 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             {/* Room Invite Banner */}
             <RoomInviteBanner />
 
-            {/* Leave confirmation modal overlay — portaled to body to ensure it stays above all other UI */}
-            {pendingTarget && typeof document !== 'undefined' && createPortal(
-                <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-transparent backdrop-blur-sm p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)', pointerEvents: 'auto' }}>
-                    <div className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center gap-3 text-red-500 mb-3">
-                            <LogOut className="w-6 h-6" />
-                            <h2 className="text-xl font-bold text-text-main">Leave Room?</h2>
-                        </div>
-                        <p className="text-text-muted mb-6">Are you sure you want to disconnect and leave this space?</p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={cancelLeave}
-                                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleConfirmLeave}
-                                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold shadow-sm hover:bg-red-600 transition-colors"
-                            >
-                                Leave
-                            </button>
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            )}
+            {/* Leave confirmation modal overlay */}
+            <LeaveConfirmModal 
+                isOpen={!!pendingTarget} 
+                onCancel={cancelLeave} 
+                onConfirm={handleConfirmLeave} 
+            />
 
             {/* Message Toast Notification */}
             <ChatToast />

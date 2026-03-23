@@ -43,6 +43,14 @@ export function VideoConferenceView() {
     // ── SPOTLIGHT MODE ──────────────────────────────────────────────────────
     if (spotlightTrack) {
         const spotKey = `${spotlightTrack.participant?.identity ?? ''}-${spotlightTrack.source ?? ''}`;
+        
+        // IMPORTANT: The spotlightTrack in state might be a stale placeholder. 
+        // We must always find the freshest track reference from the live tracks array 
+        // so that VideoTrack can auto-attach when the camera is turned on.
+        const currentSpotlight = tracks.find(
+            t => trackKey(t, -1) === spotKey
+        ) || spotlightTrack;
+
         const otherTracks = tracks.filter(
             t => trackKey(t, -1) !== spotKey
         );
@@ -55,7 +63,7 @@ export function VideoConferenceView() {
                     <div className="flex-1 min-w-0 min-h-0 grid grid-cols-1 auto-rows-fr">
                         <SpotlightableTile
                             key={spotKey}
-                            trackRef={spotlightTrack}
+                            trackRef={currentSpotlight}
                             isSpotlit={true}
                             isAnythingSpotlit={true}
                             onSpotlight={handleSpotlight}
