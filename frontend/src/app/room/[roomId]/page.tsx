@@ -11,6 +11,7 @@ import {
     RoomAudioRenderer,
     ControlBar,
     useParticipants,
+    useMediaDeviceSelect,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { ChevronUp } from 'lucide-react';
@@ -23,7 +24,7 @@ import { useFriendsStore } from '@/store/useFriendsStore';
 import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { AutoStartAudio } from '@/components/room/AutoStartAudio';
 import { useUIStore } from '@/store/useUIStore';
-import { ChatToast } from '@/components/room/ChatToast';
+import { toast } from 'react-hot-toast';
 import { RoomModals } from '@/components/room/RoomModals';
 import { RoomTopbar } from '@/components/room/RoomTopbar';
 import { VideoConferenceView } from '@/components/room/VideoConferenceView';
@@ -125,26 +126,53 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const audioDeviceId = useSettingsStore(s => s.audioDeviceId);
     const videoDeviceId = useSettingsStore(s => s.videoDeviceId);
     const setControlBarVisible = useSettingsStore(s => s.setControlBarVisible);
-    
+
     // UI Store access
-    const { 
+    const {
         chatOpen, setChatOpen, chatSidebarWidth,
-        setUnread, showToast,
+        setUnread,
         friendsSidebarOpen, setFriendsSidebarOpen,
         isRoomOpen: uiIsRoomOpen, setIsRoomOpen: setUiIsRoomOpen,
-        setShowFriendsModal
+        setShowFriendsModal,
+        setShowSettings
     } = useUIStore(useShallow(s => ({
         chatOpen: s.chatOpen,
         setChatOpen: s.setChatOpen,
         chatSidebarWidth: s.chatSidebarWidth,
         setUnread: s.setUnread,
-        showToast: s.showToast,
         friendsSidebarOpen: s.friendsSidebarOpen,
         setFriendsSidebarOpen: s.setFriendsSidebarOpen,
         isRoomOpen: s.isRoomOpen,
         setIsRoomOpen: s.setIsRoomOpen,
-        setShowFriendsModal: s.setShowFriendsModal
+        setShowFriendsModal: s.setShowFriendsModal,
+        setShowSettings: s.setShowSettings
     })));
+
+    // Custom Toast implementation using react-hot-toast for top-center design
+    const handleShowToast = useCallback((msg: { id?: string, name: string, text: string }) => {
+        toast.custom((t) => (
+            <div
+                className={`${t.visible ? 'animate-in slide-in-from-top-4 fade-in' : 'animate-out fade-out zoom-out-95'
+                    } duration-300 max-w-[300px] w-full bg-white dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-2xl dark:shadow-black/40 rounded-2xl p-4 pointer-events-auto flex items-start flex-col gap-1 transition-all text-left cursor-pointer hover:border-primary/40 dark:hover:border-primary/40`}
+                onClick={() => {
+                    toast.dismiss(t.id);
+                    if (msg.name === 'System') {
+                        setShowSettings(true);
+                    } else {
+                        setChatOpen(true);
+                    }
+                }}
+            >
+                <div className="flex items-center gap-2">
+                    <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
+                    <span className="text-xs font-bold text-gray-900 dark:text-white truncate">{msg.name}</span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 leading-relaxed break-words w-full">
+                    {msg.text}
+                </p>
+            </div>
+        ), { id: msg.id || Date.now().toString(), duration: 4000, position: 'top-center' });
+    }, [setChatOpen, setShowSettings]);
 
     // Friends state & socket
     const incomingRequests = useFriendsStore(s => s.incomingRequests);
@@ -174,7 +202,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const handleCallFriend = useCallback((friendId: string) => {
         initiateCall(friendId);
     }, [initiateCall]);
-    
+
     const [copied, setCopied] = useState(false);
     const controlBarTimerRef = useRef<NodeJS.Timeout | null>(null);
     // roomOptions is intentionally stable — device IDs are only initial defaults.
@@ -214,10 +242,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     // Auto-hide control bar after 4s of inactivity
     useEffect(() => {
         if (!autoHideControlBar || !controlBarVisible) return;
-        
+
         if (controlBarTimerRef.current) clearTimeout(controlBarTimerRef.current);
         controlBarTimerRef.current = setTimeout(() => setControlBarVisible(false), 4000);
-        
+
         return () => {
             if (controlBarTimerRef.current) clearTimeout(controlBarTimerRef.current);
         };
@@ -229,14 +257,14 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
             // Show visual toast
             if (msg.userId !== user?.id) {
-                showToast({
+                handleShowToast({
                     id: msg.id,
                     name: msg.name,
                     text: msg.text
                 });
             }
         }
-    }, [chatOpen, user?.id, setUnread, showToast]);
+    }, [chatOpen, user?.id, setUnread, handleShowToast]);
 
     // Set up real-time chat socket
     const { messages, typingUsers, sendMessage, sendTyping, sendReaction, connected: chatConnected, isRoomOpen: socketIsRoomOpen } = useChatSocket({
@@ -261,6 +289,51 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     const availableWidth = windowWidth - (chatOpen && windowWidth >= 640 ? chatSidebarWidth : 0);
     const isCompact = availableWidth < 700;
+
+    // ── Missing Mic Indication ──────────────────────────────────────────────
+    const { devices: micDevices } = useMediaDeviceSelect({ kind: 'audioinput' });
+    const hasNoMic = micDevices.length === 0;
+
+    useEffect(() => {
+        if (!hasNoMic) return;
+
+        let micBtn: HTMLButtonElement | null = null;
+
+        const handleClick = (e: MouseEvent) => {
+            e.stopPropagation();
+            e.preventDefault();
+            handleShowToast({
+                id: Date.now().toString(),
+                name: 'System',
+                text: 'No microphone found. Please check your settings or permissions.'
+            });
+        };
+
+        const setup = () => {
+            micBtn = document.querySelector('.lk-button-group > button:first-child') as HTMLButtonElement | null;
+            if (micBtn && !micBtn.hasAttribute('data-mic-disabled')) {
+                micBtn.setAttribute('data-mic-disabled', 'true');
+                micBtn.style.opacity = '0.4';
+                micBtn.style.filter = 'grayscale(100%)';
+                micBtn.title = 'Kein Mikrofon gefunden';
+                micBtn.addEventListener('click', handleClick, true);
+            }
+        };
+
+        const interval = setInterval(setup, 500);
+        setup();
+
+        return () => {
+            clearInterval(interval);
+            if (micBtn) {
+                micBtn.removeAttribute('data-mic-disabled');
+                micBtn.style.opacity = '';
+                micBtn.style.filter = '';
+                micBtn.title = '';
+                micBtn.removeEventListener('click', handleClick, true);
+            }
+        };
+    }, [hasNoMic, handleShowToast]);
 
 
 
@@ -423,14 +496,13 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             <RoomInviteBanner />
 
             {/* Leave confirmation modal overlay */}
-            <LeaveConfirmModal 
-                isOpen={!!pendingTarget} 
-                onCancel={cancelLeave} 
-                onConfirm={handleConfirmLeave} 
+            <LeaveConfirmModal
+                isOpen={!!pendingTarget}
+                onCancel={cancelLeave}
+                onConfirm={handleConfirmLeave}
             />
 
-            {/* Message Toast Notification */}
-            <ChatToast />
+            {/* Toast Notifications are now handled via react-hot-toast (top-center) */}
         </div>
     );
 }

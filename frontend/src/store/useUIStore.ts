@@ -1,11 +1,5 @@
 import { create } from 'zustand';
 
-export interface ToastMessage {
-    id: string;
-    name: string;
-    text: string;
-}
-
 export type SettingsTab = 'audio-video' | 'quality' | 'interface' | 'sounds' | 'profile' | 'account';
 
 interface UIState {
@@ -21,7 +15,7 @@ interface UIState {
     settingsTab: SettingsTab;
     setSettingsTab: (tab: SettingsTab) => void;
     
-    // Chat & Toast
+    // Chat
     isRoomOpen: boolean;
     setIsRoomOpen: (open: boolean) => void;
     chatOpen: boolean;
@@ -30,12 +24,7 @@ interface UIState {
     setChatSidebarWidth: (width: number) => void;
     unread: number;
     setUnread: (count: number | ((prev: number) => number)) => void;
-    toastMessage: ToastMessage | null;
-    showToast: (message: ToastMessage) => void;
-    clearToast: () => void;
 }
-
-let toastTimer: NodeJS.Timeout | null = null;
 
 export const useUIStore = create<UIState>((set) => ({
     friendsSidebarOpen: false,
@@ -64,19 +53,4 @@ export const useUIStore = create<UIState>((set) => ({
     setUnread: (unread) => set((state) => ({
         unread: typeof unread === 'function' ? (unread as (prev: number) => number)(state.unread) : unread
     })),
-    
-    toastMessage: null,
-    showToast: (message) => {
-        if (toastTimer) clearTimeout(toastTimer);
-        set({ toastMessage: message });
-        toastTimer = setTimeout(() => {
-            set({ toastMessage: null });
-            toastTimer = null;
-        }, 4000);
-    },
-    clearToast: () => {
-        if (toastTimer) clearTimeout(toastTimer);
-        set({ toastMessage: null });
-        toastTimer = null;
-    }
 }));
