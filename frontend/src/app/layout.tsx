@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { IncomingCallModal } from "@/components/IncomingCallModal";
 import Script from "next/script";
 import "./globals.css";
-import { Toaster } from "react-hot-toast";
+import { CustomToaster } from "@/components/ui/CustomToaster";
 import { FriendsProvider } from "@/components/FriendsProvider";
 
 const inter = Inter({
@@ -61,10 +61,11 @@ export default function RootLayout({
             <ThemeProvider />
             <Header />
             <IncomingCallModal />
-            <Toaster position="top-center" reverseOrder={false} />
+            <CustomToaster />
             <main className="flex-1 flex flex-col">
               {children}
             </main>
+
           </FriendsProvider>
           {/* <Footer /> */}
           <Script id="register-sw" strategy="afterInteractive">

@@ -160,7 +160,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     {msg.text}
                 </p>
             </div>
-        ), { id: msg.id || Date.now().toString(), duration: 4000, position: 'top-center' });
+        ), { id: msg.id || Date.now().toString(), duration: 1500, position: 'top-center' });
     }, [setChatOpen, setShowSettings]);
 
     // Friends state & socket
