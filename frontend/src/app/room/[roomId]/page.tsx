@@ -34,18 +34,6 @@ import { ConnectionError } from '@/components/room/ConnectionError';
 import { SecureContextWarning } from '@/components/room/SecureContextWarning';
 import { LeaveConfirmModal } from '@/components/room/LeaveConfirmModal';
 
-
-
-
-
-
-
-
-
-
-
-
-
 // ─── Friends Sidebar with Presence Tracking ─────────────────────────────────
 function FriendsSidebarWithPresence({
     roomId,
