@@ -45,6 +45,8 @@ interface SettingsState {
     audioOutputDeviceId: string | null;
     participantVolumes: Record<string, number>;
     hiddenTracks: Record<string, boolean>;
+    hydrated: boolean;
+    setHydrated: (v: boolean) => void;
     setSoundsEnabled: (v: boolean) => void;
     setSoundVolume: (v: number) => void;
     setVideoQuality: (v: VideoQuality) => void;
@@ -88,6 +90,8 @@ export const useSettingsStore = create<SettingsState>()(
             audioOutputDeviceId: null,
             participantVolumes: {},
             hiddenTracks: {},
+            hydrated: false,
+            setHydrated: (v) => set({ hydrated: v }),
             setSoundsEnabled: (v) => set({ soundsEnabled: v }),
             setSoundVolume: (v) => set({ soundVolume: Math.max(0, Math.min(100, v)) }),
             setVideoQuality: (v) => set({ videoQuality: v }),
@@ -112,6 +116,11 @@ export const useSettingsStore = create<SettingsState>()(
                 hiddenTracks: { ...s.hiddenTracks, [key]: isHidden }
             })),
         }),
-        { name: 'user-settings' }
+        { 
+            name: 'user-settings',
+            onRehydrateStorage: () => (state) => {
+                state?.setHydrated(true);
+            }
+        }
     )
 );

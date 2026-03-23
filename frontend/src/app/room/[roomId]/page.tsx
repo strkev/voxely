@@ -113,6 +113,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const theme = useSettingsStore(s => s.theme);
     const audioDeviceId = useSettingsStore(s => s.audioDeviceId);
     const videoDeviceId = useSettingsStore(s => s.videoDeviceId);
+    const hydrated = useSettingsStore(s => s.hydrated);
     const setControlBarVisible = useSettingsStore(s => s.setControlBarVisible);
 
     // UI Store access
@@ -196,7 +197,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     // roomOptions is intentionally stable — device IDs are only initial defaults.
     // LiveKitDeviceSync handles live switching via room.switchActiveDevice().
     const qPreset = VIDEO_PRESETS[videoQuality];
-    const [roomOptions] = useState(() => ({
+    const roomOptions = useMemo(() => ({
         videoCaptureDefaults: {
             deviceId: videoDeviceId || undefined,
             resolution: { width: qPreset.width, height: qPreset.height, frameRate: qPreset.frameRate },
@@ -216,7 +217,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             },
             screenShareSimulcastLayers: [],
         },
-    }));
+    }), [videoDeviceId, audioDeviceId, qPreset, screenShareFps]);
 
 
     // Ensure control bar is always visible on mount + activate leave guard
@@ -363,7 +364,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         return <ConnectionError onRetry={() => { setTokenError(false); setLivekitToken(''); }} />;
     }
 
-    if (isSecureContext === null || authLoading || !mounted) {
+    if (isSecureContext === null || authLoading || !mounted || !hydrated) {
         return (
             <div className="flex-1 flex items-center justify-center min-h-[50vh]">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

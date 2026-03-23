@@ -14,6 +14,7 @@ export function useDeviceSync() {
     // Track state to avoid redundant switches
     const lastAudioId = useRef<string | null | undefined>(undefined);
     const lastVideoId = useRef<string | null | undefined>(undefined);
+    const lastOutputId = useRef<string | null | undefined>(undefined);
 
     useEffect(() => {
         const sync = async () => {
@@ -64,13 +65,22 @@ export function useDeviceSync() {
     }, [room, videoDeviceId]);
 
     useEffect(() => {
+        if (audioOutputDeviceId === lastOutputId.current) return;
+
         const isSafariBased = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent) || /iPhone|iPad|iPod/i.test(navigator.userAgent);
         const supportsOutputSwitching = typeof HTMLMediaElement !== 'undefined' && ('setSinkId' in HTMLMediaElement.prototype) && !isSafariBased;
 
-        if (!supportsOutputSwitching) return;
+        if (!supportsOutputSwitching) {
+            console.log('[LiveKitDeviceSync] Output switching not supported in this browser');
+            return;
+        }
 
         const targetId = audioOutputDeviceId || 'default';
-        room.switchActiveDevice('audiooutput', targetId).catch(err => {
+        console.log('[LiveKitDeviceSync] Switching audio output to:', targetId);
+        
+        room.switchActiveDevice('audiooutput', targetId).then(() => {
+            lastOutputId.current = audioOutputDeviceId;
+        }).catch(err => {
             console.warn('[LiveKitDeviceSync] Failed to switch audio output:', err);
         });
     }, [room, audioOutputDeviceId]);
