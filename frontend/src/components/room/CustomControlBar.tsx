@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useTrackToggle, useMediaDeviceSelect } from '@livekit/components-react';
 import { Track } from 'livekit-client';
 import { Mic, MicOff, Video, VideoOff, MonitorUp, MonitorOff, ChevronDown, Check } from 'lucide-react';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 // --- Hilfskomponente für das Dropdown-Menü der Geräteauswahl ---
 function DeviceMenu({ 
@@ -16,6 +17,8 @@ function DeviceMenu({
     isDark: boolean;
 }) {
     const { devices, activeDeviceId, setActiveMediaDevice } = useMediaDeviceSelect({ kind });
+    const setAudioDeviceId = useSettingsStore(state => state.setAudioDeviceId);
+    const setVideoDeviceId = useSettingsStore(state => state.setVideoDeviceId);
 
     return (
         <div 
@@ -30,21 +33,28 @@ function DeviceMenu({
                 {devices.length === 0 ? (
                     <div className={`px-5 py-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Keine Geräte gefunden</div>
                 ) : (
-                    devices.map((device) => (
-                        <button
-                            key={device.deviceId}
-                            onClick={() => {
-                                setActiveMediaDevice(device.deviceId);
-                                onClose();
-                            }}
-                            className={`w-full text-left px-5 py-3 text-sm flex items-center justify-between transition-colors ${isDark ? 'hover:bg-white/5 text-gray-200' : 'hover:bg-gray-50 text-gray-900'}`}
-                        >
-                            <span className="truncate pr-3">{device.label || 'Unbekanntes Gerät'}</span>
-                            {activeDeviceId === device.deviceId && (
-                                <Check className="w-5 h-5 text-primary shrink-0" />
-                            )}
-                        </button>
-                    ))
+                    <>
+                        {devices.filter(d => d.deviceId !== 'default').map((device) => (
+                            <button
+                                key={device.deviceId}
+                                onClick={() => {
+                                    setActiveMediaDevice(device.deviceId);
+                                    if (kind === 'audioinput') {
+                                        setAudioDeviceId(device.deviceId);
+                                    } else if (kind === 'videoinput') {
+                                        setVideoDeviceId(device.deviceId);
+                                    }
+                                    onClose();
+                                }}
+                                className={`w-full text-left px-5 py-3 text-sm flex items-center justify-between transition-colors ${isDark ? 'hover:bg-white/5 text-gray-200' : 'hover:bg-gray-50 text-gray-900'}`}
+                            >
+                                <span className="truncate pr-3">{device.label || 'Unbekanntes Gerät'}</span>
+                                {activeDeviceId === device.deviceId && (
+                                    <Check className="w-5 h-5 text-primary shrink-0" />
+                                )}
+                            </button>
+                        ))}
+                    </>
                 )}
             </div>
         </div>
