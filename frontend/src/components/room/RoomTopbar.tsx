@@ -59,7 +59,6 @@ export function RoomTopbar({
     chatConnected,
     requestLeave,
 }: RoomTopbarProps) {
-    const friendsSidebarOpen = useUIStore(s => s.friendsSidebarOpen);
     const setFriendsSidebarOpen = useUIStore(s => s.setFriendsSidebarOpen);
     const setShowSettings = useUIStore(s => s.setShowSettings);
     const setSettingsTab = useUIStore(s => s.setSettingsTab);
@@ -81,10 +80,7 @@ export function RoomTopbar({
             <button
                 onClick={() => setFriendsSidebarOpen(o => !o)}
                 aria-label="Friends"
-                className={`shrink-0 flex items-center backdrop-blur-md border rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm ${friendsSidebarOpen
-                    ? 'bg-primary/90 hover:bg-primary border-primary/60 text-white'
-                    : 'bg-white/90 hover:bg-white border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary'
-                    }`}
+                className="shrink-0 flex items-center bg-white/90 hover:bg-white backdrop-blur-md border border-[rgba(220,220,220,0.85)] hover:border-primary/40 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium text-text-main hover:text-primary transition-all duration-150 shadow-sm"
             >
                 <div className="relative flex items-center justify-center">
                     <Users className="w-4 h-4" />
