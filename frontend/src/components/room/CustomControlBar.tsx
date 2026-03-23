@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useTrackToggle, useMediaDeviceSelect } from '@livekit/components-react';
 import { Track } from 'livekit-client';
 import { Mic, MicOff, Video, VideoOff, MonitorUp, MonitorOff, ChevronDown, Check } from 'lucide-react';
-import { useSettingsStore } from '@/store/useSettingsStore';
 
 // --- Hilfskomponente für das Dropdown-Menü der Geräteauswahl ---
 function DeviceMenu({ 
@@ -53,7 +52,7 @@ function DeviceMenu({
 }
 
 // --- Hauptkomponente ---
-export function CustomControlBar() {
+export function CustomControlBar({ isDark }: { isDark: boolean }) {
     const [openMenu, setOpenMenu] = useState<'mic' | 'cam' | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -62,11 +61,6 @@ export function CustomControlBar() {
     const { toggle: toggleCam, enabled: isCamEnabled } = useTrackToggle({ source: Track.Source.Camera });
     const { toggle: toggleScreen, enabled: isScreenShareEnabled } = useTrackToggle({ source: Track.Source.ScreenShare });
 
-    // isDark abrufen (genau wie in der page.tsx)
-    const theme = useSettingsStore(s => s.theme);
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => { setMounted(true); }, []);
-    const isDark = mounted ? (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) : (theme === 'dark');
 
     // Schließt das Menü, wenn man außerhalb klickt
     useEffect(() => {

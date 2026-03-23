@@ -434,7 +434,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                             }
                         }}
                     >
-                        <CustomControlBar />
+                        <CustomControlBar isDark={isDark} />
                     </div>
                 ) : (
                     <button
