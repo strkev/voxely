@@ -196,7 +196,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     // roomOptions is intentionally stable — device IDs are only initial defaults.
     // LiveKitDeviceSync handles live switching via room.switchActiveDevice().
     const qPreset = VIDEO_PRESETS[videoQuality];
-    const roomOptions = useMemo(() => ({
+    const [roomOptions] = useState(() => ({
         videoCaptureDefaults: {
             deviceId: videoDeviceId || undefined,
             resolution: { width: qPreset.width, height: qPreset.height, frameRate: qPreset.frameRate },
@@ -216,7 +216,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             },
             screenShareSimulcastLayers: [],
         },
-    }), [videoDeviceId, audioDeviceId, qPreset, screenShareFps]);
+    }));
 
 
     // Ensure control bar is always visible on mount + activate leave guard
