@@ -96,14 +96,13 @@ export function VideoTab({
                         <ImageIcon className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                        <h4 className="text-sm font-bold text-text-main">Appearance</h4>
+                        <h4 className="text-sm font-bold text-text-main">Effects</h4>
                         <p className="text-xs text-text-muted">Personalize your video stream</p>
                     </div>
                 </div>
 
                 <div className="space-y-6 pl-1">
                     <div className="space-y-3">
-                        <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">Background Effects</label>
                         <div className="grid grid-cols-3 gap-2 bg-gray-50 p-1.5 rounded-[20px] border border-gray-100">
                             {[
                                 { id: 'none', label: 'None', icon: CircleSlash },

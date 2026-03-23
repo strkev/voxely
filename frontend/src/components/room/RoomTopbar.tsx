@@ -101,9 +101,13 @@ export function RoomTopbar({
             <button
                 onClick={handleCopyLink}
                 aria-label="Copy room link"
-                className="shrink-0 flex items-center bg-gray-900 hover:bg-gray-800 text-white border border-gray-800 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm"
+                className={`shrink-0 flex items-center backdrop-blur-md border rounded-2xl px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm font-medium transition-all duration-150 shadow-sm ${
+                    copied 
+                        ? 'bg-green-50 border-green-200 text-green-600'
+                        : 'bg-white/90 hover:bg-white border-[rgba(220,220,220,0.85)] hover:border-primary/40 text-text-main hover:text-primary'
+                }`}
             >
-                {copied ? <Check className="w-4 h-4 text-green-400" /> : <Link2 className="w-4 h-4" />}
+                {copied ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
                 <span className={`topbar-btn-inner ${isCompact ? 'topbar-btn-inner--compact' : ''}`}>{copied ? 'Copied!' : 'Share'}</span>
             </button>
 
