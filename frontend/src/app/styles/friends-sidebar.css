@@ -1,0 +1,415 @@
+/* ── Friends Sidebar ──────────────────────────────────────────────────────────── */
+.friends-sidebar {
+  width: 260px;
+  min-width: 260px;
+  height: calc(100vh - 64px);
+  position: sticky;
+  top: 64px;
+  align-self: flex-start;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 0.25s ease, min-width 0.25s ease;
+}
+
+@media (max-width: 639px) {
+  .friends-sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 280px;
+    max-width: 85vw;
+  }
+}
+
+.friends-sidebar--collapsed {
+  width: 40px;
+  min-width: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 12px;
+  gap: 8px;
+  background: var(--color-surface);
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  height: 100%;
+}
+
+.friends-sidebar__toggle {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  transition: background-color 0.15s ease;
+}
+
+.friends-sidebar__toggle:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.friends-sidebar__badge-collapsed {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.friends-sidebar__header {
+  padding: 14px 14px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.friends-sidebar__title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.friends-sidebar__title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.friends-sidebar__count {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
+.friends-sidebar__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.friends-sidebar__btn {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.friends-sidebar__btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--color-text-main);
+}
+
+.friends-sidebar__badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  font-size: 0.55rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.friends-sidebar__search {
+  padding: 8px 14px;
+  position: relative;
+}
+
+.friends-sidebar__search-icon {
+  position: absolute;
+  left: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.friends-sidebar__search-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 28px 0 32px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: var(--color-text-main);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.friends-sidebar__search-input:focus {
+  border-color: var(--color-primary);
+}
+
+.friends-sidebar__search-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+.friends-sidebar__search-clear {
+  position: absolute;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.friends-sidebar__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 8px;
+}
+
+.friends-sidebar__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.friends-sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  transition: background-color 0.15s ease;
+}
+
+.friends-sidebar__item:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.friends-sidebar__avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.friends-sidebar__avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.friends-sidebar__status-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ccc;
+  border: 2px solid var(--color-surface);
+  transition: background-color 0.3s ease;
+}
+
+.friends-sidebar__status-dot--online {
+  background: #22c55e;
+  animation: online-pulse 2s infinite;
+}
+
+@keyframes online-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0);
+  }
+}
+
+.friends-sidebar__name {
+  flex: 1;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.friends-sidebar__name--offline {
+  opacity: 0.5;
+}
+
+.friends-sidebar__item-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 1;
+  /* Always visible */
+  transition: opacity 0.15s ease;
+}
+
+/* Removed hover requirement for visibility */
+
+.friends-sidebar__invite-btn,
+.friends-sidebar__call-btn,
+.friends-sidebar__remove-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  transition: all 0.15s ease;
+}
+
+.friends-sidebar__invite-btn:hover {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.friends-sidebar__call-btn:hover {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+.friends-sidebar__invited-indicator {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: rgba(34, 197, 94, 0.12);
+  animation: invite-confirm 0.3s ease;
+}
+
+@keyframes invite-confirm {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.15);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.friends-sidebar__remove-btn:hover {
+  background: rgba(255, 90, 95, 0.1);
+  color: var(--color-primary);
+}
+
+/* Increase button sizes on mobile for better touch accessibility */
+@media (max-width: 639px) {
+
+  .friends-sidebar__invite-btn,
+  .friends-sidebar__remove-btn,
+  .friends-sidebar__call-btn,
+  .friends-sidebar__invited-indicator {
+    width: 38px;
+    /* Slightly larger as requested */
+    height: 38px;
+  }
+
+  .friends-sidebar__invite-btn svg,
+  .friends-sidebar__remove-btn svg,
+  .friends-sidebar__call-btn svg,
+  .friends-sidebar__invited-indicator svg {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+  }
+
+  .friends-sidebar__item-actions {
+    gap: 6px;
+  }
+}
+
+.friends-sidebar__confirm-remove {
+  display: flex;
+  gap: 4px;
+}
+
+.friends-sidebar__confirm-yes,
+.friends-sidebar__confirm-no {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0 8px;
+  transition: all 0.15s ease;
+}
+
+.friends-sidebar__confirm-yes {
+  background: rgba(255, 90, 95, 0.08);
+  color: var(--color-primary);
+}
+
+.friends-sidebar__confirm-yes:hover {
+  background: var(--color-primary);
+  color: white;
+}
+
+.friends-sidebar__confirm-no {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--color-text-muted);
+}
+
+.friends-sidebar__confirm-no:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--color-text-main);
+}
+
+/* Mobile adjustments */
+@media (max-width: 639px) {
+
+  .friends-sidebar__confirm-yes,
+  .friends-sidebar__confirm-no {
+    height: 38px;
+    padding: 0 14px;
+    font-size: 0.85rem;
+    border-radius: 10px;
+  }
+}

@@ -218,7 +218,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             },
             screenShareSimulcastLayers: [],
         },
-    }), [hydrated]);
+    }), [videoDeviceId, qPreset, audioDeviceId, screenShareFps]);
 
 
     // Ensure control bar is always visible on mount + activate leave guard

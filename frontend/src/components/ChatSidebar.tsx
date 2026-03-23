@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { MessageSquare, ChevronRight, ChevronDown, Send, SmilePlus, Paperclip, Download, FileIcon, AlertCircle, X } from 'lucide-react';
+import { MessageSquare, ChevronRight, ChevronDown, Send, SmilePlus, Paperclip, Download, FileIcon, AlertCircle } from 'lucide-react';
 import type { FileTransferInfo } from '@/hooks/useFileTransfer';
 import { ChatMessage, TypingUser } from '@/hooks/useChatSocket';
 import DOMPurify from 'isomorphic-dompurify';

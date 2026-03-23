@@ -1,0 +1,170 @@
+/* ── LiveKit Custom Overrides ─────────────────────────────────────────────── */
+
+/* Hide the 'Start Audio' button — started programmatically on join */
+.lk-audio-conference-stage,
+.lk-start-audio-button,
+[class*="lk-audio"]>button:only-child {
+  display: none !important;
+}
+
+/* Kill the blue ring on the room container — outline/border from LiveKit's default theme */
+[data-lk-theme] {
+  outline: none !important;
+}
+
+@keyframes avatar-speak-glow {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--user-color, #FF5A5F) 70%, transparent);
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+
+  100% {
+    box-shadow: 0 0 0 15px transparent;
+    transform: scale(1);
+  }
+}
+
+.avatar-speaking {
+  animation: avatar-speak-glow 1.2s infinite ease-in-out;
+}
+
+.lk-participant-placeholder svg {
+  display: none !important;
+}
+
+.lk-participant-placeholder {
+  background: transparent !important;
+}
+
+.lk-room-container,
+.lk-room-container:focus,
+.lk-room-container:focus-visible,
+[data-lk-theme]>div:focus,
+[data-lk-theme]>div:focus-visible {
+  outline: none !important;
+  border: none !important;
+}
+
+/* Participant tiles: no border/outline except the speaking shadow below */
+.lk-participant-tile:focus,
+.lk-participant-tile:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+
+.lk-participant-tile {
+
+  transition: all 0.3s ease;
+  border-radius: var(--radius-video) !important;
+  overflow: hidden;
+  position: relative;
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+  border: 3px solid transparent !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure the video element fits without cropping */
+.lk-participant-tile video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  background: var(--color-surface);
+  transition: opacity 0.3s ease;
+}
+
+/* Hide the video element completely when muted so the background avatar shows through */
+.lk-custom-tile-wrapper.is-muted video {
+  opacity: 0 !important;
+}
+
+/* Screen share: same contain behavior with pure black bg */
+.lk-screen-share-tile .lk-participant-tile video {
+  object-fit: contain !important;
+  background: #000;
+}
+
+/* Kill the default blue speaking border on ::after pseudo-element */
+.lk-participant-tile::after {
+  border-color: transparent !important;
+  border-width: 0px !important;
+}
+
+.lk-participant-tile[data-lk-speaking="true"]::after,
+.lk-participant-tile[data-lk-speaking="true"]:not([data-lk-source="screen_share"])::after {
+  border-width: 0px !important;
+  border-color: transparent !important;
+}
+
+/* Red glow on the tile itself */
+.lk-participant-tile[data-lk-speaking="true"]:not([data-lk-source="screen_share"]):not(.lk-screen-share-tile) {
+  border: 3px solid var(--user-color, #FF5A5F) !important;
+  box-shadow: inset 0 0 20px color-mix(in srgb, var(--user-color, #FF5A5F) 40%, transparent) !important;
+  outline: none !important;
+}
+
+/* Hide the default LiveKit participant metadata as we use a custom overlay in SpotlightableTile */
+.lk-participant-metadata {
+  display: none !important;
+}
+
+/* Hide the LiveKit connection quality indicator */
+.lk-connection-quality {
+  display: none !important;
+}
+
+/* Make Spotlight (Pin) button larger and more visible on hover */
+.lk-focus-toggle-button {
+  padding: 0.5rem !important;
+  border-radius: 8px !important;
+  background-color: rgba(34, 34, 34, 0.75) !important;
+  backdrop-filter: blur(4px);
+  top: 12px !important;
+  right: 12px !important;
+}
+
+.lk-focus-toggle-button svg {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  fill: white !important;
+}
+
+/* Disconnect button styling (Make it solid red/primary) */
+.lk-disconnect-button {
+  background-color: var(--color-primary) !important;
+  color: white !important;
+  border-color: var(--color-primary) !important;
+  opacity: 1 !important;
+  /* Reset the transparent SVG fill that livekit defaults to */
+  fill: white !important;
+}
+
+.lk-disconnect-button svg {
+  fill: white !important;
+}
+
+.lk-disconnect-button:hover {
+  background-color: #E0484D !important;
+  border-color: #E0484D !important;
+}
+
+/* Ensure livekit grid/focus containers fill their parent */
+.lk-grid-layout,
+.lk-focus-layout {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0;
+}
+
+/* Participant tile fills its grid cell completely */
+.lk-participant-tile {
+  min-height: 0;
+  min-width: 0;
+}

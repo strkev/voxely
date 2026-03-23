@@ -1,0 +1,78 @@
+/* ── Room Invite Banner ───────────────────────────────────────────────────────── */
+.room-invite-banner {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 60;
+  transform: translateY(120%);
+  opacity: 0;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.room-invite-banner--visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.room-invite-banner__content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+}
+
+.room-invite-banner__text {
+  font-size: 0.85rem;
+  color: var(--color-text-main);
+  line-height: 1.3;
+}
+
+.room-invite-banner__text strong {
+  font-weight: 600;
+}
+
+.room-invite-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.room-invite-banner__join {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  background: var(--color-primary);
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 0.15s ease;
+}
+
+.room-invite-banner__join:hover {
+  background: #E0484D;
+}
+
+.room-invite-banner__dismiss {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  transition: background-color 0.15s ease;
+}
+
+.room-invite-banner__dismiss:hover {
+  background: rgba(0, 0, 0, 0.05);
+}

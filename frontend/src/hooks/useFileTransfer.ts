@@ -317,7 +317,6 @@ export function useFileTransfer() {
                 break;
             }
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [updateTransfer]);
 
     const { send } = useDataChannel('file-transfer', handleMessage);
