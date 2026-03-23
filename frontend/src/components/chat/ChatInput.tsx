@@ -2,6 +2,7 @@
 
 import React, { useRef, useState, useCallback, KeyboardEvent } from 'react';
 import { Send, Paperclip } from 'lucide-react';
+import { isBlockedFileType } from '@/hooks/useFileTransfer';
 
 interface ChatInputProps {
     connected: boolean;
@@ -86,6 +87,13 @@ export function ChatInput({
 
         if (file.size > maxFileSize) {
             alert(`File is too large. Maximum size is ${Math.round(maxFileSize / (1024 * 1024))} MB.`);
+            e.target.value = '';
+            return;
+        }
+
+        // Security: block dangerous file types
+        if (isBlockedFileType(file.name)) {
+            alert('This file type is not allowed for security reasons.');
             e.target.value = '';
             return;
         }
