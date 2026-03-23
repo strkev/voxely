@@ -153,26 +153,27 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
                             </div>
                         </div>
 
-                        {/* Mobile Navigation List (Expands under active tab) */}
-                        {isNavExpanded && (
-                            <nav className="md:hidden px-4 pt-1 pb-4 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                                {tabs.map((tab) => (
-                                    <SettingsNavButton
-                                        key={tab.id}
-                                        isActive={activeTab === tab.id}
-                                        onClick={() => {
-                                            setActiveTab(tab.id);
-                                            setIsNavExpanded(false);
-                                        }}
-                                        icon={tab.icon}
-                                        label={tab.label}
-                                    />
-                                ))}
-                            </nav>
-                        )}
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 scroll-smooth overscroll-contain">
+                    {/* Mobile Navigation List (Expands under active tab) */}
+                    {isNavExpanded && (
+                        <nav className="md:hidden flex-1 overflow-y-auto px-4 pt-2 pb-4 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                            {tabs.map((tab) => (
+                                <SettingsNavButton
+                                    key={tab.id}
+                                    isActive={activeTab === tab.id}
+                                    onClick={() => {
+                                        setActiveTab(tab.id);
+                                        setIsNavExpanded(false);
+                                    }}
+                                    icon={tab.icon}
+                                    label={tab.label}
+                                />
+                            ))}
+                        </nav>
+                    )}
+
+                    <div className={`flex-1 overflow-y-auto p-6 md:p-8 space-y-8 scroll-smooth overscroll-contain ${isNavExpanded ? 'hidden md:block' : 'block'}`}>
                         {renderTab()}
                     </div>
                 </div>
