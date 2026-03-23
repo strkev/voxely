@@ -1,10 +1,11 @@
 "use client";
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Users, Check, Link2, Unlock, Lock, LogOut, ImageIcon } from 'lucide-react';
 import { useLocalParticipant } from '@livekit/components-react';
 import { ChatSidebar } from '@/components/ChatSidebar';
 import { ChatMessage, TypingUser } from '@/hooks/useChatSocket';
+import { useFileTransfer } from '@/hooks/useFileTransfer';
 import { User } from '@/store/useAuthStore';
 import { FriendRequestIncoming } from '@/store/useFriendsStore';
 
@@ -24,6 +25,7 @@ interface RoomTopbarProps {
     sendTyping: (isTyping: boolean) => void;
     onReact: (messageId: string, emoji: string) => void;
     chatConnected: boolean;
+    isDark: boolean;
     requestLeave: (target: string) => void;
 }
 
@@ -57,6 +59,7 @@ export function RoomTopbar({
     sendTyping,
     onReact,
     chatConnected,
+    isDark,
     requestLeave,
 }: RoomTopbarProps) {
     const setFriendsSidebarOpen = useUIStore(s => s.setFriendsSidebarOpen);
@@ -73,6 +76,13 @@ export function RoomTopbar({
     const handleRead = React.useCallback(() => {
         if (unread > 0) setUnread(0);
     }, [unread, setUnread]);
+
+    // File transfer via LiveKit data channel (hook needs to be inside LiveKitRoom)
+    const { transfers, sendFile, maxFileSize } = useFileTransfer();
+
+    const handleSendFile = useCallback((file: File) => {
+        sendFile(file, user?.name ?? 'Anonymous', user?.id ?? '');
+    }, [sendFile, user?.name, user?.id]);
 
     return (
         <div className="absolute top-4 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-visible py-2 -my-2 flex-wrap sm:flex-nowrap">
@@ -137,6 +147,10 @@ export function RoomTopbar({
                 width={chatSidebarWidth}
                 onWidthChange={setChatSidebarWidth}
                 forceCompact={isCompact}
+                isDark={isDark}
+                fileTransfers={transfers}
+                onSendFile={handleSendFile}
+                maxFileSize={maxFileSize}
             />
 
             <button

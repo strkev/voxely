@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState, useCallback, KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { MessageSquare, ChevronRight, ChevronDown, Send, SmilePlus } from 'lucide-react';
+import { MessageSquare, ChevronRight, ChevronDown, Send, SmilePlus, Paperclip, Download, FileIcon, AlertCircle, X } from 'lucide-react';
+import type { FileTransferInfo } from '@/hooks/useFileTransfer';
 import { ChatMessage, TypingUser } from '@/hooks/useChatSocket';
 import DOMPurify from 'isomorphic-dompurify';
 import { Mascot } from '@/components/voxy';
@@ -249,6 +250,97 @@ function MessageBubble({ msg, isOwn, currentUserId, onReact }: { msg: ChatMessag
     );
 }
 
+// ── Human-readable file size ──────────────────────────────────────────────────
+function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// ── FileBubble ────────────────────────────────────────────────────────────────
+function FileBubble({ transfer, isOwn }: { transfer: FileTransferInfo; isOwn: boolean }) {
+    const isComplete = transfer.status === 'complete';
+    const isError = transfer.status === 'error';
+    const isInProgress = transfer.status === 'sending' || transfer.status === 'receiving';
+
+    return (
+        <div className={`flex flex-col gap-0.5 group relative w-full`}>
+            {/* Sender name + time */}
+            <div className={`flex items-baseline gap-1.5 text-[10px] sm:text-xs text-text-muted px-1 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+                <span className="font-semibold text-text-main truncate max-w-[120px]">{transfer.senderName}</span>
+                <span>{formatTime(transfer.timestamp)}</span>
+            </div>
+
+            <div className={`flex items-end gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div
+                    className={`
+                        max-w-[85%] px-3 py-2.5 rounded-2xl text-sm leading-relaxed break-words
+                        ${isOwn
+                            ? 'bg-primary text-white rounded-tr-sm'
+                            : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-text-main dark:text-gray-200 rounded-tl-sm shadow-sm'
+                        }
+                    `}
+                >
+                    {/* File icon + name */}
+                    <div className="flex items-center gap-2">
+                        <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
+                            isError
+                                ? 'bg-red-100 dark:bg-red-900/30'
+                                : isOwn
+                                    ? 'bg-white/20'
+                                    : 'bg-gray-100 dark:bg-gray-700'
+                        }`}>
+                            {isError
+                                ? <AlertCircle className="w-4 h-4 text-red-400" />
+                                : <FileIcon className={`w-4 h-4 ${isOwn ? 'text-white/80' : 'text-text-muted dark:text-gray-400'}`} />
+                            }
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className={`font-medium text-sm truncate ${isOwn ? 'text-white' : ''}`}>{transfer.fileName}</p>
+                            <p className={`text-[10px] ${isOwn ? 'text-white/70' : 'text-text-muted dark:text-gray-400'}`}>
+                                {formatFileSize(transfer.fileSize)}
+                                {isError && <span className={`ml-1 ${isOwn ? 'text-white/80' : 'text-red-500'}`}>• {transfer.error || 'Error'}</span>}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    {isInProgress && (
+                        <div className="mt-2">
+                            <div className={`w-full h-1.5 rounded-full overflow-hidden ${isOwn ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-600'}`}>
+                                <div
+                                    className={`h-full rounded-full transition-all duration-300 ease-out ${isOwn ? 'bg-white' : 'bg-primary'}`}
+                                    style={{ width: `${transfer.progress}%` }}
+                                />
+                            </div>
+                            <p className={`text-[10px] mt-1 ${isOwn ? 'text-white/70' : 'text-text-muted dark:text-gray-400'}`}>
+                                {transfer.status === 'sending' ? 'Sending' : 'Receiving'}… {transfer.progress}%
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Download button — only for completed transfers */}
+                    {isComplete && transfer.blobUrl && (
+                        <a
+                            href={transfer.blobUrl}
+                            download={transfer.fileName}
+                            className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-lg transition-colors w-fit ${
+                                isOwn
+                                    ? 'bg-white/20 text-white hover:bg-white/30'
+                                    : 'bg-gray-100 dark:bg-gray-700 text-text-main dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                            }`}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <Download className="w-3 h-3" />
+                            Download
+                        </a>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface ChatSidebarProps {
     roomId: string;
@@ -263,9 +355,14 @@ interface ChatSidebarProps {
     onToggle: () => void;
     unreadCount: number;
     onRead: () => void;
+    isDark: boolean;
     width?: number;
     onWidthChange?: (width: number) => void;
     forceCompact?: boolean;
+    // File transfer
+    fileTransfers?: Map<string, FileTransferInfo>;
+    onSendFile?: (file: File) => void;
+    maxFileSize?: number;
 }
 
 // ── ChatSidebar ───────────────────────────────────────────────────────────────
@@ -281,12 +378,17 @@ export function ChatSidebar({
     onToggle,
     unreadCount,
     onRead,
+    isDark,
     width = 320,
     onWidthChange,
     forceCompact = false,
+    fileTransfers,
+    onSendFile,
+    maxFileSize = 50 * 1024 * 1024,
 }: ChatSidebarProps) {
     const [draft, setDraft] = useState('');
     const [mounted, setMounted] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => { 
         const t = setTimeout(() => setMounted(true), 0);
@@ -417,6 +519,54 @@ export function ChatSidebar({
 
     const remaining = 500 - draft.length;
 
+    // ── File handling ─────────────────────────────────────────────────────
+    const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > maxFileSize) {
+            alert(`File is too large. Maximum size is ${Math.round(maxFileSize / (1024 * 1024))} MB.`);
+            e.target.value = '';
+            return;
+        }
+
+        if (onSendFile) {
+            onSendFile(file);
+        }
+        e.target.value = ''; // reset so same file can be re-selected
+    }, [maxFileSize, onSendFile]);
+
+    // Merge text messages with file transfer messages for display
+    const mergedMessages = React.useMemo(() => {
+        if (!fileTransfers || fileTransfers.size === 0) return messages;
+
+        // Convert file transfers into ChatMessage-like objects
+        const fileMessages: ChatMessage[] = [];
+        fileTransfers.forEach((transfer) => {
+            fileMessages.push({
+                id: `file-${transfer.transferId}`,
+                userId: transfer.senderId,
+                name: transfer.senderName,
+                text: '',
+                timestamp: transfer.timestamp,
+                fileTransfer: {
+                    transferId: transfer.transferId,
+                    fileName: transfer.fileName,
+                    fileSize: transfer.fileSize,
+                    blobUrl: transfer.blobUrl,
+                    progress: transfer.progress,
+                    status: transfer.status,
+                    error: transfer.error,
+                },
+            });
+        });
+
+        // Merge and sort by timestamp
+        return [...messages, ...fileMessages].sort(
+            (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+        );
+    }, [messages, fileTransfers]);
+
     const scrollToBottom = () => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -454,7 +604,7 @@ export function ChatSidebar({
                         className={`
                             fixed top-16 right-0 bottom-0 z-[50]
                             flex flex-col
-                            bg-[#F7F7F7] border-l border-gray-200
+                            ${isDark ? 'bg-[#121212] border-l border-white/5' : 'bg-[#F7F7F7] border-l border-gray-200'}
                             ${isOpen ? 'flex' : 'hidden'}
                             w-full sm:w-auto
                         `}
@@ -471,17 +621,22 @@ export function ChatSidebar({
                     }}
                 />
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white shrink-0">
+                <div className={`
+                    flex items-center justify-between px-4 py-3 border-b shrink-0
+                    ${isDark ? 'border-white/5 bg-[#121212]' : 'border-gray-200 bg-white'}
+                `}>
                     <div className="flex items-center gap-2">
                         <MessageSquare className="w-4 h-4 text-primary" />
-                        <span className="font-semibold text-text-main text-sm">Room Chat</span>
+                        <span className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-text-main'}`}>Room Chat</span>
                         {/* Connection indicator */}
                         <span className={`flex h-1.5 w-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`} />
                     </div>
                     <button
                         onClick={onToggle}
                         aria-label="Close chat"
-                        className="p-1 rounded-lg text-text-muted hover:bg-gray-100 hover:text-text-main transition-colors"
+                        className={`p-1 rounded-lg text-text-muted transition-colors ${
+                            isDark ? 'hover:bg-white/5 hover:text-white' : 'hover:bg-gray-100 hover:text-text-main'
+                        }`}
                     >
                         <ChevronRight className="w-4 h-4" />
                     </button>
@@ -506,7 +661,7 @@ export function ChatSidebar({
                             <p className="text-sm font-medium">Connecting...</p>
                             <p className="text-xs opacity-60">Establishing a secure connection.</p>
                         </div>
-                    ) : messages.length === 0 ? (
+                    ) : mergedMessages.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center text-text-muted">
                             <div className="h-40 flex items-center justify-center">
                                 <Mascot 
@@ -520,14 +675,33 @@ export function ChatSidebar({
                             <p className="text-xs opacity-60">Be the first to say something!</p>
                         </div>
                     ) : (
-                        messages.map(msg => (
-                            <MessageBubble
-                                key={msg.id}
-                                msg={msg}
-                                isOwn={msg.userId === currentUserId}
-                                currentUserId={currentUserId}
-                                onReact={onReact || (() => {})}
-                            />
+                        mergedMessages.map(msg => (
+                            msg.fileTransfer ? (
+                                <FileBubble
+                                    key={msg.id}
+                                    transfer={{
+                                        transferId: msg.fileTransfer.transferId,
+                                        fileName: msg.fileTransfer.fileName,
+                                        fileSize: msg.fileTransfer.fileSize,
+                                        blobUrl: msg.fileTransfer.blobUrl,
+                                        progress: msg.fileTransfer.progress,
+                                        status: msg.fileTransfer.status,
+                                        error: msg.fileTransfer.error,
+                                        senderId: msg.userId,
+                                        senderName: msg.name,
+                                        timestamp: msg.timestamp,
+                                    }}
+                                    isOwn={msg.userId === currentUserId}
+                                />
+                            ) : (
+                                <MessageBubble
+                                    key={msg.id}
+                                    msg={msg}
+                                    isOwn={msg.userId === currentUserId}
+                                    currentUserId={currentUserId}
+                                    onReact={onReact || (() => {})}
+                                />
+                            )
                         ))
                     )}
                     
@@ -549,12 +723,44 @@ export function ChatSidebar({
                 </div>
 
                 {/* Input area */}
-                <div className="shrink-0 border-t border-gray-200 bg-white px-3 py-3">
+                <div className={`
+                    shrink-0 border-t px-3 py-3
+                    ${isDark ? 'bg-[#121212] border-white/5' : 'bg-white border-gray-200'}
+                `}>
                     {/*
                      * Wrapper: starts at 1-line height + padding, expands to max 3 lines.
                      * items-end keeps the send button at the bottom as the textarea grows.
                      */}
-                    <div className="relative flex items-end gap-2 bg-[#F7F7F7] rounded-2xl border border-gray-200 px-3 py-2 min-h-[40px] focus-within:border-primary/50 transition-colors">
+                    <div className={`
+                        relative flex items-center gap-2 rounded-2xl border px-3 py-2 min-h-[40px] focus-within:border-primary/50 transition-colors
+                        ${isDark ? 'bg-[#1E1E1E] border-white/10' : 'bg-[#F7F7F7] border-gray-200'}
+                    `}>
+
+                        {/* Hidden file input */}
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            className="hidden"
+                            onChange={handleFileSelect}
+                        />
+
+                        {/* Attachment button */}
+                        {onSendFile && (
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={!connected}
+                                aria-label="Attach file"
+                                title={`Attach file (max ${Math.round(maxFileSize / (1024 * 1024))} MB)`}
+                                className="
+                                    shrink-0 w-8 h-8 flex items-center justify-center rounded-xl
+                                    text-text-muted hover:text-text-main dark:hover:text-gray-300
+                                    disabled:opacity-30 disabled:cursor-not-allowed
+                                    transition-all duration-150
+                                "
+                            >
+                                <Paperclip className="w-3.5 h-3.5" />
+                            </button>
+                        )}
 
                         <textarea
                             ref={textareaRef}
@@ -576,9 +782,10 @@ export function ChatSidebar({
                             disabled={!draft.trim() || !connected}
                             aria-label="Send message"
                             className="
-                                shrink-0 self-end w-8 h-8 flex items-center justify-center rounded-xl
+                                shrink-0 w-8 h-8 flex items-center justify-center rounded-xl
                                 bg-primary text-white
-                                hover:bg-[#E0484D] disabled:opacity-30 disabled:cursor-not-allowed
+                                hover:brightness-90 active:scale-95
+                                disabled:opacity-30 disabled:cursor-not-allowed
                                 transition-all duration-150
                             "
                         >
@@ -589,6 +796,13 @@ export function ChatSidebar({
                     {remaining <= 100 && (
                         <p className={`text-right text-[10px] mt-1 pr-1 ${remaining <= 20 ? 'text-primary' : 'text-text-muted'}`}>
                             {remaining} remaining
+                        </p>
+                    )}
+                    {/* File size hint */}
+                    {onSendFile && (
+                        <p className="text-[10px] text-text-muted dark:text-gray-500 mt-1 px-1 flex items-center gap-1">
+                            <Paperclip className="w-2.5 h-2.5" />
+                            Files up to {Math.round(maxFileSize / (1024 * 1024))} MB • E2E encrypted
                         </p>
                     )}
                 </div>

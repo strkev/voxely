@@ -409,6 +409,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     sendTyping={sendTyping}
                     onReact={sendReaction}
                     chatConnected={chatConnected}
+                    isDark={isDark}
                     requestLeave={requestLeave}
                 />
                 <AutoStartAudio />

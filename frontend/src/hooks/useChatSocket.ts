@@ -10,6 +10,15 @@ export interface ChatMessage {
     text: string;
     timestamp: string;
     reactions?: Record<string, string[]>;
+    fileTransfer?: {
+        transferId: string;
+        fileName: string;
+        fileSize: number;
+        blobUrl?: string;
+        progress: number;
+        status: 'sending' | 'receiving' | 'complete' | 'error';
+        error?: string;
+    };
 }
 
 interface UseChatSocketOptions {
