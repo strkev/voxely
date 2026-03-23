@@ -4,6 +4,7 @@ import React, { useRef } from 'react';
 import { useSettingsStore, QUALITY_OPTIONS, type VideoQuality } from '@/store/useSettingsStore';
 import { SettingsOptionButton } from '@/components/ui/SettingsOptionButton';
 import { SettingsSlider } from '@/components/ui/SettingsSlider';
+import { SettingsSelect } from '@/components/ui/SettingsSelect';
 import { resizeImage } from '@/lib/image';
 import {
     ImageIcon, CircleSlash, MonitorPlay, Upload, Trash2,
@@ -56,19 +57,15 @@ export function VideoTab({
                     {/* Device Selection FIRST */}
                     <div className="space-y-3">
                         <label htmlFor="video-input-select" className="text-[11px] font-bold text-text-muted uppercase tracking-wider">Camera Device</label>
-                        <select
-                            id="video-input-select"
-                            value={videoDeviceId || ''}
-                            onChange={(e) => setVideoDeviceId(e.target.value || null)}
-                            className="w-full bg-gray-50 border border-gray-100/50 rounded-xl px-4 py-2.5 text-sm font-medium text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer hover:bg-gray-100/50"
-                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/xml' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1rem' }}
-                        >
-                            {videoDevices.filter(d => d.deviceId !== 'default').map((device) => (
-                                <option key={device.deviceId} value={device.deviceId}>
-                                    {device.label || `Camera ${device.deviceId.slice(0, 5)}...`}
-                                </option>
-                            ))}
-                        </select>
+                        <SettingsSelect
+                            value={videoDeviceId}
+                            onChange={(val) => setVideoDeviceId(val || null)}
+                            placeholder="System Default"
+                            options={videoDevices.filter(d => d.deviceId !== 'default').map(d => ({
+                                value: d.deviceId,
+                                label: d.label || `Camera ${d.deviceId.slice(0, 5)}...`
+                            }))}
+                        />
                     </div>
 
                     {/* Camera Quality SECOND */}
