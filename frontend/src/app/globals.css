@@ -101,7 +101,7 @@ body {
   overflow: hidden;
   white-space: nowrap;
   margin-left: 6px;
-  transition: 
+  transition:
     max-width 0.4s cubic-bezier(0.23, 1, 0.32, 1),
     opacity 0.3s cubic-bezier(0.23, 1, 0.32, 1),
     margin-left 0.4s cubic-bezier(0.23, 1, 0.32, 1);
@@ -459,6 +459,43 @@ body {
   animation: fadeInDown 0.15s ease both;
 }
 
+/* ── LiveKit Device Menu Custom Styling ─────────────────────────────────────── */
+/* This matches the new control bar look: bg-[#F2F2F2]/90 in light mode */
+.lk-device-menu {
+  background-color: rgba(242, 242, 242, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(200, 200, 200, 0.4) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+  z-index: 100 !important;
+  padding: 6px !important;
+  margin-bottom: 8px !important;
+}
+
+/* Menu items inside the device menu */
+.lk-device-menu .lk-button {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 12px !important;
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+  color: var(--color-text-main) !important;
+  justify-content: flex-start !important;
+}
+
+.lk-device-menu [data-lk-active="true"] .lk-button {
+  background-color: var(--color-primary) !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(255, 90, 95, 0.25) !important;
+}
+
+/* Ensure the menu arrow points correctly or is clean */
+.lk-device-menu::after {
+  display: none !important;
+}
+
 /* ── Chat sidebar scrollbar ─────────────────────────────────────────────────── */
 .chat-messages::-webkit-scrollbar {
   width: 4px;
@@ -756,7 +793,8 @@ body {
   display: flex;
   align-items: center;
   gap: 2px;
-  opacity: 1; /* Always visible */
+  opacity: 1;
+  /* Always visible */
   transition: opacity 0.15s ease;
 }
 
@@ -819,14 +857,16 @@ body {
 
 /* Increase button sizes on mobile for better touch accessibility */
 @media (max-width: 639px) {
+
   .friends-sidebar__invite-btn,
   .friends-sidebar__remove-btn,
   .friends-sidebar__call-btn,
   .friends-sidebar__invited-indicator {
-    width: 38px; /* Slightly larger as requested */
+    width: 38px;
+    /* Slightly larger as requested */
     height: 38px;
   }
-  
+
   .friends-sidebar__invite-btn svg,
   .friends-sidebar__remove-btn svg,
   .friends-sidebar__call-btn svg,
@@ -880,6 +920,7 @@ body {
 
 /* Mobile adjustments */
 @media (max-width: 639px) {
+
   .friends-sidebar__confirm-yes,
   .friends-sidebar__confirm-no {
     height: 38px;
@@ -1721,6 +1762,19 @@ body {
 .dark .border-gray-200.border-t-primary {
   border-color: rgba(255, 255, 255, 0.10);
   border-top-color: var(--color-primary);
+}
+
+/* ── LiveKit Device Menu Dark Mode ─────────────────────────────────────────── */
+.dark .lk-device-menu {
+  background-color: rgba(30, 30, 30, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .lk-device-menu .lk-button {
+  color: var(--color-text-main) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════

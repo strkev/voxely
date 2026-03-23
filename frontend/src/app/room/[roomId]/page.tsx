@@ -437,7 +437,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                             }
                         }}
                     >
-                        <div className="bg-white/90 backdrop-blur-md border border-white/60 rounded-full shadow-lg px-3 py-1.5 flex items-center gap-1">
+                        <div className={`${isDark ? 'bg-white/90 border-white/60' : 'bg-[#F2F2F2]/90 border-gray-300/40'} backdrop-blur-md rounded-full shadow-lg px-3 py-1.5 flex items-center gap-1`}>
                             <ControlBar
                                 controls={{ camera: true, microphone: true, screenShare: true, chat: false, leave: false }}
                                 saveUserChoices={true}

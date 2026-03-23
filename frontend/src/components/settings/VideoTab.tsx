@@ -6,7 +6,7 @@ import { SettingsOptionButton } from '@/components/ui/SettingsOptionButton';
 import { SettingsSlider } from '@/components/ui/SettingsSlider';
 import { resizeImage } from '@/lib/image';
 import {
-    ImageIcon, CircleSlash, MonitorPlay, Upload, Trash2, Monitor,
+    ImageIcon, CircleSlash, MonitorPlay, Upload, Trash2,
 } from 'lucide-react';
 
 interface VideoTabProps {
@@ -119,7 +119,7 @@ export function VideoTab({
                                 return (
                                     <button
                                         key={effect.id}
-                                        onClick={() => setVirtualBackground(effect.id as any)}
+                                        onClick={() => setVirtualBackground(effect.id as 'none' | 'blur' | 'image')}
                                         className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-[16px] transition-all ${isActive
                                             ? 'bg-white text-primary shadow-sm'
                                             : 'text-text-muted hover:text-text-main'
