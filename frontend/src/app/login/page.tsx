@@ -59,7 +59,7 @@ function LoginForm() {
         <div className="min-h-screen flex flex-col items-center justify-center p-4">
             <div className="w-full max-w-md mb-6">
                 <button
-                    onClick={() => router.back()}
+                    onClick={() => router.push('/')}
                     className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-main transition-colors"
                 >
                     <ChevronLeft className="w-4 h-4" />
