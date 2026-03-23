@@ -3,19 +3,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useDevices } from '@/hooks/useDevices';
-import { AudioVideoTab } from '@/components/settings/AudioVideoTab';
-import { QualityTab } from '@/components/settings/QualityTab';
+import { AudioTab } from '@/components/settings/AudioTab';
+import { VideoTab } from '@/components/settings/VideoTab';
+import { SharingTab } from '@/components/settings/SharingTab';
 import { InterfaceTab } from '@/components/settings/InterfaceTab';
 import { SoundsTab } from '@/components/settings/SoundsTab';
 import { ProfileTab } from '@/components/settings/ProfileTab';
 import { AccountTab } from '@/components/settings/AccountTab';
 import { SettingsNavButton } from '@/components/ui/SettingsNavButton';
 import {
-    X, Settings, Mic, Monitor, Palette, Bell, User, Lock, ChevronDown,
+    X, Settings, Mic, Video, Monitor, Palette, Bell, User, Lock, ChevronDown,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 
-type TabId = 'audio-video' | 'quality' | 'interface' | 'sounds' | 'profile' | 'account';
+type TabId = 'audio' | 'video' | 'sharing' | 'interface' | 'sounds' | 'profile' | 'account';
 
 interface SettingsModalProps {
     onClose: () => void;
@@ -23,8 +24,9 @@ interface SettingsModalProps {
 }
 
 const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
-    { id: 'audio-video', label: 'Audio & Video', icon: Mic },
-    { id: 'quality', label: 'Stream Quality', icon: Monitor },
+    { id: 'audio', label: 'Voice & Audio', icon: Mic },
+    { id: 'video', label: 'Video', icon: Video },
+    { id: 'sharing', label: 'Screen Share', icon: Monitor },
     { id: 'interface', label: 'Interface', icon: Palette },
     { id: 'sounds', label: 'Sounds', icon: Bell },
     { id: 'profile', label: 'My Profile', icon: User },
@@ -35,7 +37,7 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
     const { user } = useAuthStore();
     const devices = useDevices();
 
-    const [activeTab, setActiveTab] = useState<TabId>(defaultTab || 'audio-video');
+    const [activeTab, setActiveTab] = useState<TabId>(defaultTab || 'audio');
     const [isNavExpanded, setIsNavExpanded] = useState(false);
     const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -58,19 +60,21 @@ export function SettingsModal({ onClose, defaultTab }: SettingsModalProps) {
 
     const renderTab = () => {
         switch (activeTab) {
-            case 'audio-video':
+            case 'audio':
                 return (
-                    <AudioVideoTab
+                    <AudioTab
                         audioDevices={devices.audioDevices}
-                        videoDevices={devices.videoDevices}
                         audioOutputDevices={devices.audioOutputDevices}
-                        activeAudioId={devices.activeAudioId}
-                        activeVideoId={devices.activeVideoId}
-                        activeAudioOutputId={devices.activeAudioOutputId}
                     />
                 );
-            case 'quality':
-                return <QualityTab />;
+            case 'video':
+                return (
+                    <VideoTab
+                        videoDevices={devices.videoDevices}
+                    />
+                );
+            case 'sharing':
+                return <SharingTab />;
             case 'interface':
                 return <InterfaceTab />;
             case 'sounds':
