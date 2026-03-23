@@ -132,7 +132,7 @@ export function ChatInput({
                         title={`Attach file (max ${Math.round(maxFileSize / (1024 * 1024))} MB)`}
                         className="
                             shrink-0 w-8 h-8 flex items-center justify-center rounded-xl
-                            text-text-muted hover:text-text-main dark:hover:text-gray-300
+                            text-text-muted hover:text-primary dark:hover:text-primary
                             disabled:opacity-30 disabled:cursor-not-allowed
                             transition-all duration-150
                         "
