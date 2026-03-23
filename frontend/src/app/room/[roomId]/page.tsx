@@ -9,7 +9,6 @@ import { useWindowWidth, useThemeBackground, usePreventTabClose, useLiveKitToken
 import {
     LiveKitRoom,
     RoomAudioRenderer,
-    ControlBar,
     useParticipants,
     useMediaDeviceSelect,
 } from '@livekit/components-react';
@@ -33,6 +32,7 @@ import { DevInfoOverlay } from '@/components/room/DevInfoOverlay';
 import { ConnectionError } from '@/components/room/ConnectionError';
 import { SecureContextWarning } from '@/components/room/SecureContextWarning';
 import { LeaveConfirmModal } from '@/components/room/LeaveConfirmModal';
+import { CustomControlBar } from '@/components/room/CustomControlBar';
 
 // ─── Friends Sidebar with Presence Tracking ─────────────────────────────────
 function FriendsSidebarWithPresence({
@@ -420,14 +420,11 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 {/* Collapsible control bar */}
                 {controlBarVisible ? (
                     <div
-                        className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-40 transition-opacity duration-200 ${chatOpen ? 'max-sm:opacity-0 max-sm:pointer-events-none' : ''}`}
+                        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-opacity duration-200 ${chatOpen ? 'max-sm:opacity-0 max-sm:pointer-events-none' : ''}`}
                         onMouseEnter={() => {
-                            if (autoHideControlBar) {
-                                // Reset timer on hover
-                                if (controlBarTimerRef.current) {
-                                    clearTimeout(controlBarTimerRef.current);
-                                    controlBarTimerRef.current = null;
-                                }
+                            if (autoHideControlBar && controlBarTimerRef.current) {
+                                clearTimeout(controlBarTimerRef.current);
+                                controlBarTimerRef.current = null;
                             }
                         }}
                         onMouseLeave={() => {
@@ -437,12 +434,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                             }
                         }}
                     >
-                        <div className={`${isDark ? 'bg-white/90 border-white/60' : 'bg-[#F2F2F2]/90 border-gray-300/40'} backdrop-blur-md rounded-full shadow-lg px-3 py-1.5 flex items-center gap-1`}>
-                            <ControlBar
-                                controls={{ camera: true, microphone: true, screenShare: true, chat: false, leave: false }}
-                                saveUserChoices={true}
-                            />
-                        </div>
+                        <CustomControlBar />
                     </div>
                 ) : (
                     <button

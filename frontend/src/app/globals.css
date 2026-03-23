@@ -251,139 +251,7 @@ body {
   fill: white !important;
 }
 
-/* Control bar: tighter gap so button+chevron pairs look connected */
-.lk-control-bar {
-  background: transparent !important;
-  border: none !important;
-  gap: 0.25rem !important;
-  align-items: center;
-}
 
-/* Base button — clean white style */
-.lk-button {
-  border-radius: 9999px !important;
-  background-color: rgba(255, 255, 255, 0.92);
-  color: var(--color-text-main);
-  border: 1px solid rgba(235, 235, 235, 0.8);
-  box-shadow: var(--shadow-flat);
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
-  padding: 0.75rem 1.25rem !important;
-  font-family: var(--font-sans);
-  font-weight: 500;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 1 !important;
-  min-height: 44px;
-  will-change: background-color, color;
-}
-
-.lk-button:hover {
-  background-color: rgba(247, 247, 247, 0.98) !important;
-  border-color: #DDDDDD !important;
-  color: var(--color-text-main) !important;
-}
-
-/* When button is ON — keep neutral, no background change */
-.lk-button[aria-pressed="true"],
-.lk-button-group .lk-button[aria-pressed="true"],
-.lk-button-group>.lk-button[aria-pressed="true"] {
-  background-color: rgba(255, 255, 255, 0.92) !important;
-  color: var(--color-text-main) !important;
-  border-color: rgba(235, 235, 235, 0.8) !important;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease !important;
-}
-
-.lk-button[aria-pressed="true"]:hover,
-.lk-button-group .lk-button[aria-pressed="true"]:hover {
-  background-color: rgba(247, 247, 247, 0.98) !important;
-}
-
-/* 
-  Button groups: GROUP WRAPPER is the single styled surface.
-  Buttons inside are transparent click regions — true single-pill feel.
-*/
-.lk-button-group {
-  display: inline-flex !important;
-  align-items: stretch !important;
-  gap: 0 !important;
-  background-color: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(220, 220, 220, 0.85);
-  border-radius: 9999px;
-  box-shadow: var(--shadow-flat);
-  position: relative;
-}
-
-/* Strip all individual button styling inside a group */
-.lk-button-group>.lk-button {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  border-radius: 0 !important;
-  color: var(--color-text-main) !important;
-  transition: background-color 0.18s ease, color 0.18s ease !important;
-}
-
-/* Hover: subtle darkening */
-.lk-button-group>.lk-button:hover {
-  background-color: rgba(0, 0, 0, 0.04) !important;
-}
-
-/* Left (main action) — round outer left, square inner right */
-.lk-button-group>.lk-button:first-child {
-  padding: 0.65rem 0.75rem 0.65rem 1.1rem !important;
-  border-radius: 9999px 0 0 9999px !important;
-}
-
-/* Right (chevron) — square inner left, round outer right + separator */
-.lk-button-group>.lk-button:last-child {
-  padding: 0.65rem 0.875rem 0.65rem 0.5rem !important;
-  border-radius: 0 9999px 9999px 0 !important;
-  border-left: 1px solid rgba(220, 220, 220, 0.85) !important;
-  width: 2.25rem !important;
-  min-width: 0 !important;
-  flex-shrink: 0;
-}
-
-/* ON state: keep main button half neutral */
-.lk-button-group>.lk-button:first-child[aria-pressed="true"] {
-  background-color: transparent !important;
-  color: var(--color-text-main) !important;
-}
-
-.lk-button-group>.lk-button:first-child[aria-pressed="true"]:hover {
-  background-color: rgba(0, 0, 0, 0.04) !important;
-}
-
-/* Chevron SVG — smooth rotation controlled by ChevronRotationFix component */
-.lk-button-menu svg {
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  display: block;
-}
-
-/* Rotate 180° when JS sets data-menu-open="true" on the button */
-.lk-button-menu[data-menu-open="true"] svg {
-  transform: rotate(180deg) !important;
-}
-
-/* Keep the chevron button color neutral always */
-.lk-button-group-menu>.lk-button,
-.lk-button-group-menu>.lk-button:hover,
-.lk-button-group-menu>.lk-button[aria-expanded="true"],
-.lk-button-group-menu>.lk-button[data-state="open"],
-.lk-button-group-menu>.lk-button[data-lk-active="true"],
-.lk-button-group>.lk-button:last-child[aria-pressed="true"] {
-  background-color: transparent !important;
-  color: var(--color-text-main) !important;
-}
-
-/* Space between button groups / standalone buttons */
-.lk-control-bar>.lk-button-group+.lk-button-group,
-.lk-control-bar>.lk-button-group+.lk-button,
-.lk-control-bar>.lk-button+.lk-button-group {
-  margin-left: 0.625rem;
-}
 
 
 /* Disconnect button styling (Make it solid red/primary) */
@@ -459,42 +327,7 @@ body {
   animation: fadeInDown 0.15s ease both;
 }
 
-/* ── LiveKit Device Menu Custom Styling ─────────────────────────────────────── */
-/* This matches the new control bar look: bg-[#F2F2F2]/90 in light mode */
-.lk-device-menu {
-  background-color: rgba(242, 242, 242, 0.9) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(200, 200, 200, 0.4) !important;
-  border-radius: 20px !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
-  z-index: 100 !important;
-  padding: 6px !important;
-  margin-bottom: 8px !important;
-}
 
-/* Menu items inside the device menu */
-.lk-device-menu .lk-button {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  border-radius: 12px !important;
-  font-size: 0.82rem !important;
-  font-weight: 500 !important;
-  color: var(--color-text-main) !important;
-  justify-content: flex-start !important;
-}
-
-.lk-device-menu [data-lk-active="true"] .lk-button {
-  background-color: var(--color-primary) !important;
-  color: white !important;
-  box-shadow: 0 4px 12px rgba(255, 90, 95, 0.25) !important;
-}
-
-/* Ensure the menu arrow points correctly or is clean */
-.lk-device-menu::after {
-  display: none !important;
-}
 
 /* ── Chat sidebar scrollbar ─────────────────────────────────────────────────── */
 .chat-messages::-webkit-scrollbar {
@@ -1523,64 +1356,7 @@ body {
 }
 
 /* ── 7. LiveKit Control Bar ──────────────────────────────────────────────────── */
-.dark .lk-button {
-  background-color: var(--elevation-04) !important;
-  color: var(--color-text-main) !important;
-  border-color: rgba(255, 255, 255, 0.10) !important;
-}
 
-.dark .lk-button:hover {
-  background-color: var(--elevation-06) !important;
-}
-
-.dark .lk-button[aria-pressed="true"],
-.dark .lk-button-group .lk-button[aria-pressed="true"],
-.dark .lk-button-group>.lk-button[aria-pressed="true"] {
-  background-color: var(--elevation-04) !important;
-  color: var(--color-text-main) !important;
-  border-color: rgba(255, 255, 255, 0.10) !important;
-}
-
-.dark .lk-button[aria-pressed="true"]:hover,
-.dark .lk-button-group .lk-button[aria-pressed="true"]:hover {
-  background-color: var(--elevation-06) !important;
-}
-
-.dark .lk-button-group {
-  background-color: var(--elevation-04) !important;
-  border-color: rgba(255, 255, 255, 0.10) !important;
-}
-
-.dark .lk-button-group>.lk-button {
-  color: var(--color-text-main) !important;
-}
-
-.dark .lk-button-group>.lk-button:hover {
-  background-color: rgba(255, 255, 255, 0.06) !important;
-}
-
-.dark .lk-button-group>.lk-button:last-child {
-  border-left-color: rgba(255, 255, 255, 0.10) !important;
-}
-
-.dark .lk-button-group>.lk-button:first-child[aria-pressed="true"] {
-  background-color: transparent !important;
-  color: var(--color-text-main) !important;
-}
-
-.dark .lk-button-group>.lk-button:first-child[aria-pressed="true"]:hover {
-  background-color: rgba(255, 255, 255, 0.06) !important;
-}
-
-.dark .lk-button-group-menu>.lk-button,
-.dark .lk-button-group-menu>.lk-button:hover,
-.dark .lk-button-group-menu>.lk-button[aria-expanded="true"],
-.dark .lk-button-group-menu>.lk-button[data-state="open"],
-.dark .lk-button-group-menu>.lk-button[data-lk-active="true"],
-.dark .lk-button-group>.lk-button:last-child[aria-pressed="true"] {
-  background-color: transparent !important;
-  color: var(--color-text-main) !important;
-}
 
 .dark .lk-disconnect-button {
   background-color: var(--color-primary) !important;
@@ -1593,11 +1369,7 @@ body {
   border-color: #E0607A !important;
 }
 
-/* Ensure active device in device selection menu uses primary color */
-.lk-media-device-select [data-lk-active="true"]>.lk-button {
-  background-color: var(--color-primary) !important;
-  color: white !important;
-}
+
 
 /* Speaking border — use dark primary */
 .dark .lk-participant-tile[data-lk-speaking="true"]:not([data-lk-source="screen_share"]):not(.lk-screen-share-tile) {
