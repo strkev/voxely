@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type SettingsTab = 'audio-video' | 'quality' | 'interface' | 'sounds' | 'profile' | 'account';
+export type SettingsTab = 'audio' | 'video' | 'sharing' | 'interface' | 'sounds' | 'profile' | 'account';
 
 interface UIState {
     // Sidebar
@@ -38,7 +38,7 @@ export const useUIStore = create<UIState>((set) => ({
     showSettings: false,
     setShowSettings: (show) => set({ showSettings: show }),
     
-    settingsTab: 'audio-video',
+    settingsTab: 'audio',
     setSettingsTab: (tab) => set({ settingsTab: tab }),
     
     isRoomOpen: false,
