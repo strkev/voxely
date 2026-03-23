@@ -117,7 +117,7 @@ export function RoomTopbar({
             </button>
 
             <div className="flex-1 min-w-[8px]" />
-            <LocalCameraAwareQuickAction onOpenSettings={() => { setSettingsTab('audio-video'); setShowSettings(true); }} />
+            <LocalCameraAwareQuickAction onOpenSettings={() => { setSettingsTab('video'); setShowSettings(true); }} />
 
 
             {/* Chat toggle button lives inside ChatSidebar */}
