@@ -196,6 +196,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const controlBarTimerRef = useRef<NodeJS.Timeout | null>(null);
     // roomOptions is intentionally stable — device IDs are only initial defaults.
     // LiveKitDeviceSync handles live switching via room.switchActiveDevice().
+    // We only re-memoize once hydration is complete to capture initial user settings.
     const qPreset = VIDEO_PRESETS[videoQuality];
     const roomOptions = useMemo(() => ({
         videoCaptureDefaults: {
@@ -217,7 +218,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             },
             screenShareSimulcastLayers: [],
         },
-    }), [videoDeviceId, audioDeviceId, qPreset, screenShareFps]);
+    }), [hydrated]);
 
 
     // Ensure control bar is always visible on mount + activate leave guard
