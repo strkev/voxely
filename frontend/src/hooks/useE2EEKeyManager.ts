@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { useDataChannel } from '@livekit/components-react';
+import { useDataChannel, useConnectionState, useRemoteParticipants } from '@livekit/components-react';
+import { ConnectionState } from 'livekit-client';
 import type { ReceivedDataMessage } from '@livekit/components-core';
 
 // ── Protocol message types for E2EE key exchange ─────────────────────────────
@@ -196,9 +197,14 @@ export function useE2EEKeyManager(localIdentity: string) {
     const saltRef = useRef<Uint8Array>(crypto.getRandomValues(new Uint8Array(32)));
     const peersRef = useRef<Map<string, PeerKeyState>>(new Map());
     const groupKeyRef = useRef<CryptoKey | null>(null);
-    const isInitiatorRef = useRef(false);
     const initPromiseRef = useRef<Promise<void> | null>(null);
-    const joinTimestampRef = useRef<string>(new Date().toISOString());
+    const hasGeneratedGroupKey = useRef(false);
+    const connectionState = useConnectionState();
+    const remoteParticipants = useRemoteParticipants();
+
+    const [joinTimestamp] = useState(() => new Date().toISOString());
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sendRef = useRef<((data: Uint8Array, options: any) => Promise<void>) | null>(null);
 
     // Initialize key pair on mount
     useEffect(() => {
@@ -206,14 +212,36 @@ export function useE2EEKeyManager(localIdentity: string) {
             const keyPair = await generateECDHKeyPair();
             keyPairRef.current = keyPair;
             publicKeyBytesRef.current = await exportPublicKey(keyPair.publicKey);
-            // If we are the first person in the room, generate the group key
-            const gk = await generateGroupKey();
-            groupKeyRef.current = gk;
-            isInitiatorRef.current = true;
             setIsReady(true);
         };
         initPromiseRef.current = init();
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Generate group key if we are the first person in the room
+    useEffect(() => {
+        if (connectionState === ConnectionState.Connected && isReady && !groupKeyRef.current && !hasGeneratedGroupKey.current) {
+            if (remoteParticipants.length === 0) {
+                generateGroupKey().then(gk => {
+                    groupKeyRef.current = gk;
+                    hasGeneratedGroupKey.current = true;
+                    console.log('[E2EE] Generated initial group key');
+                });
+            } else {
+                // Not first, wait to receive the group key from others.
+                // Fallback: if we don't receive one within 3 seconds, generate one anyway
+                const timer = setTimeout(() => {
+                    if (!groupKeyRef.current && !hasGeneratedGroupKey.current) {
+                        generateGroupKey().then(gk => {
+                            groupKeyRef.current = gk;
+                            hasGeneratedGroupKey.current = true;
+                            console.log('[E2EE] Generated fallback group key');
+                        });
+                    }
+                }, 3000);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [connectionState, remoteParticipants.length, isReady]);
 
     // ── Handle incoming key exchange messages ────────────────────────────────
     const handleKeyMessage = useCallback(async (msg: ReceivedDataMessage) => {
@@ -271,8 +299,8 @@ export function useE2EEKeyManager(localIdentity: string) {
                         sendRef.current?.(reply, { reliable: true });
                     }
 
-                    // If we are the initiator (have the group key), share it
-                    if (isInitiatorRef.current && groupKeyRef.current) {
+                    // Share our group key with the new peer if we have one
+                    if (groupKeyRef.current) {
                         const rawGroupKey = await exportAESKey(groupKeyRef.current);
                         const { ciphertext, iv } = await aesEncrypt(rawGroupKey, sharedKey);
                         const shareMsg = buildGroupKeyShare(iv, ciphertext);
@@ -301,8 +329,9 @@ export function useE2EEKeyManager(localIdentity: string) {
 
                 try {
                     const rawGroupKey = await aesDecrypt(encryptedKeyData, peerState.sharedKey, iv);
+                    // Only import if we don't have one, or if it's the exact same key it's harmless
                     groupKeyRef.current = await importAESKey(rawGroupKey);
-                    isInitiatorRef.current = false; // we received the key, not the initiator
+                    hasGeneratedGroupKey.current = true; // prevent fallback generation
                     console.log('[E2EE] Group key received from', senderId);
                 } catch (err) {
                     console.error('[E2EE] Failed to decrypt group key:', err);
@@ -314,14 +343,10 @@ export function useE2EEKeyManager(localIdentity: string) {
 
     const { send } = useDataChannel('e2ee-keys', handleKeyMessage);
 
-    // Store the send function from the data channel
-    const sendRef = useRef<typeof send | null>(null);
-
-    // Store send ref and announce our key
+    // Announce our public key to the room once ready
     useEffect(() => {
         sendRef.current = send;
 
-        // Announce our public key to the room once ready
         const announce = async () => {
             if (initPromiseRef.current) await initPromiseRef.current;
             if (!publicKeyBytesRef.current) return;
@@ -410,7 +435,7 @@ export function useE2EEKeyManager(localIdentity: string) {
     return {
         isReady,
         peerCount,
-        joinTimestamp: joinTimestampRef.current,
+        joinTimestamp,
         encryptFileKeyForPeer,
         decryptFileKeyFromPeer,
         encryptChat,

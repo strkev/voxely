@@ -379,6 +379,88 @@ export function useFileTransfer(e2ee?: E2EECallbacks) {
         updateTransfer(transferId, { progress });
     }, [updateTransfer]);
 
+    // ── Assemble and decrypt a completed transfer ────────────────────────────
+    const assembleAndDecrypt = useCallback((transferId: string, transfer: IncomingTransfer) => {
+        if (!transfer.key) return;
+
+        // Reassemble chunks in order
+        const chunks: Uint8Array[] = [];
+        for (let i = 0; i < transfer.totalChunks; i++) {
+            const chunk = transfer.receivedChunks.get(i);
+            if (!chunk) {
+                console.error('[FileTransfer] Missing chunk', i);
+                updateTransfer(transferId, {
+                    status: 'error',
+                    error: `Missing chunk ${i}`,
+                });
+                incomingRef.current.delete(transferId);
+                return;
+            }
+            chunks.push(chunk);
+        }
+
+        // Concatenate all encrypted chunks
+        const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+        const encryptedData = new Uint8Array(totalLength);
+        let offset = 0;
+        for (const chunk of chunks) {
+            encryptedData.set(chunk, offset);
+            offset += chunk.length;
+        }
+
+        // Decrypt the full payload
+        decryptData(encryptedData, transfer.key, transfer.iv)
+            .then(async plainData => {
+                // ── Security: verify file integrity via SHA-256 ──
+                const receivedHash = await computeHash(plainData);
+                const hashMatch = transfer.fileHash.length === receivedHash.length &&
+                    transfer.fileHash.every((b, i) => b === receivedHash[i]);
+
+                if (!hashMatch) {
+                    console.error('[FileTransfer] Integrity check failed — file hash mismatch');
+                    updateTransfer(transferId, {
+                        status: 'error',
+                        error: 'Integrity check failed',
+                    });
+                    incomingRef.current.delete(transferId);
+                    return;
+                }
+
+                // ── Security: Magic Number validation ──
+                const dangerousType = hasDangerousMagicNumber(plainData);
+                if (dangerousType) {
+                    console.error('[FileTransfer] Magic Number check failed — detected:', dangerousType);
+                    updateTransfer(transferId, {
+                        status: 'error',
+                        error: `Blocked: detected ${dangerousType}`,
+                    });
+                    incomingRef.current.delete(transferId);
+                    return;
+                }
+
+                // Force safe MIME type to prevent browser from executing content
+                const blob = new Blob([plainData.buffer as ArrayBuffer], {
+                    type: 'application/octet-stream',
+                });
+                const blobUrl = URL.createObjectURL(blob);
+                trackUrl(blobUrl);
+                updateTransfer(transferId, {
+                    status: 'complete',
+                    progress: 100,
+                    blobUrl,
+                });
+                incomingRef.current.delete(transferId);
+            })
+            .catch(err => {
+                console.error('[FileTransfer] Decryption failed:', err);
+                updateTransfer(transferId, {
+                    status: 'error',
+                    error: 'Decryption failed',
+                });
+                incomingRef.current.delete(transferId);
+            });
+    }, [updateTransfer, trackUrl]);
+
     // ── Handle incoming data channel messages ────────────────────────────────
     const handleMessage = useCallback((msg: ReceivedDataMessage) => {
         const data = msg.payload;
@@ -616,89 +698,7 @@ export function useFileTransfer(e2ee?: E2EECallbacks) {
                 break;
             }
         }
-    }, [updateTransfer, startTransferTimeout, resetTransferTimeout, trackUrl, cleanupTransfer, processBufferedChunks, e2ee]);
-
-    // ── Assemble and decrypt a completed transfer ────────────────────────────
-    const assembleAndDecrypt = useCallback((transferId: string, transfer: IncomingTransfer) => {
-        if (!transfer.key) return;
-
-        // Reassemble chunks in order
-        const chunks: Uint8Array[] = [];
-        for (let i = 0; i < transfer.totalChunks; i++) {
-            const chunk = transfer.receivedChunks.get(i);
-            if (!chunk) {
-                console.error('[FileTransfer] Missing chunk', i);
-                updateTransfer(transferId, {
-                    status: 'error',
-                    error: `Missing chunk ${i}`,
-                });
-                incomingRef.current.delete(transferId);
-                return;
-            }
-            chunks.push(chunk);
-        }
-
-        // Concatenate all encrypted chunks
-        const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
-        const encryptedData = new Uint8Array(totalLength);
-        let offset = 0;
-        for (const chunk of chunks) {
-            encryptedData.set(chunk, offset);
-            offset += chunk.length;
-        }
-
-        // Decrypt the full payload
-        decryptData(encryptedData, transfer.key, transfer.iv)
-            .then(async plainData => {
-                // ── Security: verify file integrity via SHA-256 ──
-                const receivedHash = await computeHash(plainData);
-                const hashMatch = transfer.fileHash.length === receivedHash.length &&
-                    transfer.fileHash.every((b, i) => b === receivedHash[i]);
-
-                if (!hashMatch) {
-                    console.error('[FileTransfer] Integrity check failed — file hash mismatch');
-                    updateTransfer(transferId, {
-                        status: 'error',
-                        error: 'Integrity check failed',
-                    });
-                    incomingRef.current.delete(transferId);
-                    return;
-                }
-
-                // ── Security: Magic Number validation ──
-                const dangerousType = hasDangerousMagicNumber(plainData);
-                if (dangerousType) {
-                    console.error('[FileTransfer] Magic Number check failed — detected:', dangerousType);
-                    updateTransfer(transferId, {
-                        status: 'error',
-                        error: `Blocked: detected ${dangerousType}`,
-                    });
-                    incomingRef.current.delete(transferId);
-                    return;
-                }
-
-                // Force safe MIME type to prevent browser from executing content
-                const blob = new Blob([plainData.buffer as ArrayBuffer], {
-                    type: 'application/octet-stream',
-                });
-                const blobUrl = URL.createObjectURL(blob);
-                trackUrl(blobUrl);
-                updateTransfer(transferId, {
-                    status: 'complete',
-                    progress: 100,
-                    blobUrl,
-                });
-                incomingRef.current.delete(transferId);
-            })
-            .catch(err => {
-                console.error('[FileTransfer] Decryption failed:', err);
-                updateTransfer(transferId, {
-                    status: 'error',
-                    error: 'Decryption failed',
-                });
-                incomingRef.current.delete(transferId);
-            });
-    }, [updateTransfer, trackUrl]);
+    }, [updateTransfer, startTransferTimeout, resetTransferTimeout, cleanupTransfer, processBufferedChunks, e2ee, assembleAndDecrypt]);
 
     const { send } = useDataChannel('file-transfer', handleMessage);
 
