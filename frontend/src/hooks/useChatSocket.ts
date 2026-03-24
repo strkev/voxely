@@ -10,6 +10,7 @@ export interface ChatMessage {
     text: string;
     timestamp: string;
     reactions?: Record<string, string[]>;
+    encrypted?: boolean; // true if the message could not be decrypted
     fileTransfer?: {
         transferId: string;
         fileName: string;
@@ -27,6 +28,10 @@ interface UseChatSocketOptions {
     userName: string;
     userId: string;
     onNewMessage?: (msg: ChatMessage) => void;
+    // E2EE callbacks (optional)
+    encryptChat?: (plaintext: string) => Promise<string | null>;
+    decryptChat?: (ciphertext: string) => Promise<string | null>;
+    joinTimestamp?: string; // hide messages before this timestamp
 }
 
 export interface TypingUser {
@@ -50,7 +55,10 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const SEND_THROTTLE_MS = 500;
 const TYPING_THROTTLE_MS = 1000;
 
-export function useChatSocket({ roomId, token, userName, userId, onNewMessage }: UseChatSocketOptions): UseChatSocketReturn {
+// Marker prefix to identify encrypted messages
+const E2EE_PREFIX = 'E2EE:';
+
+export function useChatSocket({ roomId, token, userName, userId, onNewMessage, encryptChat, decryptChat, joinTimestamp }: UseChatSocketOptions): UseChatSocketReturn {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
     const [connected, setConnected] = useState(false);
@@ -60,10 +68,42 @@ export function useChatSocket({ roomId, token, userName, userId, onNewMessage }:
     const lastTypingSentRef = useRef<number>(0);
     const typingTimeoutsRef = useRef<Record<string, NodeJS.Timeout>>({});
     const onNewMessageRef = useRef(onNewMessage);
+    const encryptChatRef = useRef(encryptChat);
+    const decryptChatRef = useRef(decryptChat);
+    const joinTimestampRef = useRef(joinTimestamp);
 
     useEffect(() => {
         onNewMessageRef.current = onNewMessage;
     }, [onNewMessage]);
+
+    useEffect(() => {
+        encryptChatRef.current = encryptChat;
+    }, [encryptChat]);
+
+    useEffect(() => {
+        decryptChatRef.current = decryptChat;
+    }, [decryptChat]);
+
+    useEffect(() => {
+        joinTimestampRef.current = joinTimestamp;
+    }, [joinTimestamp]);
+
+    // Decrypt a message text (if it's encrypted)
+    const tryDecrypt = useCallback(async (text: string): Promise<{ text: string; encrypted: boolean }> => {
+        if (!text.startsWith(E2EE_PREFIX)) {
+            return { text, encrypted: false };
+        }
+        const ciphertext = text.slice(E2EE_PREFIX.length);
+        const decrypt = decryptChatRef.current;
+        if (!decrypt) {
+            return { text: '🔒 Encrypted message', encrypted: true };
+        }
+        const plaintext = await decrypt(ciphertext);
+        if (plaintext === null) {
+            return { text: '🔒 Encrypted message', encrypted: true };
+        }
+        return { text: plaintext, encrypted: false };
+    }, []);
 
     useEffect(() => {
         if (!token || !roomId) return;
@@ -91,10 +131,14 @@ export function useChatSocket({ roomId, token, userName, userId, onNewMessage }:
         });
 
         socket.on('chat:message', (msg: ChatMessage) => {
-            setMessages(prev => [...prev, msg]);
-            if (onNewMessageRef.current) {
-                onNewMessageRef.current(msg);
-            }
+            // Decrypt incoming message
+            tryDecrypt(msg.text).then(({ text, encrypted }) => {
+                const decryptedMsg = { ...msg, text, encrypted };
+                setMessages(prev => [...prev, decryptedMsg]);
+                if (onNewMessageRef.current) {
+                    onNewMessageRef.current(decryptedMsg);
+                }
+            });
             
             // If someone sends a message, they are no longer typing
             setTypingUsers(prev => prev.filter(u => u.userId !== msg.userId));
@@ -146,7 +190,21 @@ export function useChatSocket({ roomId, token, userName, userId, onNewMessage }:
         });
 
         socket.on('chat:history', (history: ChatMessage[]) => {
-            setMessages(history);
+            // Filter out messages from before the user joined (E2EE: can't decrypt old messages)
+            const jt = joinTimestampRef.current;
+            const filteredHistory = jt
+                ? history.filter(m => new Date(m.timestamp).getTime() >= new Date(jt).getTime())
+                : history;
+
+            // Decrypt all history messages
+            Promise.all(
+                filteredHistory.map(async (m) => {
+                    const { text, encrypted } = await tryDecrypt(m.text);
+                    return { ...m, text, encrypted };
+                })
+            ).then(decryptedHistory => {
+                setMessages(decryptedHistory);
+            });
         });
 
         return () => {
@@ -163,7 +221,7 @@ export function useChatSocket({ roomId, token, userName, userId, onNewMessage }:
             setTypingUsers([]);
             setConnected(false);
         };
-    }, [roomId, token, userName]);
+    }, [roomId, token, userName, tryDecrypt]);
 
     const sendMessage = useCallback((text: string) => {
         const socket = socketRef.current;
@@ -176,7 +234,20 @@ export function useChatSocket({ roomId, token, userName, userId, onNewMessage }:
         const trimmed = text.trim().slice(0, 500);
         if (!trimmed) return;
 
-        socket.emit('chat:message', { roomId, text: trimmed });
+        // Encrypt the message if E2EE is available
+        const encrypt = encryptChatRef.current;
+        if (encrypt) {
+            encrypt(trimmed).then(ciphertext => {
+                if (ciphertext) {
+                    socket.emit('chat:message', { roomId, text: E2EE_PREFIX + ciphertext });
+                } else {
+                    // Fallback: send plaintext if encryption fails
+                    socket.emit('chat:message', { roomId, text: trimmed });
+                }
+            });
+        } else {
+            socket.emit('chat:message', { roomId, text: trimmed });
+        }
     }, [roomId]);
 
     const sendTyping = useCallback((isTyping: boolean) => {

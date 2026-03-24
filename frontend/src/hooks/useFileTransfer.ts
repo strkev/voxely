@@ -7,8 +7,8 @@ import type { ReceivedDataMessage } from '@livekit/components-core';
 // ── Constants ────────────────────────────────────────────────────────────────
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 const CHUNK_SIZE = 60 * 1024; // 60 KB per chunk (safe for WebRTC)
-const MAX_INCOMING_TRANSFERS = 10; // total concurrent incoming transfers
-const MAX_INCOMING_PER_SENDER = 3; // concurrent incoming transfers per sender
+const MAX_INCOMING_TRANSFERS = 4; // total concurrent incoming transfers
+const MAX_INCOMING_PER_SENDER = 2; // concurrent incoming transfers per sender
 const TRANSFER_TIMEOUT_MS = 60_000; // 60 seconds timeout for stale transfers
 
 // ── Blocked file extensions (dangerous executables / scripting) ──────────────
@@ -25,10 +25,42 @@ const BLOCKED_EXTENSIONS = new Set([
     'dll', 'sys', 'drv', 'ocx',                              // Libraries
 ]);
 
+// ── Magic Number signatures for dangerous file types ─────────────────────────
+// Checked post-decryption against actual file bytes, not just extension
+const DANGEROUS_MAGIC_NUMBERS: Array<{ name: string; bytes: number[] }> = [
+    { name: 'Windows EXE/DLL (MZ)',       bytes: [0x4D, 0x5A] },
+    { name: 'ELF executable',             bytes: [0x7F, 0x45, 0x4C, 0x46] },
+    { name: 'Mach-O 32-bit',              bytes: [0xFE, 0xED, 0xFA, 0xCE] },
+    { name: 'Mach-O 64-bit',              bytes: [0xFE, 0xED, 0xFA, 0xCF] },
+    { name: 'Mach-O 32-bit (reverse)',     bytes: [0xCE, 0xFA, 0xED, 0xFE] },
+    { name: 'Mach-O 64-bit (reverse)',     bytes: [0xCF, 0xFA, 0xED, 0xFE] },
+    { name: 'Mach-O Universal Binary',    bytes: [0xCA, 0xFE, 0xBA, 0xBE] },
+    { name: 'Java Class file',            bytes: [0xCA, 0xFE, 0xBA, 0xBE] },
+    { name: 'Windows COM executable',     bytes: [0xE9] },
+    { name: 'MS-DOS MZ (alt)',            bytes: [0x5A, 0x4D] },
+    // Shebang scripts (#!/)
+    { name: 'Shell/Script (shebang)',     bytes: [0x23, 0x21] },
+];
+
+/** Check if the decrypted file bytes match any dangerous magic number signature */
+function hasDangerousMagicNumber(data: Uint8Array): string | null {
+    if (data.length < 4) return null;
+    for (const sig of DANGEROUS_MAGIC_NUMBERS) {
+        if (sig.bytes.length > data.length) continue;
+        let match = true;
+        for (let i = 0; i < sig.bytes.length; i++) {
+            if (data[i] !== sig.bytes[i]) { match = false; break; }
+        }
+        if (match) return sig.name;
+    }
+    return null;
+}
+
 // ── Binary protocol message types ────────────────────────────────────────────
 const MSG_FILE_START = 0x01;
 const MSG_FILE_CHUNK = 0x02;
 const MSG_FILE_COMPLETE = 0x03;
+const MSG_FILE_KEY = 0x04; // NEW: ECDH-encrypted per-file AES key
 
 // ── Types ────────────────────────────────────────────────────────────────────
 export type FileTransferStatus = 'sending' | 'receiving' | 'complete' | 'error';
@@ -51,13 +83,15 @@ interface IncomingTransfer {
     fileSize: number;
     totalChunks: number;
     receivedChunks: Map<number, Uint8Array>;
+    receivedBytes: number; // cumulative byte tracking for DoS protection
     iv: Uint8Array;
-    key: CryptoKey;
+    key: CryptoKey | null; // null until we receive MSG_FILE_KEY
     senderId: string;
     senderName: string;
     timestamp: string;
     lastActivity: number; // for timeout detection
     fileHash: Uint8Array; // SHA-256 hash for integrity verification
+    pendingChunks: Array<{ chunkIndex: number; chunkData: Uint8Array }>; // buffer chunks before key arrives
 }
 
 // ── Security helpers ─────────────────────────────────────────────────────────
@@ -104,7 +138,7 @@ async function computeHash(data: Uint8Array): Promise<Uint8Array> {
 async function generateKey(): Promise<CryptoKey> {
     return crypto.subtle.generateKey(
         { name: 'AES-GCM', length: 256 },
-        true, // extractable so we can share it
+        true, // extractable so we can share it via ECDH
         ['encrypt', 'decrypt'],
     );
 }
@@ -178,12 +212,15 @@ function decodeFloat64(data: Uint8Array, offset: number): number {
 
 // ── Build protocol messages ──────────────────────────────────────────────────
 
+/**
+ * MSG_FILE_START (no longer contains the raw AES key)
+ * Layout: type(1) + id(36) + chunks(4) + size(8) + iv(12) + hash(32) + name(var)
+ */
 function buildFileStartMessage(
     transferId: string,
     totalChunks: number,
     fileSize: number,
     iv: Uint8Array,
-    rawKey: Uint8Array,
     fileName: string,
     fileHash: Uint8Array, // 32 bytes SHA-256
 ): Uint8Array {
@@ -191,10 +228,7 @@ function buildFileStartMessage(
     const idBytes = encoder.encode(transferId); // 36 bytes UUID
     const nameBytes = encoder.encode(fileName);
 
-    // Layout: type(1) + id(36) + chunks(4) + size(8) + iv(12) + key(32) + hash(32) + name(var)
-    const msg = new Uint8Array(
-        1 + 36 + 4 + 8 + 12 + 32 + 32 + nameBytes.length,
-    );
+    const msg = new Uint8Array(1 + 36 + 4 + 8 + 12 + 32 + nameBytes.length);
 
     let offset = 0;
     msg[offset++] = MSG_FILE_START;
@@ -202,9 +236,30 @@ function buildFileStartMessage(
     msg.set(encodeUint32(totalChunks), offset); offset += 4;
     msg.set(encodeFloat64(fileSize), offset); offset += 8;
     msg.set(iv, offset); offset += 12;
-    msg.set(rawKey, offset); offset += 32;
     msg.set(fileHash, offset); offset += 32;
     msg.set(nameBytes, offset);
+
+    return msg;
+}
+
+/**
+ * MSG_FILE_KEY: per-recipient encrypted file key via ECDH
+ * Layout: type(1) + transferId(36) + keyIv(12) + encryptedKey(var)
+ */
+function buildFileKeyMessage(
+    transferId: string,
+    keyIv: Uint8Array,
+    encryptedKey: Uint8Array,
+): Uint8Array {
+    const encoder = new TextEncoder();
+    const idBytes = encoder.encode(transferId);
+
+    const msg = new Uint8Array(1 + 36 + 12 + encryptedKey.length);
+    let offset = 0;
+    msg[offset++] = MSG_FILE_KEY;
+    msg.set(idBytes, offset); offset += 36;
+    msg.set(keyIv, offset); offset += 12;
+    msg.set(encryptedKey, offset);
 
     return msg;
 }
@@ -237,9 +292,16 @@ function buildFileCompleteMessage(transferId: string): Uint8Array {
     return msg;
 }
 
+// ── E2EE callback types ─────────────────────────────────────────────────────
+export interface E2EECallbacks {
+    encryptFileKeyForPeer: (peerId: string, fileKey: Uint8Array) => Promise<{ ciphertext: Uint8Array; iv: Uint8Array } | null>;
+    decryptFileKeyFromPeer: (peerId: string, ciphertext: Uint8Array, iv: Uint8Array) => Promise<Uint8Array | null>;
+    getPeerIds: () => string[];
+}
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useFileTransfer() {
+export function useFileTransfer(e2ee?: E2EECallbacks) {
     const [transfers, setTransfers] = useState<Map<string, FileTransferInfo>>(new Map());
     const incomingRef = useRef<Map<string, IncomingTransfer>>(new Map());
     const timeoutTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -300,6 +362,23 @@ export function useFileTransfer() {
         createdUrlsRef.current.add(url);
     }, []);
 
+    // ── Helper: process buffered chunks once key arrives ─────────────────────
+    const processBufferedChunks = useCallback((transferId: string) => {
+        const transfer = incomingRef.current.get(transferId);
+        if (!transfer || !transfer.key) return;
+
+        for (const { chunkIndex, chunkData } of transfer.pendingChunks) {
+            transfer.receivedChunks.set(chunkIndex, chunkData);
+            transfer.receivedBytes += chunkData.length;
+        }
+        transfer.pendingChunks = [];
+
+        const progress = Math.round(
+            (transfer.receivedChunks.size / transfer.totalChunks) * 100,
+        );
+        updateTransfer(transferId, { progress });
+    }, [updateTransfer]);
+
     // ── Handle incoming data channel messages ────────────────────────────────
     const handleMessage = useCallback((msg: ReceivedDataMessage) => {
         const data = msg.payload;
@@ -328,12 +407,12 @@ export function useFileTransfer() {
                     return;
                 }
 
+                // New layout: type(1) + id(36) + chunks(4) + size(8) + iv(12) + hash(32) + name(var)
                 const totalChunks = decodeUint32(data, 37);
                 const fileSize = decodeFloat64(data, 41);
                 const iv = data.slice(49, 61);
-                const rawKey = data.slice(61, 93);
-                const fileHash = data.slice(93, 125);
-                const rawFileName = decoder.decode(data.slice(125));
+                const fileHash = data.slice(61, 93);
+                const rawFileName = decoder.decode(data.slice(93));
 
                 // ── Security: sanitize filename ──────────────────────────
                 const fileName = sanitizeFileName(rawFileName);
@@ -369,42 +448,86 @@ export function useFileTransfer() {
                 const senderName = msg.from?.name ?? 'Unknown';
                 const timestamp = new Date().toISOString();
 
-                // Import AES key
-                importKey(rawKey).then(key => {
-                    incomingRef.current.set(transferId, {
+                // Key will be provided via MSG_FILE_KEY (ECDH encrypted)
+                incomingRef.current.set(transferId, {
+                    fileName,
+                    fileSize,
+                    totalChunks,
+                    receivedChunks: new Map(),
+                    receivedBytes: 0,
+                    iv,
+                    key: null, // awaiting MSG_FILE_KEY
+                    senderId,
+                    senderName,
+                    timestamp,
+                    lastActivity: Date.now(),
+                    fileHash,
+                    pendingChunks: [],
+                });
+
+                // Start timeout for this transfer
+                startTransferTimeout(transferId);
+
+                setTransfers(prev => {
+                    const next = new Map(prev);
+                    next.set(transferId, {
+                        transferId,
                         fileName,
                         fileSize,
-                        totalChunks,
-                        receivedChunks: new Map(),
-                        iv,
-                        key,
+                        progress: 0,
+                        status: 'receiving',
                         senderId,
                         senderName,
                         timestamp,
-                        lastActivity: Date.now(),
-                        fileHash,
                     });
-
-                    // Start timeout for this transfer
-                    startTransferTimeout(transferId);
-
-                    setTransfers(prev => {
-                        const next = new Map(prev);
-                        next.set(transferId, {
-                            transferId,
-                            fileName,
-                            fileSize,
-                            progress: 0,
-                            status: 'receiving',
-                            senderId,
-                            senderName,
-                            timestamp,
-                        });
-                        return next;
-                    });
-                }).catch(err => {
-                    console.error('[FileTransfer] Failed to import key:', err);
+                    return next;
                 });
+                break;
+            }
+
+            case MSG_FILE_KEY: {
+                // Layout: type(1) + transferId(36) + keyIv(12) + encryptedKey(var)
+                const transfer = incomingRef.current.get(transferId);
+                if (!transfer) {
+                    console.warn('[FileTransfer] Received key for unknown transfer:', transferId);
+                    return;
+                }
+
+                const keyIv = data.slice(37, 49);
+                const encryptedKeyData = data.slice(49);
+                const senderId = transfer.senderId;
+
+                if (e2ee) {
+                    e2ee.decryptFileKeyFromPeer(senderId, encryptedKeyData, keyIv)
+                        .then(async (rawKey) => {
+                            if (!rawKey) {
+                                console.error('[FileTransfer] Failed to decrypt file key via ECDH');
+                                cleanupTransfer(transferId, 'Key exchange failed');
+                                return;
+                            }
+                            transfer.key = await importKey(rawKey);
+                            // Process any chunks that arrived before the key
+                            processBufferedChunks(transferId);
+                            resetTransferTimeout(transferId);
+                        })
+                        .catch(err => {
+                            console.error('[FileTransfer] ECDH key decryption error:', err);
+                            cleanupTransfer(transferId, 'Key exchange failed');
+                        });
+                } else {
+                    // Fallback: no E2EE, import directly (legacy — should not happen in production)
+                    const rawKey = data.slice(49, 81);
+                    importKey(rawKey)
+                        .then(key => {
+                            transfer.key = key;
+                            processBufferedChunks(transferId);
+                            resetTransferTimeout(transferId);
+                        })
+                        .catch(err => {
+                            console.error('[FileTransfer] Failed to import key:', err);
+                            cleanupTransfer(transferId, 'Key import failed');
+                        });
+                }
                 break;
             }
 
@@ -424,11 +547,34 @@ export function useFileTransfer() {
                     return;
                 }
 
-                transfer.receivedChunks.set(chunkIndex, chunkData);
-                const progress = Math.round(
-                    (transfer.receivedChunks.size / transfer.totalChunks) * 100,
-                );
-                updateTransfer(transferId, { progress });
+                // ── Security: chunk replay protection ────────────────────
+                // If we already have this chunk, SILENTLY ignore — do NOT reset timeout
+                if (transfer.receivedChunks.has(chunkIndex) ||
+                    transfer.pendingChunks.some(c => c.chunkIndex === chunkIndex)) {
+                    return;
+                }
+
+                // ── Security: cumulative byte limit (10% overhead for encryption) ──
+                const maxBytes = transfer.fileSize * 1.1;
+                if (transfer.receivedBytes + chunkData.length > maxBytes) {
+                    console.warn('[FileTransfer] Cumulative byte limit exceeded, terminating:', transferId);
+                    cleanupTransfer(transferId, 'Data size limit exceeded');
+                    return;
+                }
+
+                if (transfer.key) {
+                    // Key available, store directly
+                    transfer.receivedChunks.set(chunkIndex, chunkData);
+                    transfer.receivedBytes += chunkData.length;
+                    const progress = Math.round(
+                        (transfer.receivedChunks.size / transfer.totalChunks) * 100,
+                    );
+                    updateTransfer(transferId, { progress });
+                } else {
+                    // Key not yet available, buffer the chunk
+                    transfer.pendingChunks.push({ chunkIndex, chunkData });
+                    transfer.receivedBytes += chunkData.length;
+                }
 
                 // Reset timeout on activity
                 resetTransferTimeout(transferId);
@@ -446,74 +592,113 @@ export function useFileTransfer() {
                     timeoutTimersRef.current.delete(transferId);
                 }
 
-                // Reassemble chunks in order
-                const chunks: Uint8Array[] = [];
-                for (let i = 0; i < transfer.totalChunks; i++) {
-                    const chunk = transfer.receivedChunks.get(i);
-                    if (!chunk) {
-                        console.error('[FileTransfer] Missing chunk', i);
-                        updateTransfer(transferId, {
-                            status: 'error',
-                            error: `Missing chunk ${i}`,
-                        });
-                        incomingRef.current.delete(transferId);
-                        return;
-                    }
-                    chunks.push(chunk);
-                }
-
-                // Concatenate all encrypted chunks
-                const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
-                const encryptedData = new Uint8Array(totalLength);
-                let offset = 0;
-                for (const chunk of chunks) {
-                    encryptedData.set(chunk, offset);
-                    offset += chunk.length;
-                }
-
-                // Decrypt the full payload
-                decryptData(encryptedData, transfer.key, transfer.iv)
-                    .then(async plainData => {
-                        // ── Security: verify file integrity via SHA-256 ──
-                        const receivedHash = await computeHash(plainData);
-                        const hashMatch = transfer.fileHash.length === receivedHash.length &&
-                            transfer.fileHash.every((b, i) => b === receivedHash[i]);
-
-                        if (!hashMatch) {
-                            console.error('[FileTransfer] Integrity check failed — file hash mismatch');
-                            updateTransfer(transferId, {
-                                status: 'error',
-                                error: 'Integrity check failed',
-                            });
-                            incomingRef.current.delete(transferId);
-                            return;
+                // Wait for key if not yet available
+                if (!transfer.key) {
+                    console.warn('[FileTransfer] Complete received but key not yet available, waiting...');
+                    // Set a short timeout to check again
+                    const keyWaitTimer = setInterval(() => {
+                        if (transfer.key) {
+                            clearInterval(keyWaitTimer);
+                            assembleAndDecrypt(transferId, transfer);
                         }
+                    }, 100);
+                    // Timeout the key wait after 10 seconds
+                    setTimeout(() => {
+                        clearInterval(keyWaitTimer);
+                        if (!transfer.key) {
+                            cleanupTransfer(transferId, 'File key never received');
+                        }
+                    }, 10_000);
+                    return;
+                }
 
-                        // Force safe MIME type to prevent browser from executing content
-                        const blob = new Blob([plainData.buffer as ArrayBuffer], {
-                            type: 'application/octet-stream',
-                        });
-                        const blobUrl = URL.createObjectURL(blob);
-                        trackUrl(blobUrl);
-                        updateTransfer(transferId, {
-                            status: 'complete',
-                            progress: 100,
-                            blobUrl,
-                        });
-                        incomingRef.current.delete(transferId);
-                    })
-                    .catch(err => {
-                        console.error('[FileTransfer] Decryption failed:', err);
-                        updateTransfer(transferId, {
-                            status: 'error',
-                            error: 'Decryption failed',
-                        });
-                        incomingRef.current.delete(transferId);
-                    });
+                assembleAndDecrypt(transferId, transfer);
                 break;
             }
         }
-    }, [updateTransfer, startTransferTimeout, resetTransferTimeout, trackUrl]);
+    }, [updateTransfer, startTransferTimeout, resetTransferTimeout, trackUrl, cleanupTransfer, processBufferedChunks, e2ee]);
+
+    // ── Assemble and decrypt a completed transfer ────────────────────────────
+    const assembleAndDecrypt = useCallback((transferId: string, transfer: IncomingTransfer) => {
+        if (!transfer.key) return;
+
+        // Reassemble chunks in order
+        const chunks: Uint8Array[] = [];
+        for (let i = 0; i < transfer.totalChunks; i++) {
+            const chunk = transfer.receivedChunks.get(i);
+            if (!chunk) {
+                console.error('[FileTransfer] Missing chunk', i);
+                updateTransfer(transferId, {
+                    status: 'error',
+                    error: `Missing chunk ${i}`,
+                });
+                incomingRef.current.delete(transferId);
+                return;
+            }
+            chunks.push(chunk);
+        }
+
+        // Concatenate all encrypted chunks
+        const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+        const encryptedData = new Uint8Array(totalLength);
+        let offset = 0;
+        for (const chunk of chunks) {
+            encryptedData.set(chunk, offset);
+            offset += chunk.length;
+        }
+
+        // Decrypt the full payload
+        decryptData(encryptedData, transfer.key, transfer.iv)
+            .then(async plainData => {
+                // ── Security: verify file integrity via SHA-256 ──
+                const receivedHash = await computeHash(plainData);
+                const hashMatch = transfer.fileHash.length === receivedHash.length &&
+                    transfer.fileHash.every((b, i) => b === receivedHash[i]);
+
+                if (!hashMatch) {
+                    console.error('[FileTransfer] Integrity check failed — file hash mismatch');
+                    updateTransfer(transferId, {
+                        status: 'error',
+                        error: 'Integrity check failed',
+                    });
+                    incomingRef.current.delete(transferId);
+                    return;
+                }
+
+                // ── Security: Magic Number validation ──
+                const dangerousType = hasDangerousMagicNumber(plainData);
+                if (dangerousType) {
+                    console.error('[FileTransfer] Magic Number check failed — detected:', dangerousType);
+                    updateTransfer(transferId, {
+                        status: 'error',
+                        error: `Blocked: detected ${dangerousType}`,
+                    });
+                    incomingRef.current.delete(transferId);
+                    return;
+                }
+
+                // Force safe MIME type to prevent browser from executing content
+                const blob = new Blob([plainData.buffer as ArrayBuffer], {
+                    type: 'application/octet-stream',
+                });
+                const blobUrl = URL.createObjectURL(blob);
+                trackUrl(blobUrl);
+                updateTransfer(transferId, {
+                    status: 'complete',
+                    progress: 100,
+                    blobUrl,
+                });
+                incomingRef.current.delete(transferId);
+            })
+            .catch(err => {
+                console.error('[FileTransfer] Decryption failed:', err);
+                updateTransfer(transferId, {
+                    status: 'error',
+                    error: 'Decryption failed',
+                });
+                incomingRef.current.delete(transferId);
+            });
+    }, [updateTransfer, trackUrl]);
 
     const { send } = useDataChannel('file-transfer', handleMessage);
 
@@ -558,6 +743,12 @@ export function useFileTransfer() {
             const arrayBuffer = await file.arrayBuffer();
             const fileData = new Uint8Array(arrayBuffer);
 
+            // ── Security: Magic Number check before sending ──
+            const dangerousType = hasDangerousMagicNumber(fileData);
+            if (dangerousType) {
+                throw new Error(`Blocked: file detected as ${dangerousType}`);
+            }
+
             // Compute SHA-256 hash for integrity verification
             const fileHash = await computeHash(fileData);
 
@@ -588,13 +779,29 @@ export function useFileTransfer() {
             });
 
             try {
-                // 1. Send start message (now includes fileHash)
+                // 1. Send start message (no longer contains raw key)
                 const startMsg = buildFileStartMessage(
-                    transferId, totalChunks, file.size, iv, rawKey, safeFileName, fileHash,
+                    transferId, totalChunks, file.size, iv, safeFileName, fileHash,
                 );
                 await send(startMsg, { reliable: true });
 
-                // 2. Send chunks with small delay to not overwhelm
+                // 2. Send per-file AES key encrypted via ECDH for each peer
+                if (e2ee) {
+                    const peerIds = e2ee.getPeerIds();
+                    for (const peerId of peerIds) {
+                        const encrypted = await e2ee.encryptFileKeyForPeer(peerId, rawKey);
+                        if (encrypted) {
+                            const keyMsg = buildFileKeyMessage(transferId, encrypted.iv, encrypted.ciphertext);
+                            await send(keyMsg, { reliable: true });
+                        }
+                    }
+                } else {
+                    // Legacy fallback: send raw key (for when E2EE is not available)
+                    const keyMsg = buildFileKeyMessage(transferId, new Uint8Array(12), rawKey);
+                    await send(keyMsg, { reliable: true });
+                }
+
+                // 3. Send chunks with small delay to not overwhelm
                 for (let i = 0; i < totalChunks; i++) {
                     const start = i * CHUNK_SIZE;
                     const end = Math.min(start + CHUNK_SIZE, encryptedData.length);
@@ -612,7 +819,7 @@ export function useFileTransfer() {
                     }
                 }
 
-                // 3. Send complete message
+                // 4. Send complete message
                 const completeMsg = buildFileCompleteMessage(transferId);
                 await send(completeMsg, { reliable: true });
 
@@ -636,7 +843,7 @@ export function useFileTransfer() {
                 });
             }
         },
-        [send, updateTransfer, trackUrl],
+        [send, updateTransfer, trackUrl, e2ee],
     );
 
     return {

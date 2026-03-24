@@ -67,7 +67,7 @@ export function ChatInput({
             if (sendTyping) {
                 if (val.length > 0) {
                     sendTyping(true);
-                    
+
                     // Stop typing indicator after 3 seconds of inactivity
                     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
                     typingTimeoutRef.current = setTimeout(() => {
@@ -188,7 +188,6 @@ export function ChatInput({
             {/* File size hint */}
             {onSendFile && (
                 <p className="text-[10px] text-text-muted dark:text-gray-500 mt-1 px-1 flex items-center gap-1">
-                    <Paperclip className="w-2.5 h-2.5" />
                     Files up to {Math.round(maxFileSize / (1024 * 1024))} MB • E2E encrypted
                 </p>
             )}

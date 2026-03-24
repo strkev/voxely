@@ -44,6 +44,7 @@
 | **livekit-client** | 2.17 | WebRTC-Client-Bibliothek für LiveKit |
 | **Socket.IO Client** | 4.8 | Echtzeit-Chat-Verbindung zum Backend |
 | **Lucide React** | 0.575 | Icon-Bibliothek (Star, AlertCircle, Link2, etc.) |
+| **Web Crypto API** | Native | **SubtleCrypto** für ECDH-Schlüsselaustausch und AES-GCM-256 Verschlüsselung |
 | **clsx + tailwind-merge** | – | Bedingte CSS-Klassen-Zusammenführung |
 
 ### Backend
@@ -103,8 +104,15 @@ voxely/
 │   │   │   ├── TutorialSpotlight.tsx # Overlay mit Spotlight-Loch für die geführte Tour
 │   │   │   └── ui/                # Wiederverwendbare UI-Komponenten (Button, Input, Header)
 │   │   ├── hooks/
-│   │   │   ├── useChatSocket.ts   # Socket.IO Chat-Hook
-│   │   │   └── useRoomSounds.ts   # Join/Leave Sound-Effekte
+│   │   │   ├── useChatSocket.ts        # Socket.IO Chat-Hook mit E2EE-Verschlüsselung
+│   │   │   ├── useFileTransfer.ts      # P2P-Dateiübertragung (LiveKit DataChannel) mit E2EE
+│   │   │   ├── useE2EEKeyManager.ts    # ECDH Key-Exchange & Group-Key Management
+│   │   │   ├── useAudioProcessing.ts   # Rauschunterdrückung & Audio-Filter (Web Audio API)
+│   │   │   ├── useFriendsSocket.ts     # Echtzeit-Status & Freundschaftsanfragen
+│   │   │   ├── useVirtualBackground.ts # KI-Hintergrundunschärfe & Ersetzung
+│   │   │   ├── useRoomSounds.ts        # Join/Leave Sound-Effekte
+│   │   │   ├── useDeviceSync.ts        # Synchronisierung von Cam/Mic-Status
+│   │   │   └── useVideoQualitySync.ts  # Adaptive Bitraten-Steuerung
 │   │   ├── store/
 │   │   │   ├── useAuthStore.ts    # Zustand Auth-Store
 │   │   │   ├── useFriendsStore.ts # Globaler Friends- & Sidebar-State
@@ -177,6 +185,10 @@ voxely/
 | **httpOnly Cookies** | Kein JavaScript-Zugriff auf Auth-Token |
 | **CORS Whitelist** | Nur explizit erlaubte Origins (`ALLOWED_ORIGINS`) |
 | **Rate Limiting** | 10 fehlgeschlagene Auth-Versuche / 15 Min pro IP |
+| **Chat E2EE** | **ECDH-P256 + AES-GCM-256** Verschlüsselung am Server vorbei |
+| **File Transfer E2EE** | Pairwise ECDH-verschlüsselte AES-Keys pro Übertragung |
+| **Zero-Knowledge** | Backend/Datenbank speichert nur Ciphertext-Blobs |
+| **Magic Number Check** | Byte-Level-Verifizierung von Dateisignaturen (MZ, ELF, etc.) |
 | **Chat Rate Limiting** | 5 Nachrichten / 5 Sek pro User (in-memory) |
 | **XSS-Schutz** | sanitize-html entfernt alle HTML-Tags aus Chat-Nachrichten |
 | **Security Headers** | Helmet setzt CSP, HSTS, X-Frame-Options etc. |
@@ -200,13 +212,22 @@ voxely/
 4. Frontend verbindet sich direkt mit dem LiveKit-Server (WebRTC)
 5. LiveKit routet Audio/Video-Streams zwischen Teilnehmern (SFU)
 
-### Chat (Socket.IO)
+### E2EE Handshake & Dateiübertragung
+
+1. **ECDH Key Exchange:** Beim Betreten des Raums tauschen Teilnehmer über den `e2ee-keys` Datenkanal öffentliche Schlüssel aus.
+2. **Key Derivation:** Jeder Teilnehmer leitet über **HKDF** ein gemeinsames Geheimnis pro Peer ab.
+3. **Group Key:** Der erste Teilnehmer generiert einen Gruppen-AES-Key und verteilt ihn verschlüsselt an neue Teilnehmer.
+4. **Sichere Dateipfade:** Dateien werden via WebRTC DataChannel übertragen. Der AES-Schlüssel der Datei wird für jeden Empfänger individuell via ECDH-Secret verschlüsselt gesendet.
+5. **Integritätsprüfung:** Jede Datei wird mit einem **SHA-256 Hash** und **Magic-Number-Check** (Dateisignatur) nach der Entschlüsselung validiert.
+
+### Chat (Socket.IO + E2EE)
 
 1. Frontend verbindet sich per WebSocket mit JWT-Authentifizierung
-2. Server verifiziert JWT (inkl. Blacklist-Check) beim Connection-Handshake
-3. Client joined Raum-Channel (`chat:join`)
-4. Server liefert die letzten 50 Nachrichten aus der Datenbank
-5. Neue Nachrichten werden sanitized, in PostgreSQL persistiert und an alle Teilnehmer broadcastet
+2. Neue Nachrichten werden **clientseitig mit dem Gruppen-Key verschlüsselt** (AES-GCM).
+3. Server empfängt den Ciphertext, führt eine Basis-Sanitization durch und persistiert den **verschlüsselten Blob** in PostgreSQL.
+4. Client joined Raum-Channel (`chat:join`) und lädt die Historie.
+5. Nur Nachrichten nach dem `joinTimestamp` werden entschlüsselt; alte Historie bleibt für Späteinsteiger verborgen (Privatsphäre).
+6. Neue Nachrichten werden an alle Teilnehmer broadcastet und lokal im Browser entschlüsselt.
 
 ---
 

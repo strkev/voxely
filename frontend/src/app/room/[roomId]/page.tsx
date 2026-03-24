@@ -256,6 +256,19 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         }
     }, [chatOpen, user?.id, setUnread, handleShowToast]);
 
+    // ── E2EE state (populated by RoomTopbar inside LiveKitRoom) ──────────────
+    const encryptChatRef = useRef<((plaintext: string) => Promise<string | null>) | undefined>(undefined);
+    const decryptChatRef = useRef<((ciphertext: string) => Promise<string | null>) | undefined>(undefined);
+    const [e2eeJoinTimestamp] = useState(() => new Date().toISOString());
+
+    // Stable wrappers that delegate to the ref (so useChatSocket deps don't change)
+    const encryptChatStable = useCallback(async (plaintext: string): Promise<string | null> => {
+        return encryptChatRef.current ? encryptChatRef.current(plaintext) : null;
+    }, []);
+    const decryptChatStable = useCallback(async (ciphertext: string): Promise<string | null> => {
+        return decryptChatRef.current ? decryptChatRef.current(ciphertext) : null;
+    }, []);
+
     // Set up real-time chat socket
     const { messages, typingUsers, sendMessage, sendTyping, sendReaction, connected: chatConnected, isRoomOpen: socketIsRoomOpen } = useChatSocket({
         roomId,
@@ -263,6 +276,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         userName: user?.name ?? 'Anonymous',
         userId: user?.id ?? '',
         onNewMessage: handleNewMessage,
+        encryptChat: encryptChatStable,
+        decryptChat: decryptChatStable,
+        joinTimestamp: e2eeJoinTimestamp,
     });
 
     // Sync room open status to store
@@ -411,6 +427,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     chatConnected={chatConnected}
                     isDark={isDark}
                     requestLeave={requestLeave}
+                    encryptChatRef={encryptChatRef}
+                    decryptChatRef={decryptChatRef}
                 />
                 <AutoStartAudio />
                 <RoomEffects />

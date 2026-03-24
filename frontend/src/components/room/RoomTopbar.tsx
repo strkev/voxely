@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, type MutableRefObject } from 'react';
 import { Users, Check, Link2, Unlock, Lock, LogOut, ImageIcon } from 'lucide-react';
 import { useLocalParticipant } from '@livekit/components-react';
 import { ChatSidebar } from '@/components/ChatSidebar';
 import { ChatMessage, TypingUser } from '@/hooks/useChatSocket';
 import { useFileTransfer } from '@/hooks/useFileTransfer';
+import { useE2EEKeyManager } from '@/hooks/useE2EEKeyManager';
 import { User } from '@/store/useAuthStore';
 import { FriendRequestIncoming } from '@/store/useFriendsStore';
 
@@ -27,6 +28,9 @@ interface RoomTopbarProps {
     chatConnected: boolean;
     isDark: boolean;
     requestLeave: (target: string) => void;
+    // E2EE callback refs — populated by this component once ECDH keys are ready
+    encryptChatRef?: MutableRefObject<((plaintext: string) => Promise<string | null>) | undefined>;
+    decryptChatRef?: MutableRefObject<((ciphertext: string) => Promise<string | null>) | undefined>;
 }
 
 function LocalCameraAwareQuickAction({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -61,6 +65,8 @@ export function RoomTopbar({
     chatConnected,
     isDark,
     requestLeave,
+    encryptChatRef,
+    decryptChatRef,
 }: RoomTopbarProps) {
     const setFriendsSidebarOpen = useUIStore(s => s.setFriendsSidebarOpen);
     const setShowSettings = useUIStore(s => s.setShowSettings);
@@ -77,8 +83,21 @@ export function RoomTopbar({
         if (unread > 0) setUnread(0);
     }, [unread, setUnread]);
 
+    // E2EE key manager (ECDH key exchange via dedicated data channel)
+    const e2ee = useE2EEKeyManager(user?.id ?? '');
+
+    // Populate the parent's E2EE refs once the key manager is ready
+    useEffect(() => {
+        if (encryptChatRef) encryptChatRef.current = e2ee.encryptChat;
+        if (decryptChatRef) decryptChatRef.current = e2ee.decryptChat;
+    }, [e2ee.encryptChat, e2ee.decryptChat, encryptChatRef, decryptChatRef]);
+
     // File transfer via LiveKit data channel (hook needs to be inside LiveKitRoom)
-    const { transfers, sendFile, maxFileSize } = useFileTransfer();
+    const { transfers, sendFile, maxFileSize } = useFileTransfer({
+        encryptFileKeyForPeer: e2ee.encryptFileKeyForPeer,
+        decryptFileKeyFromPeer: e2ee.decryptFileKeyFromPeer,
+        getPeerIds: e2ee.getPeerIds,
+    });
 
     const handleSendFile = useCallback((file: File) => {
         sendFile(file, user?.name ?? 'Anonymous', user?.id ?? '');
