@@ -15,6 +15,7 @@ describe('Auth Service', () => {
         name: 'TestUser',
         passwordHash: 'hashed-pw',
         avatarColor: '#FFFFFF',
+        avatarUrl: null,
         createdAt: new Date(),
         updatedAt: new Date(),
     };
