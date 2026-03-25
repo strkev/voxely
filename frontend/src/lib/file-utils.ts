@@ -151,7 +151,7 @@ export async function importKey(raw: Uint8Array): Promise<CryptoKey> {
         'raw',
         raw.buffer as ArrayBuffer,
         { name: 'AES-GCM', length: 256 },
-        false,
+        true,
         ['decrypt'],
     );
 }

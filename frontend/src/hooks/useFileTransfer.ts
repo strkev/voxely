@@ -41,9 +41,15 @@ export interface E2EECallbacks {
     getPeerIds: () => string[];
 }
 
+export interface UseFileTransferOptions {
+    e2ee?: E2EECallbacks;
+    onIncomingTransfer?: (transfer: FileTransferInfo) => void;
+}
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useFileTransfer(e2ee?: E2EECallbacks) {
+export function useFileTransfer(options?: UseFileTransferOptions) {
+    const { e2ee, onIncomingTransfer } = options ?? {};
     const [transfers, setTransfers] = useState<Map<string, FileTransferInfo>>(new Map());
     const incomingRef = useRef<Map<string, IncomingTransfer>>(new Map());
     const timeoutTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -289,23 +295,29 @@ export function useFileTransfer(e2ee?: E2EECallbacks) {
                     pendingChunks: [],
                 });
 
+                const transferInfo: FileTransferInfo = {
+                    transferId,
+                    fileName,
+                    fileSize,
+                    progress: 0,
+                    status: 'receiving',
+                    senderId,
+                    senderName,
+                    timestamp,
+                };
+
                 // Start timeout for this transfer
                 startTransferTimeout(transferId);
 
                 setTransfers(prev => {
                     const next = new Map(prev);
-                    next.set(transferId, {
-                        transferId,
-                        fileName,
-                        fileSize,
-                        progress: 0,
-                        status: 'receiving',
-                        senderId,
-                        senderName,
-                        timestamp,
-                    });
+                    next.set(transferId, transferInfo);
                     return next;
                 });
+
+                if (onIncomingTransfer) {
+                    onIncomingTransfer(transferInfo);
+                }
                 break;
             }
 
@@ -440,7 +452,7 @@ export function useFileTransfer(e2ee?: E2EECallbacks) {
                 break;
             }
         }
-    }, [updateTransfer, startTransferTimeout, resetTransferTimeout, cleanupTransfer, processBufferedChunks, e2ee, assembleAndDecrypt]);
+    }, [updateTransfer, startTransferTimeout, resetTransferTimeout, cleanupTransfer, processBufferedChunks, e2ee, assembleAndDecrypt, onIncomingTransfer]);
 
     const { send } = useDataChannel('file-transfer', handleMessage);
 

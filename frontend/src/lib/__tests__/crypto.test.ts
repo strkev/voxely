@@ -87,6 +87,16 @@ describe('Crypto Utility', () => {
             expect(imported.algorithm.name).toBe('AES-GCM');
         });
 
+        it('should allow exporting an imported group key (required for sharing)', async () => {
+            const key = await generateGroupKey();
+            const raw = await exportAESKey(key);
+            const imported = await importAESKey(raw);
+            
+            // This should NOT throw InvalidAccessError anymore
+            const reExported = await exportAESKey(imported);
+            expect(reExported).toEqual(raw);
+        });
+
         it('should encrypt and decrypt a message successfully', async () => {
             const key = await generateGroupKey();
             const plaintext = new TextEncoder().encode('Hello World');

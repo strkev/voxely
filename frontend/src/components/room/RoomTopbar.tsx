@@ -31,6 +31,7 @@ interface RoomTopbarProps {
     // E2EE callback refs — populated by this component once ECDH keys are ready
     encryptChatRef?: MutableRefObject<((plaintext: string) => Promise<string | null>) | undefined>;
     decryptChatRef?: MutableRefObject<((ciphertext: string) => Promise<string | null>) | undefined>;
+    onIncomingFileTransfer?: (fileName: string, senderName: string) => void;
 }
 
 function LocalCameraAwareQuickAction({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -67,6 +68,7 @@ export function RoomTopbar({
     requestLeave,
     encryptChatRef,
     decryptChatRef,
+    onIncomingFileTransfer,
 }: RoomTopbarProps) {
     const setFriendsSidebarOpen = useUIStore(s => s.setFriendsSidebarOpen);
     const setShowSettings = useUIStore(s => s.setShowSettings);
@@ -94,9 +96,14 @@ export function RoomTopbar({
 
     // File transfer via LiveKit data channel (hook needs to be inside LiveKitRoom)
     const { transfers, sendFile, maxFileSize } = useFileTransfer({
-        encryptFileKeyForPeer: e2ee.encryptFileKeyForPeer,
-        decryptFileKeyFromPeer: e2ee.decryptFileKeyFromPeer,
-        getPeerIds: e2ee.getPeerIds,
+        e2ee: {
+            encryptFileKeyForPeer: e2ee.encryptFileKeyForPeer,
+            decryptFileKeyFromPeer: e2ee.decryptFileKeyFromPeer,
+            getPeerIds: e2ee.getPeerIds,
+        },
+        onIncomingTransfer: (t) => {
+            if (onIncomingFileTransfer) onIncomingFileTransfer(t.fileName, t.senderName);
+        }
     });
 
     const handleSendFile = useCallback((file: File) => {

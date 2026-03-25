@@ -255,6 +255,17 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             }
         }
     }, [chatOpen, user?.id, setUnread, handleShowToast]);
+    
+    const handleIncomingFile = useCallback((fileName: string, senderName: string) => {
+        if (!chatOpen) {
+            setUnread(u => u + 1);
+            handleShowToast({
+                id: `file-toast-${Date.now()}`,
+                name: senderName,
+                text: `📁 Datei gesendet: ${fileName}`
+            });
+        }
+    }, [chatOpen, setUnread, handleShowToast]);
 
     // ── E2EE state (populated by RoomTopbar inside LiveKitRoom) ──────────────
     const encryptChatRef = useRef<((plaintext: string) => Promise<string | null>) | undefined>(undefined);
@@ -429,6 +440,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     requestLeave={requestLeave}
                     encryptChatRef={encryptChatRef}
                     decryptChatRef={decryptChatRef}
+                    onIncomingFileTransfer={handleIncomingFile}
                 />
                 <AutoStartAudio />
                 <RoomEffects />
