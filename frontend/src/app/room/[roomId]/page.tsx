@@ -198,27 +198,32 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     // LiveKitDeviceSync handles live switching via room.switchActiveDevice().
     // We only re-memoize once hydration is complete to capture initial user settings.
     const qPreset = VIDEO_PRESETS[videoQuality];
-    const roomOptions = useMemo(() => ({
-        videoCaptureDefaults: {
-            deviceId: videoDeviceId || undefined,
-            resolution: { width: qPreset.width, height: qPreset.height, frameRate: qPreset.frameRate },
-        },
-        audioCaptureDefaults: {
-            deviceId: audioDeviceId || undefined,
-        },
-        publishDefaults: {
-            videoCodec: 'vp9' as const,
-            videoEncoding: {
-                maxBitrate: qPreset.maxBitrate,
-                maxFramerate: qPreset.frameRate,
+    const roomOptions = useMemo(() => {
+        if (!hydrated) return undefined;
+
+        return {
+            videoCaptureDefaults: {
+                deviceId: videoDeviceId || undefined,
+                resolution: { width: qPreset.width, height: qPreset.height, frameRate: qPreset.frameRate },
             },
-            screenShareEncoding: {
-                maxBitrate: 50_000_000,
-                maxFramerate: screenShareFps,
+            audioCaptureDefaults: {
+                deviceId: audioDeviceId || undefined,
             },
-            screenShareSimulcastLayers: [],
-        },
-    }), [videoDeviceId, qPreset, audioDeviceId, screenShareFps]);
+            publishDefaults: {
+                videoCodec: 'vp9' as const,
+                videoEncoding: {
+                    maxBitrate: qPreset.maxBitrate,
+                    maxFramerate: qPreset.frameRate,
+                },
+                screenShareEncoding: {
+                    maxBitrate: 50_000_000,
+                    maxFramerate: screenShareFps,
+                },
+                screenShareSimulcastLayers: [],
+            },
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hydrated]);
 
 
     // Ensure control bar is always visible on mount + activate leave guard
