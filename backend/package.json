@@ -38,7 +38,8 @@
     "@types/pg": "^8.16.0",
     "@types/sanitize-html": "^2.16.0",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.1"
   },
   "overrides": {
     "effect": "^3.20.0"
