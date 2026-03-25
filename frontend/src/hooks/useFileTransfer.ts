@@ -4,293 +4,35 @@ import { useCallback, useRef, useState, useEffect } from 'react';
 import { useDataChannel } from '@livekit/components-react';
 import type { ReceivedDataMessage } from '@livekit/components-core';
 
-// ── Constants ────────────────────────────────────────────────────────────────
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
-const CHUNK_SIZE = 60 * 1024; // 60 KB per chunk (safe for WebRTC)
-const MAX_INCOMING_TRANSFERS = 4; // total concurrent incoming transfers
-const MAX_INCOMING_PER_SENDER = 2; // concurrent incoming transfers per sender
-const TRANSFER_TIMEOUT_MS = 60_000; // 60 seconds timeout for stale transfers
-
-// ── Blocked file extensions (dangerous executables / scripting) ──────────────
-const BLOCKED_EXTENSIONS = new Set([
-    'exe', 'bat', 'cmd', 'com', 'msi', 'scr', 'pif',     // Windows executables
-    'vbs', 'vbe', 'js', 'jse', 'ws', 'wsf', 'wsc', 'wsh', // Scripts
-    'ps1', 'ps1xml', 'ps2', 'ps2xml', 'psc1', 'psc2',     // PowerShell
-    'msp', 'mst', 'cpl', 'hta', 'inf', 'ins', 'isp',      // Windows system
-    'reg', 'rgs', 'sct', 'shb', 'shs', 'lnk',              // Shortcuts / registry
-    'app', 'action', 'command', 'workflow',                  // macOS
-    'sh', 'csh', 'ksh', 'out', 'run',                       // Unix
-    'html', 'htm', 'xhtml', 'svg', 'xml',                   // Markup with scripting
-    'swf', 'jar', 'class',                                   // Flash / Java
-    'dll', 'sys', 'drv', 'ocx',                              // Libraries
-]);
-
-// ── Magic Number signatures for dangerous file types ─────────────────────────
-// Checked post-decryption against actual file bytes, not just extension
-const DANGEROUS_MAGIC_NUMBERS: Array<{ name: string; bytes: number[] }> = [
-    { name: 'Windows EXE/DLL (MZ)',       bytes: [0x4D, 0x5A] },
-    { name: 'ELF executable',             bytes: [0x7F, 0x45, 0x4C, 0x46] },
-    { name: 'Mach-O 32-bit',              bytes: [0xFE, 0xED, 0xFA, 0xCE] },
-    { name: 'Mach-O 64-bit',              bytes: [0xFE, 0xED, 0xFA, 0xCF] },
-    { name: 'Mach-O 32-bit (reverse)',     bytes: [0xCE, 0xFA, 0xED, 0xFE] },
-    { name: 'Mach-O 64-bit (reverse)',     bytes: [0xCF, 0xFA, 0xED, 0xFE] },
-    { name: 'Mach-O Universal Binary',    bytes: [0xCA, 0xFE, 0xBA, 0xBE] },
-    { name: 'Java Class file',            bytes: [0xCA, 0xFE, 0xBA, 0xBE] },
-    { name: 'Windows COM executable',     bytes: [0xE9] },
-    { name: 'MS-DOS MZ (alt)',            bytes: [0x5A, 0x4D] },
-    // Shebang scripts (#!/)
-    { name: 'Shell/Script (shebang)',     bytes: [0x23, 0x21] },
-];
-
-/** Check if the decrypted file bytes match any dangerous magic number signature */
-function hasDangerousMagicNumber(data: Uint8Array): string | null {
-    if (data.length < 4) return null;
-    for (const sig of DANGEROUS_MAGIC_NUMBERS) {
-        if (sig.bytes.length > data.length) continue;
-        let match = true;
-        for (let i = 0; i < sig.bytes.length; i++) {
-            if (data[i] !== sig.bytes[i]) { match = false; break; }
-        }
-        if (match) return sig.name;
-    }
-    return null;
-}
-
-// ── Binary protocol message types ────────────────────────────────────────────
-const MSG_FILE_START = 0x01;
-const MSG_FILE_CHUNK = 0x02;
-const MSG_FILE_COMPLETE = 0x03;
-const MSG_FILE_KEY = 0x04; // NEW: ECDH-encrypted per-file AES key
-
-// ── Types ────────────────────────────────────────────────────────────────────
-export type FileTransferStatus = 'sending' | 'receiving' | 'complete' | 'error';
-
-export interface FileTransferInfo {
-    transferId: string;
-    fileName: string;
-    fileSize: number;
-    blobUrl?: string;
-    progress: number; // 0-100
-    status: FileTransferStatus;
-    senderId: string;
-    senderName: string;
-    timestamp: string;
-    error?: string;
-}
-
-interface IncomingTransfer {
-    fileName: string;
-    fileSize: number;
-    totalChunks: number;
-    receivedChunks: Map<number, Uint8Array>;
-    receivedBytes: number; // cumulative byte tracking for DoS protection
-    iv: Uint8Array;
-    key: CryptoKey | null; // null until we receive MSG_FILE_KEY
-    senderId: string;
-    senderName: string;
-    timestamp: string;
-    lastActivity: number; // for timeout detection
-    fileHash: Uint8Array; // SHA-256 hash for integrity verification
-    pendingChunks: Array<{ chunkIndex: number; chunkData: Uint8Array }>; // buffer chunks before key arrives
-}
-
-// ── Security helpers ─────────────────────────────────────────────────────────
-
-/** Sanitize filename to prevent path traversal, XSS, and filesystem issues */
-function sanitizeFileName(name: string): string {
-    return name
-        .replace(/[\/\\:*?"<>|]/g, '_')  // filesystem-unsafe characters
-        .replace(/\.\./g, '_')            // path traversal
-        .replace(/^\.+/, '_')             // hidden files / dotfile escape
-        .replace(/[\x00-\x1f\x7f]/g, '') // control characters
-        .trim()
-        .slice(0, 200)                    // length limit
-        || 'unnamed_file';                // fallback if empty after sanitization
-}
-
-/** Extract file extension (lowercase) from filename */
-function getFileExtension(name: string): string {
-    const dotIndex = name.lastIndexOf('.');
-    if (dotIndex < 0 || dotIndex === name.length - 1) return '';
-    return name.slice(dotIndex + 1).toLowerCase();
-}
-
-/** Check if file extension is blocked (dangerous executable/script types) */
-export function isBlockedFileType(name: string): boolean {
-    const ext = getFileExtension(name);
-    if (!ext) return false;
-    return BLOCKED_EXTENSIONS.has(ext);
-}
-
-/** Get user-friendly list of allowed file info */
-export function getBlockedExtensionsList(): string {
-    return Array.from(BLOCKED_EXTENSIONS).sort().join(', ');
-}
-
-// ── Hashing helper ───────────────────────────────────────────────────────────
-
-async function computeHash(data: Uint8Array): Promise<Uint8Array> {
-    const hash = await crypto.subtle.digest('SHA-256', data.buffer as ArrayBuffer);
-    return new Uint8Array(hash);
-}
-
-// ── Crypto helpers ───────────────────────────────────────────────────────────
-async function generateKey(): Promise<CryptoKey> {
-    return crypto.subtle.generateKey(
-        { name: 'AES-GCM', length: 256 },
-        true, // extractable so we can share it via ECDH
-        ['encrypt', 'decrypt'],
-    );
-}
-
-async function exportKey(key: CryptoKey): Promise<Uint8Array> {
-    const raw = await crypto.subtle.exportKey('raw', key);
-    return new Uint8Array(raw as ArrayBuffer);
-}
-
-async function importKey(raw: Uint8Array): Promise<CryptoKey> {
-    return crypto.subtle.importKey(
-        'raw',
-        raw.buffer as ArrayBuffer,
-        { name: 'AES-GCM', length: 256 },
-        false,
-        ['decrypt'],
-    );
-}
-
-async function encryptData(
-    data: Uint8Array,
-    key: CryptoKey,
-    iv: Uint8Array,
-): Promise<Uint8Array> {
-    const encrypted = await crypto.subtle.encrypt(
-        { name: 'AES-GCM', iv: iv.buffer as ArrayBuffer },
-        key,
-        data.buffer as ArrayBuffer,
-    );
-    return new Uint8Array(encrypted as ArrayBuffer);
-}
-
-async function decryptData(
-    data: Uint8Array,
-    key: CryptoKey,
-    iv: Uint8Array,
-): Promise<Uint8Array> {
-    const decrypted = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: iv.buffer as ArrayBuffer },
-        key,
-        data.buffer as ArrayBuffer,
-    );
-    return new Uint8Array(decrypted as ArrayBuffer);
-}
-
-// ── UUID helper ──────────────────────────────────────────────────────────────
-function generateTransferId(): string {
-    return crypto.randomUUID();
-}
-
-// ── Encoding helpers ─────────────────────────────────────────────────────────
-function encodeUint32(value: number): Uint8Array {
-    const buf = new ArrayBuffer(4);
-    new DataView(buf).setUint32(0, value, false);
-    return new Uint8Array(buf);
-}
-
-function decodeUint32(data: Uint8Array, offset: number): number {
-    return new DataView(data.buffer, data.byteOffset + offset, 4).getUint32(0, false);
-}
-
-function encodeFloat64(value: number): Uint8Array {
-    const buf = new ArrayBuffer(8);
-    new DataView(buf).setFloat64(0, value, false);
-    return new Uint8Array(buf);
-}
-
-function decodeFloat64(data: Uint8Array, offset: number): number {
-    return new DataView(data.buffer, data.byteOffset + offset, 8).getFloat64(0, false);
-}
-
-// ── Build protocol messages ──────────────────────────────────────────────────
-
-/**
- * MSG_FILE_START (no longer contains the raw AES key)
- * Layout: type(1) + id(36) + chunks(4) + size(8) + iv(12) + hash(32) + name(var)
- */
-function buildFileStartMessage(
-    transferId: string,
-    totalChunks: number,
-    fileSize: number,
-    iv: Uint8Array,
-    fileName: string,
-    fileHash: Uint8Array, // 32 bytes SHA-256
-): Uint8Array {
-    const encoder = new TextEncoder();
-    const idBytes = encoder.encode(transferId); // 36 bytes UUID
-    const nameBytes = encoder.encode(fileName);
-
-    const msg = new Uint8Array(1 + 36 + 4 + 8 + 12 + 32 + nameBytes.length);
-
-    let offset = 0;
-    msg[offset++] = MSG_FILE_START;
-    msg.set(idBytes, offset); offset += 36;
-    msg.set(encodeUint32(totalChunks), offset); offset += 4;
-    msg.set(encodeFloat64(fileSize), offset); offset += 8;
-    msg.set(iv, offset); offset += 12;
-    msg.set(fileHash, offset); offset += 32;
-    msg.set(nameBytes, offset);
-
-    return msg;
-}
-
-/**
- * MSG_FILE_KEY: per-recipient encrypted file key via ECDH
- * Layout: type(1) + transferId(36) + keyIv(12) + encryptedKey(var)
- */
-function buildFileKeyMessage(
-    transferId: string,
-    keyIv: Uint8Array,
-    encryptedKey: Uint8Array,
-): Uint8Array {
-    const encoder = new TextEncoder();
-    const idBytes = encoder.encode(transferId);
-
-    const msg = new Uint8Array(1 + 36 + 12 + encryptedKey.length);
-    let offset = 0;
-    msg[offset++] = MSG_FILE_KEY;
-    msg.set(idBytes, offset); offset += 36;
-    msg.set(keyIv, offset); offset += 12;
-    msg.set(encryptedKey, offset);
-
-    return msg;
-}
-
-function buildFileChunkMessage(
-    transferId: string,
-    chunkIndex: number,
-    encryptedChunk: Uint8Array,
-): Uint8Array {
-    const encoder = new TextEncoder();
-    const idBytes = encoder.encode(transferId);
-
-    const msg = new Uint8Array(1 + 36 + 4 + encryptedChunk.length);
-    let offset = 0;
-    msg[offset++] = MSG_FILE_CHUNK;
-    msg.set(idBytes, offset); offset += 36;
-    msg.set(encodeUint32(chunkIndex), offset); offset += 4;
-    msg.set(encryptedChunk, offset);
-
-    return msg;
-}
-
-function buildFileCompleteMessage(transferId: string): Uint8Array {
-    const encoder = new TextEncoder();
-    const idBytes = encoder.encode(transferId);
-
-    const msg = new Uint8Array(1 + 36);
-    msg[0] = MSG_FILE_COMPLETE;
-    msg.set(idBytes, 1);
-    return msg;
-}
+import {
+    MAX_FILE_SIZE,
+    CHUNK_SIZE,
+    MAX_INCOMING_TRANSFERS,
+    MAX_INCOMING_PER_SENDER,
+    TRANSFER_TIMEOUT_MS,
+    type FileTransferInfo,
+    type IncomingTransfer,
+    hasDangerousMagicNumber,
+    MSG_FILE_START,
+    MSG_FILE_CHUNK,
+    MSG_FILE_COMPLETE,
+    MSG_FILE_KEY,
+    sanitizeFileName,
+    isBlockedFileType,
+    computeHash,
+    generateKey,
+    exportKey,
+    importKey,
+    encryptData,
+    decryptData,
+    decodeUint32,
+    decodeFloat64,
+    buildFileStartMessage,
+    buildFileKeyMessage,
+    buildFileChunkMessage,
+    buildFileCompleteMessage,
+    generateTransferId
+} from '@/lib/file-utils';
 
 // ── E2EE callback types ─────────────────────────────────────────────────────
 export interface E2EECallbacks {
@@ -400,7 +142,7 @@ export function useFileTransfer(e2ee?: E2EECallbacks) {
         }
 
         // Concatenate all encrypted chunks
-        const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+        const totalLength = chunks.reduce((sum: number, c: Uint8Array) => sum + c.length, 0);
         const encryptedData = new Uint8Array(totalLength);
         let offset = 0;
         for (const chunk of chunks) {
@@ -414,7 +156,7 @@ export function useFileTransfer(e2ee?: E2EECallbacks) {
                 // ── Security: verify file integrity via SHA-256 ──
                 const receivedHash = await computeHash(plainData);
                 const hashMatch = transfer.fileHash.length === receivedHash.length &&
-                    transfer.fileHash.every((b, i) => b === receivedHash[i]);
+                    transfer.fileHash.every((b: number, i: number) => b === receivedHash[i]);
 
                 if (!hashMatch) {
                     console.error('[FileTransfer] Integrity check failed — file hash mismatch');
@@ -632,7 +374,7 @@ export function useFileTransfer(e2ee?: E2EECallbacks) {
                 // ── Security: chunk replay protection ────────────────────
                 // If we already have this chunk, SILENTLY ignore — do NOT reset timeout
                 if (transfer.receivedChunks.has(chunkIndex) ||
-                    transfer.pendingChunks.some(c => c.chunkIndex === chunkIndex)) {
+                    transfer.pendingChunks.some((c: { chunkIndex: number }) => c.chunkIndex === chunkIndex)) {
                     return;
                 }
 

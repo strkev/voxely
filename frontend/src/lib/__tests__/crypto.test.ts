@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { 
     generateECDHKeyPair, 
     exportPublicKey, 
@@ -13,10 +13,8 @@ import {
     KEY_ANNOUNCE
 } from '../crypto';
 
-// Polyfill for crypto in Node environment if needed (Vitest usually handles this but safety first)
 if (typeof global.crypto === 'undefined') {
-    const { webcrypto } = require('node:crypto');
-    global.crypto = webcrypto;
+    // Rely on setup.ts or Node's native webcrypto in modern versions
 }
 
 describe('Crypto Utility', () => {
