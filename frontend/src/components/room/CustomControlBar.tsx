@@ -137,7 +137,7 @@ export function CustomControlBar({ isDark }: { isDark: boolean }) {
             {/* --- Screen Share Button --- */}
             <button
                 onClick={() => toggleScreen()}
-                className={`hidden sm:flex items-center gap-2.5 px-4 sm:px-5 py-2.5 text-sm font-medium rounded-full transition-colors shadow-sm ${
+                className={`hidden sm:flex items-center gap-2.5 px-4 sm:px-5 py-2.5 text-sm font-medium rounded-full transition-colors shadow-sm whitespace-nowrap ${
                     isScreenShareEnabled 
                     ? 'bg-primary border border-primary text-white hover:bg-[#E0484D] hover:border-[#E0484D]' // Aktivierter Zustand
                     : isDark 
