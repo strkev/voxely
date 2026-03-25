@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { timingSafeEqual } from 'crypto';
 import sanitize from 'sanitize-html';
 import { prisma, io, getFriendIds, getOnlineFriendSockets } from '../index';
-import { generateToken, verifyToken, blacklistToken } from '../services/auth';
+import { generateToken, verifyToken, blacklistToken, hashPassword, comparePassword } from '../services/auth';
 
 /** Constant-time string comparison (prevents timing-based leakage). */
 const safeEquals = (a: string, b: string): boolean => {
@@ -64,7 +64,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        const passwordHash = await bcrypt.hash(password, 10);
+        const passwordHash = await hashPassword(password);
 
         const user = await prisma.user.create({
             data: { passwordHash, name: sanitizedName },
@@ -96,7 +96,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        const isMatch = await bcrypt.compare(password, user.passwordHash);
+        const isMatch = await comparePassword(password, user.passwordHash);
         if (!isMatch) {
             res.status(401).json({ error: 'Invalid credentials' });
             return;
@@ -212,7 +212,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
                 res.status(400).json({ error: 'Current password is required to change password' });
                 return;
             }
-            const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+            const isMatch = await comparePassword(currentPassword, user.passwordHash);
             if (!isMatch) {
                 res.status(401).json({ error: 'Current password is incorrect' });
                 return;
@@ -244,7 +244,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
                 res.status(400).json({ error: 'New password must be at least 8 characters' });
                 return;
             }
-            updateData.passwordHash = await bcrypt.hash(newPassword, 10);
+            updateData.passwordHash = await hashPassword(newPassword);
         }
         if (avatarColor && typeof avatarColor === 'string') {
             if (/^#[0-9A-Fa-f]{6}$/i.test(avatarColor)) {
