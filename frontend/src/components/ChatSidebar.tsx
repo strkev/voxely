@@ -76,7 +76,7 @@ export function ChatSidebar({
             const newWidth = window.innerWidth - e.clientX;
             const clampedWidth = Math.min(
                 window.innerWidth,
-                Math.max(320, Math.min(newWidth, window.innerWidth * 0.8))
+                Math.max(320, Math.min(newWidth, window.innerWidth))
             );
             onWidthChange(clampedWidth);
         };
@@ -97,6 +97,20 @@ export function ChatSidebar({
             document.body.style.userSelect = '';
         };
     }, [isResizing, onWidthChange]);
+
+    // Handle window resize to keep sidebar width in bounds
+    useEffect(() => {
+        if (typeof window === 'undefined' || !onWidthChange) return;
+
+        const handleResizeWindow = () => {
+            if (width > window.innerWidth) {
+                onWidthChange(window.innerWidth);
+            }
+        };
+
+        window.addEventListener('resize', handleResizeWindow);
+        return () => window.removeEventListener('resize', handleResizeWindow);
+    }, [width, onWidthChange]);
 
     // Track whether user is scrolled to bottom
     const handleScroll = useCallback(() => {
