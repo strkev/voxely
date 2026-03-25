@@ -26,7 +26,6 @@ interface UseChatSocketOptions {
     roomId: string;
     token: string | null;
     userName: string;
-    userId: string;
     onNewMessage?: (msg: ChatMessage) => void;
     // E2EE callbacks (optional)
     encryptChat?: (plaintext: string) => Promise<string | null>;
@@ -43,7 +42,6 @@ interface UseChatSocketReturn {
     messages: ChatMessage[];
     sendMessage: (text: string) => void;
     sendTyping: (isTyping: boolean) => void;
-    sendReaction: (messageId: string, emoji: string) => void;
     typingUsers: TypingUser[];
     connected: boolean;
     isRoomOpen: boolean;
@@ -58,7 +56,7 @@ const TYPING_THROTTLE_MS = 1000;
 // Marker prefix to identify encrypted messages
 const E2EE_PREFIX = 'E2EE:';
 
-export function useChatSocket({ roomId, token, userName, userId, onNewMessage, encryptChat, decryptChat, joinTimestamp }: UseChatSocketOptions): UseChatSocketReturn {
+export function useChatSocket({ roomId, token, userName, onNewMessage, encryptChat, decryptChat, joinTimestamp }: UseChatSocketOptions): UseChatSocketReturn {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
     const [connected, setConnected] = useState(false);
@@ -176,14 +174,6 @@ export function useChatSocket({ roomId, token, userName, userId, onNewMessage, e
             }
         });
 
-        socket.on('chat:react', ({ messageId, reactions }: { messageId: string; reactions: Record<string, string[]> }) => {
-            setMessages(prev => prev.map(m => {
-                if (m.id === messageId) {
-                    return { ...m, reactions };
-                }
-                return m;
-            }));
-        });
 
         socket.on('room:open-status', ({ isOpen }: { isOpen: boolean }) => {
             setIsRoomOpen(isOpen);
@@ -265,32 +255,6 @@ export function useChatSocket({ roomId, token, userName, userId, onNewMessage, e
         socket.emit('chat:typing', { roomId, isTyping });
     }, [roomId]);
 
-    const sendReaction = useCallback((messageId: string, emoji: string) => {
-        const socket = socketRef.current;
-        if (!socket || !socket.connected) return;
-        
-        // Optimistic UI update
-        setMessages(prev => prev.map(m => {
-            if (m.id === messageId) {
-                const newReactions = { ...m.reactions };
-                if (!newReactions[emoji]) newReactions[emoji] = [];
-                
-                const userIndex = newReactions[emoji].indexOf(userId);
-                if (userIndex > -1) {
-                    // Remove reaction
-                    newReactions[emoji] = newReactions[emoji].filter(id => id !== userId);
-                    if (newReactions[emoji].length === 0) delete newReactions[emoji];
-                } else {
-                    // Add reaction
-                    newReactions[emoji] = [...newReactions[emoji], userId];
-                }
-                return { ...m, reactions: newReactions };
-            }
-            return m;
-        }));
 
-        socket.emit('chat:react', { roomId, messageId, emoji });
-    }, [roomId, userId]);
-
-    return { messages, sendMessage, sendTyping, sendReaction, typingUsers, connected, isRoomOpen };
+    return { messages, sendMessage, sendTyping, typingUsers, connected, isRoomOpen };
 }

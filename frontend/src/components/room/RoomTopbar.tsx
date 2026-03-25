@@ -24,7 +24,6 @@ interface RoomTopbarProps {
     typingUsers: TypingUser[];
     sendMessage: (text: string) => void;
     sendTyping: (isTyping: boolean) => void;
-    onReact: (messageId: string, emoji: string) => void;
     chatConnected: boolean;
     isDark: boolean;
     requestLeave: (target: string) => void;
@@ -62,7 +61,6 @@ export function RoomTopbar({
     typingUsers,
     sendMessage,
     sendTyping,
-    onReact,
     chatConnected,
     isDark,
     requestLeave,
@@ -164,7 +162,6 @@ export function RoomTopbar({
                 typingUsers={typingUsers}
                 sendMessage={sendMessage}
                 sendTyping={sendTyping}
-                onReact={onReact}
                 connected={chatConnected}
                 isOpen={chatOpen}
                 onToggle={() => setChatOpen(o => !o)}

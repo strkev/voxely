@@ -21,7 +21,6 @@ interface ChatSidebarProps {
     typingUsers?: TypingUser[];
     sendMessage: (text: string) => void;
     sendTyping?: (isTyping: boolean) => void;
-    onReact?: (msgId: string, emoji: string) => void;
     connected: boolean;
     isOpen: boolean;
     onToggle: () => void;
@@ -44,7 +43,6 @@ export function ChatSidebar({
     typingUsers = [],
     sendMessage,
     sendTyping,
-    onReact,
     connected,
     isOpen,
     onToggle,
@@ -276,6 +274,7 @@ export function ChatSidebar({
                                         timestamp: msg.timestamp,
                                     }}
                                     isOwn={msg.userId === currentUserId}
+                                    isDark={isDark}
                                 />
                             ) : (
                                 <MessageBubble
@@ -283,7 +282,6 @@ export function ChatSidebar({
                                     msg={msg}
                                     isOwn={msg.userId === currentUserId}
                                     currentUserId={currentUserId}
-                                    onReact={onReact || (() => {})}
                                 />
                             )
                         ))

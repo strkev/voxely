@@ -281,11 +281,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     }, []);
 
     // Set up real-time chat socket
-    const { messages, typingUsers, sendMessage, sendTyping, sendReaction, connected: chatConnected, isRoomOpen: socketIsRoomOpen } = useChatSocket({
+    const { messages, typingUsers, sendMessage, sendTyping, connected: chatConnected, isRoomOpen: socketIsRoomOpen } = useChatSocket({
         roomId,
         token: authToken,
         userName: user?.name ?? 'Anonymous',
-        userId: user?.id ?? '',
         onNewMessage: handleNewMessage,
         encryptChat: encryptChatStable,
         decryptChat: decryptChatStable,
@@ -434,7 +433,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     typingUsers={typingUsers}
                     sendMessage={sendMessage}
                     sendTyping={sendTyping}
-                    onReact={sendReaction}
                     chatConnected={chatConnected}
                     isDark={isDark}
                     requestLeave={requestLeave}
