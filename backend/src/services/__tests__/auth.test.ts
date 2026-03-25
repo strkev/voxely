@@ -97,6 +97,7 @@ describe('Auth Service', () => {
         });
 
         it('should handle missing Redis gracefully (Degradation)', async () => {
+            const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
             (redisService.getRedis as any).mockReturnValue(null);
             
             // Should not throw
@@ -104,6 +105,8 @@ describe('Auth Service', () => {
             const isBlacklisted = await isTokenBlacklisted('some-jti');
             
             expect(isBlacklisted).toBe(false);
+            expect(warnSpy).toHaveBeenCalled();
+            warnSpy.mockRestore();
         });
     });
 });

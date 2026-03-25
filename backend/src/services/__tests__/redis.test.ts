@@ -31,12 +31,15 @@ describe('Redis Service', () => {
     });
 
     it('should handle connection failure gracefully', async () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         mockClient.connect.mockRejectedValue(new Error('Connection failed'));
         
         const success = await initRedis();
         
         expect(success).toBe(false);
         expect(getRedis()).toBeNull();
+        expect(warnSpy).toHaveBeenCalled();
+        warnSpy.mockRestore();
     });
 
     it('should set an error listener', async () => {
