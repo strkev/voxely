@@ -62,7 +62,7 @@ const corsOptions: cors.CorsOptions = {
 const app = express();
 // Trust first proxy (Nginx) — required for express-rate-limit behind a reverse proxy
 app.set('trust proxy', 1);
-const server = http.createServer(app);
+export const server = http.createServer(app);
 
 export const io = new Server(server, {
     cors: {
@@ -301,26 +301,27 @@ io.on('connection', async (socket) => {
     if (!onlineUsers.has(uid)) onlineUsers.set(uid, new Set());
     onlineUsers.get(uid)!.add(socket.id);
 
-    // Notify friends that this user came online (only on first socket)
-    if (isFirstSocket) {
-        try {
-            const friendIds = await getFriendIds(uid);
-            const friendSockets = getOnlineFriendSockets(friendIds);
-            for (const sid of friendSockets) {
-                io.to(sid).emit('friend:online', { userId: uid });
+    // MOVE ASYNC NOTIFICATION LOGIC TO A SEPARATE NON-BLOCKING STEP
+    const initializeSocket = async () => {
+        if (isFirstSocket) {
+            try {
+                const friendIds = await getFriendIds(uid);
+                const friendSockets = getOnlineFriendSockets(friendIds);
+                for (const sid of friendSockets) {
+                    io.to(sid).emit('friend:online', { userId: uid });
+                }
+
+                const onlineFriendIds = friendIds.filter(fid => onlineUsers.has(fid) && onlineUsers.get(fid)!.size > 0);
+                socket.emit('friend:online-list', { userIds: onlineFriendIds });
+
+                const openRoomsList = await getOpenRoomsForUser(uid);
+                socket.emit('friend:open-rooms-list', openRoomsList);
+            } catch (err) {
+                console.error('[WS] Failed to notify friends of online status:', err);
             }
-
-            // Tell the connecting user which of their friends are online
-            const onlineFriendIds = friendIds.filter(fid => onlineUsers.has(fid) && onlineUsers.get(fid)!.size > 0);
-            socket.emit('friend:online-list', { userIds: onlineFriendIds });
-
-            // Send initial open rooms list
-            const openRoomsList = await getOpenRoomsForUser(uid);
-            socket.emit('friend:open-rooms-list', openRoomsList);
-        } catch (err) {
-            console.error('[WS] Failed to notify friends of online status:', err);
         }
-    }
+    };
+    initializeSocket();
 
     // ── Room invitation: forward to friend's sockets ───────────────────────
     socket.on('friend:invite', async ({ friendId, roomId, roomName }: { friendId: string; roomId: string; roomName: string }) => {
@@ -504,7 +505,7 @@ io.on('connection', async (socket) => {
             userRooms.set(uid, roomId);
             await broadcastOpenRoomsToFriends([uid]);
         }
-        console.log(`[WS] ${displayName} joined room ${roomId}`);
+        console.log(`[WS] ${socket.data.name} joined room ${roomId}`);
 
         const currentOpenStatus = openRooms.get(roomId)?.isOpen ?? false;
         socket.emit('room:open-status', { isOpen: currentOpenStatus });
@@ -755,12 +756,20 @@ io.on('connection', async (socket) => {
 const PORT = Number(process.env.PORT) || 4000;
 const HOST = '0.0.0.0';
 
-(async () => {
+export const startServer = async (port?: number) => {
     // Connect to Redis (non-fatal if unavailable)
     await initRedis();
 
-    server.listen(PORT, HOST, () => {
-        console.log(`✅  Server running on http://${HOST}:${PORT}`);
-        console.log(`🔒  Allowed origins: ${allowedOrigins.join(', ')}`);
+    const targetPort = port ?? PORT;
+    return new Promise<void>((resolve) => {
+        server.listen(targetPort, HOST, () => {
+            console.log(`✅  Server running on http://${HOST}:${targetPort}`);
+            console.log(`🔒  Allowed origins: ${allowedOrigins.join(', ')}`);
+            resolve();
+        });
     });
-})();
+};
+
+if (process.env.NODE_ENV !== 'test') {
+    startServer();
+}
