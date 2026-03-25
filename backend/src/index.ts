@@ -10,8 +10,8 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import { fieldEncryptionExtension } from 'prisma-field-encryption';
 import { randomUUID } from 'crypto';
-import sanitize from 'sanitize-html';
 import { rateLimit } from 'express-rate-limit';
+import { stripHtml, ROOM_ID_RE, UUID_RE } from './lib/sanitization';
 
 dotenv.config();
 
@@ -224,15 +224,7 @@ app.get('/health', async (_req, res) => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Sanitise user input: strip ALL HTML to prevent XSS. */
-const stripHtml = (text: string): string =>
-    sanitize(text, { allowedTags: [], allowedAttributes: {} }).trim();
-
-/** Rooms are public but we validate format to prevent abuse. */
-const ROOM_ID_RE = /^[a-zA-Z0-9_-]{1,100}$/;
-
-/** Validate UUID format to prevent injection in friend-related events. */
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// (Helpers moved to lib/sanitization.ts)
 
 /**
  * Verifies if a user has at least one socket connected to a specific room.

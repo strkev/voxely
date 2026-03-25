@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { MessageSquare, ChevronRight, ChevronDown } from 'lucide-react';
-import type { FileTransferInfo } from '@/hooks/useFileTransfer';
+import type { FileTransferInfo } from '@/lib/file-utils';
 import { ChatMessage, TypingUser } from '@/hooks/useChatSocket';
 import { Mascot } from '@/components/voxy';
 

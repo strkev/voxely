@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { FileIcon, AlertCircle, Download } from 'lucide-react';
-import type { FileTransferInfo } from '@/hooks/useFileTransfer';
+import type { FileTransferInfo } from '@/lib/file-utils';
 import { formatTime, formatFileSize } from './utils';
 
 export function FileBubble({ transfer, isOwn }: { transfer: FileTransferInfo; isOwn: boolean }) {

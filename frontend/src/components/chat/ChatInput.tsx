@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback, KeyboardEvent } from 'react';
 import { Send, Paperclip } from 'lucide-react';
-import { isBlockedFileType } from '@/hooks/useFileTransfer';
+import { isBlockedFileType } from '@/lib/file-utils';
 
 interface ChatInputProps {
     connected: boolean;
