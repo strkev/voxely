@@ -64,31 +64,33 @@ export function useE2EEKeyManager(localIdentity: string) {
         initPromiseRef.current = init();
     }, []);
 
-    // Generate group key if we are the first person in the room
+    // Generate group key — always wait 2s to allow peers to connect first
+    // This prevents both parties in a call from generating independent keys
     useEffect(() => {
         if (connectionState === ConnectionState.Connected && isReady && !groupKeyRef.current && !hasGeneratedGroupKey.current) {
-            if (remoteParticipants.length === 0) {
-                generateGroupKey().then(gk => {
-                    groupKeyRef.current = gk;
-                    hasGeneratedGroupKey.current = true;
-                    console.log('[E2EE] Generated initial group key');
-                });
-            } else {
-                // Not first, wait to receive the group key from others.
-                // Fallback: if we don't receive one within 3 seconds, generate one anyway
-                const timer = setTimeout(() => {
-                    if (!groupKeyRef.current && !hasGeneratedGroupKey.current) {
-                        generateGroupKey().then(gk => {
-                            groupKeyRef.current = gk;
-                            hasGeneratedGroupKey.current = true;
-                            console.log('[E2EE] Generated fallback group key');
-                        });
-                    }
-                }, 3000);
-                return () => clearTimeout(timer);
-            }
+            const timer = setTimeout(() => {
+                if (!groupKeyRef.current && !hasGeneratedGroupKey.current) {
+                    generateGroupKey().then(gk => {
+                        groupKeyRef.current = gk;
+                        hasGeneratedGroupKey.current = true;
+                        console.log('[E2EE] Generated group key (after 2s wait)');
+
+                        // Share with any peers we already have a pairwise key with
+                        for (const [peerId, peerState] of peersRef.current.entries()) {
+                            exportAESKey(gk).then(rawGroupKey => {
+                                aesEncrypt(rawGroupKey, peerState.sharedKey).then(({ ciphertext, iv }) => {
+                                    const shareMsg = buildGroupKeyShare(iv, ciphertext);
+                                    sendRef.current?.(shareMsg, { reliable: true });
+                                    console.log('[E2EE] Shared new group key with', peerId);
+                                });
+                            });
+                        }
+                    });
+                }
+            }, 2000);
+            return () => clearTimeout(timer);
         }
-    }, [connectionState, remoteParticipants.length, isReady]);
+    }, [connectionState, isReady]);
 
     // ── Handle incoming key exchange messages ────────────────────────────────
     const handleKeyMessage = useCallback(async (msg: ReceivedDataMessage) => {
@@ -190,16 +192,21 @@ export function useE2EEKeyManager(localIdentity: string) {
 
     const { send } = useDataChannel('e2ee-keys', handleKeyMessage);
 
-    // Announce our public key to the room once ready
+    // Announce our public key to the room once ready, with retries
     useEffect(() => {
         sendRef.current = send;
+        let retryCount = 0;
+        const MAX_RETRIES = 3;
+        let retryTimer: ReturnType<typeof setTimeout> | null = null;
+        let cancelled = false;
 
         const announce = async () => {
             if (initPromiseRef.current) await initPromiseRef.current;
-            if (!publicKeyBytesRef.current) return;
+            if (!publicKeyBytesRef.current || cancelled) return;
 
             // Small delay to ensure data channel is ready
             await new Promise(r => setTimeout(r, 500));
+            if (cancelled) return;
 
             const msg = buildKeyAnnounce(localIdentity, publicKeyBytesRef.current, saltRef.current);
             try {
@@ -208,9 +215,56 @@ export function useE2EEKeyManager(localIdentity: string) {
             } catch (err) {
                 console.error('[E2EE] Failed to announce key:', err);
             }
+
+            // Schedule retries: re-announce every 2s up to MAX_RETRIES times
+            // This handles the case where the other party hasn't joined yet
+            const scheduleRetry = () => {
+                if (cancelled || retryCount >= MAX_RETRIES) return;
+                retryTimer = setTimeout(async () => {
+                    if (cancelled || !publicKeyBytesRef.current) return;
+                    retryCount++;
+                    const retryMsg = buildKeyAnnounce(localIdentity, publicKeyBytesRef.current, saltRef.current);
+                    try {
+                        await send(retryMsg, { reliable: true });
+                        console.log(`[E2EE] Re-announced public key (retry ${retryCount}/${MAX_RETRIES})`);
+                    } catch (err) {
+                        console.error('[E2EE] Failed to re-announce key:', err);
+                    }
+                    scheduleRetry();
+                }, 2000);
+            };
+            scheduleRetry();
         };
         announce();
+
+        return () => {
+            cancelled = true;
+            if (retryTimer) clearTimeout(retryTimer);
+        };
     }, [send, localIdentity]);
+
+    // Re-announce to new participants that joined after our initial announce
+    useEffect(() => {
+        if (connectionState !== ConnectionState.Connected || !isReady || !publicKeyBytesRef.current) return;
+
+        // Find remote participants we don't have a pairwise key for yet
+        const unknownPeers = remoteParticipants.filter(p => p.identity && !peersRef.current.has(p.identity));
+        if (unknownPeers.length === 0) return;
+
+        // Small delay to let the new participant's data channel stabilize
+        const timer = setTimeout(async () => {
+            if (!publicKeyBytesRef.current) return;
+            const msg = buildKeyAnnounce(localIdentity, publicKeyBytesRef.current, saltRef.current);
+            try {
+                await send(msg, { reliable: true });
+                console.log('[E2EE] Re-announced public key for', unknownPeers.length, 'new participant(s)');
+            } catch (err) {
+                console.error('[E2EE] Failed to re-announce for new participants:', err);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [connectionState, isReady, remoteParticipants, localIdentity, send]);
 
     // ── Encrypt a per-file AES key for a specific peer ──────────────────────
     const encryptFileKeyForPeer = useCallback(async (
