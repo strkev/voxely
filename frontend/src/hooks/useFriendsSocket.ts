@@ -58,6 +58,11 @@ export function useFriendsSocket(token: string | null) {
     useEffect(() => {
         if (!token) return;
 
+        // 1. Initial data fetch: Do this immediately if we have a token,
+        // so the list appears even if the socket is still connecting.
+        fetchFriends(token);
+        fetchRequests(token);
+
         const socket = io(BACKEND_URL, {
             auth: { token },
             transports: ['websocket'],
@@ -68,13 +73,7 @@ export function useFriendsSocket(token: string | null) {
 
         socketRef.current = socket;
 
-        // Initial data fetch on connect
-        socket.on('connect', () => {
-            fetchFriends(token);
-            fetchRequests(token);
-        });
-
-        // Re-fetch data on reconnect
+        // 2. Re-fetch data on reconnect to ensure sync
         socket.io.on('reconnect', () => {
             fetchFriends(token);
             fetchRequests(token);
