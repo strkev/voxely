@@ -127,9 +127,9 @@ export function Header() {
                                 <div className="absolute right-0 top-full mt-2 w-56 bg-surface border border-gray-100 rounded-2xl shadow-lg overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
 
 
-                                    {/* Status selector */}
-                                    <div className="border-b border-gray-100">
-                                        <div className="flex flex-col">
+                                    {/* Status selector – compact segmented control */}
+                                    <div className="border-b border-gray-100 px-3 py-2.5">
+                                        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
                                             {[
                                                 { value: 'online' as UserStatus, label: 'Online', color: '#22c55e' },
                                                 { value: 'away' as UserStatus, label: 'Away', color: '#f59e0b' },
@@ -138,19 +138,16 @@ export function Header() {
                                                 <button
                                                     key={option.value}
                                                     onClick={() => setStatus(option.value)}
-                                                    className={`flex items-center gap-3 w-full px-4 py-2.5 text-xs font-medium transition-all duration-150 ${myStatus === option.value
-                                                        ? 'bg-gray-50 text-text-main'
-                                                        : 'text-text-muted hover:bg-gray-50'
+                                                    className={`flex items-center justify-center gap-1.5 flex-1 px-2 py-1.5 rounded-md text-[0.68rem] font-medium transition-all duration-150 ${myStatus === option.value
+                                                        ? 'bg-surface text-text-main shadow-sm'
+                                                        : 'text-text-muted hover:text-text-main'
                                                         }`}
                                                 >
                                                     <span
-                                                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                                        className="w-2 h-2 rounded-full flex-shrink-0"
                                                         style={{ backgroundColor: option.color }}
                                                     />
                                                     {option.label}
-                                                    {myStatus === option.value && (
-                                                        <span className="ml-auto w-1 h-1 rounded-full bg-primary" />
-                                                    )}
                                                 </button>
                                             ))}
                                         </div>
