@@ -11,6 +11,7 @@ import { User } from '@/store/useAuthStore';
 import { FriendRequestIncoming } from '@/store/useFriendsStore';
 
 import { useUIStore } from '@/store/useUIStore';
+import { SecurityCheckOverlay } from './SecurityCheckOverlay';
 
 interface RoomTopbarProps {
     roomId: string;
@@ -109,7 +110,9 @@ export function RoomTopbar({
     }, [sendFile, user?.name, user?.id]);
 
     return (
-        <div className="absolute top-4 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-visible py-2 -my-2 flex-wrap sm:flex-nowrap">
+        <>
+            <SecurityCheckOverlay isReady={e2ee.isReady} />
+            <div className="absolute top-4 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-visible py-2 -my-2 flex-wrap sm:flex-nowrap">
             {/* Friends toggle button */}
             <button
                 onClick={() => setFriendsSidebarOpen(o => !o)}
@@ -184,5 +187,6 @@ export function RoomTopbar({
                 <span className={`topbar-btn-inner ${isCompact ? 'topbar-btn-inner--compact' : ''}`}>Leave</span>
             </button>
         </div>
+        </>
     );
 }

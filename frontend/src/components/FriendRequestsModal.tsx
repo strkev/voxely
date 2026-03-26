@@ -140,13 +140,13 @@ export function FriendRequestsModal({ onClose }: FriendRequestsModalProps) {
                         <div className="friend-modal__list">
                             {incomingRequests.length === 0 ? (
                                 <div className="friend-modal__empty flex flex-col items-center">
-                                    <Mascot 
-                                        state="friends" 
-                                        trigger="always" 
-                                        message="No pending requests. Time to make some new connections!"
+                                    <Mascot
+                                        state="friends"
+                                        trigger="always"
+                                        message="No incoming requests."
                                         className="scale-[0.5] -my-20"
                                     />
-                                    <p className="mt-2">No incoming requests</p>
+                                    <p className="mt-4">No incoming requests</p>
                                 </div>
                             ) : (
                                 incomingRequests.map(req => (
@@ -186,13 +186,13 @@ export function FriendRequestsModal({ onClose }: FriendRequestsModalProps) {
                         <div className="friend-modal__list">
                             {outgoingRequests.length === 0 ? (
                                 <div className="friend-modal__empty flex flex-col items-center">
-                                    <Mascot 
-                                        state="friends" 
-                                        trigger="always" 
+                                    <Mascot
+                                        state="happy"
+                                        trigger="hover"
                                         message="No pending requests. Time to make some new connections!"
                                         className="scale-[0.5] -my-20"
                                     />
-                                    <p className="mt-2">No pending requests</p>
+                                    <p className="mt-4">No pending requests</p>
                                 </div>
                             ) : (
                                 outgoingRequests.map(req => (

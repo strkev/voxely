@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- Typisierung für das Modul ---
-export type MascotState = 'waving' | 'typing' | 'locking' | 'friends';
+export type MascotState = 'waving' | 'typing' | 'locking' | 'friends' | 'happy' | 'support';
 export type MascotTrigger = 'always' | 'hover' | 'click';
 
 interface MascotProps {
@@ -59,6 +59,10 @@ export const Mascot: React.FC<MascotProps> = ({
                 return 'Connection to secure chat is built.';
             case 'friends':
                 return 'Connect with friends!';
+            case 'happy':
+                return 'You have mail!';
+            case 'support':
+                return 'How can I help you?';
             default:
                 return '';
         }
@@ -210,6 +214,8 @@ export const Mascot: React.FC<MascotProps> = ({
                 {state === 'typing' && <TypingMascot isAnimating={isAnimating} id={uId} />}
                 {state === 'locking' && <LockingMascot isAnimating={isAnimating} id={uId} />}
                 {state === 'friends' && <FriendsMascot isAnimating={isAnimating} id={uId} />}
+                {state === 'happy' && <HappyMascot isAnimating={isAnimating} id={uId} />}
+                {state === 'support' && <SupportMascot isAnimating={isAnimating} id={uId} />}
             </div>
         </div>
     );
@@ -562,5 +568,199 @@ const FriendsMascot = ({ isAnimating, id }: { isAnimating: boolean, id: string }
         </g>
         <path className="f-cls-4" d="M431.61,383.27c4.89,1.5,6.85,10.54,4.94,17.17-1.93,6.7-7.57,10.04-9.13,10.91-1.34-.5-2.7-.99-4.1-1.47-1.6-.56-3.18-1.08-4.73-1.58-.79-1.86-2.87-7.45-.74-13.61,2.22-6.43,8.84-12.92,13.75-11.41Z" />
         <circle className="f-cls-2" cx="427.35" cy="389.28" r="4.23" />
+    </svg>
+);
+
+
+// ==========================================
+// NEU: 5. Happy / Brief (Mail) SVG Komponente
+// ==========================================
+const HappyMascot = ({ isAnimating, id }: { isAnimating: boolean, id: string }) => (
+    <svg viewBox="0 0 388.26 552.55" className={`w-full h-full overflow-visible ${isAnimating ? 'is-animating' : 'not-animating'}`}>
+        <defs>
+            <style>{`
+                .h-cls-grad-${id} { fill: url(#happy-grad-${id}); }
+                .h-cls-white-stroke { fill: #fff; stroke: #eb5d63; stroke-miterlimit: 10; stroke-width: 5px; }
+                .h-cls-env-bg { fill: #fff; stroke: #f8c9dd; stroke-miterlimit: 10; stroke-width: 5px; }
+                .h-cls-white { fill: #fff; }
+                .h-cls-stroke { stroke: #eb5d63; stroke-miterlimit: 10; stroke-width: 5px; fill: none; }
+                .h-cls-red { fill: #eb5d63; }
+                .h-cls-black { fill: #1e1e1c; }
+                .h-cls-darkred { fill: #8f2113; }
+
+                /* Basis für die Animationen */
+                .happy-flap-closed, .happy-flap-open {
+                    transform-origin: 194.13px 299.28px; /* Perfekte Faltkante des Briefes in exakten Pixeln */
+                    transition: transform 0.35s ease-in-out, opacity 0s linear;
+                }
+                .happy-mascot {
+                    transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0s linear;
+                }
+
+                /* --- IDLE / GESCHLOSSEN --- */
+                .not-animating .happy-flap-closed {
+                    transform: scaleY(1);
+                    opacity: 1;
+                    /* Warten bis Maskottchen unten ist, bevor der Deckel schließt */
+                    transition-delay: 0.35s, 0.5s; 
+                }
+                .not-animating .happy-flap-open {
+                    transform: scaleY(0);
+                    opacity: 0;
+                    transition-delay: 0.35s, 0.5s;
+                }
+                .not-animating .happy-mascot {
+                    transform: translateY(140px);
+                    opacity: 0; /* Komplett unsichtbar im Idle */
+                    /* Gleitet direkt runter, verschwindet fast ganz unten */
+                    transition-delay: 0s, 0.35s; 
+                }
+
+                /* --- ANIMATING / OFFEN --- */
+                .is-animating .happy-flap-closed {
+                    transform: scaleY(0);
+                    opacity: 0;
+                    /* Klappt direkt auf */
+                    transition-delay: 0s, 0.175s; 
+                }
+                .is-animating .happy-flap-open {
+                    transform: scaleY(1);
+                    opacity: 1;
+                    transition-delay: 0s, 0.175s;
+                }
+                .is-animating .happy-mascot {
+                    transform: translateY(0);
+                    opacity: 1;
+                    /* Wartet, bis der Deckel offen ist, dann springt es hoch */
+                    transition-delay: 0.3s, 0.3s; 
+                }
+            `}</style>
+            <linearGradient id={`happy-grad-${id}`} x1="195.13" y1="419.65" x2="195.13" y2="123.65" gradientTransform="translate(0 548.87) scale(1 -1)" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#fff" />
+                <stop offset="1" stopColor="#eb5d63" />
+            </linearGradient>
+
+            {/* Maske, damit das Maskottchen nie unter dem Brief herausguckt */}
+            <clipPath id={`mascot-clip-${id}`}>
+                <rect x="-100" y="-100" width="700" height="625" />
+            </clipPath>
+        </defs>
+
+        {/* Der weiße Hintergrund-Body des Briefes, damit er nicht transparent ist */}
+        <rect className="h-cls-env-bg" x="2.5" y="300" width="383.26" height="229.04" rx="12" ry="12" />
+
+        {/* 1. Offene Lasche (Hinter dem Maskottchen) */}
+        <path className="h-cls-white-stroke happy-flap-open" d="M17.44,300c-1.9-.23-3.06-.8-3.47-1.7-3.84-8.43,56.69-46.15,181.58-113.18,161.33,78.49,182,104.16,178.59,113.85-.12.35-.29.7-.48,1.03H17.44Z" />
+
+        {/* 2. Maskottchen (Gleitet hoch und runter) in einer Schnittmaske (clipPath) */}
+        <g clipPath={`url(#mascot-clip-${id})`}>
+            <g className="happy-mascot">
+                <path className={`h-cls-grad-${id}`} d="M349.79,309.38c10.3,46.94,5.12,87.29-.01,111.78-47.02,3.5-99.26,5.12-155.87,3.33-57.43-1.81-110.16-6.83-157.42-13.43-2.58-24.26-3.85-59.89,4.15-101.68,2.88-15.07,8.11-42.92,21.7-70.44,18.31-37.07,68.8-107.59,132.85-109.68,80.3-2.61,138.46,106.51,154.6,180.11Z" />
+                <ellipse className="h-cls-white" cx="142.57" cy="224.76" rx="55.18" ry="52.13" />
+                <ellipse className="h-cls-white" cx="248.97" cy="224.5" rx="55.18" ry="52.13" />
+                <path className="h-cls-red" d="M147.6,186.71c13.35,2.47,25.67,12.51,32.08,24.31,13.06,24.01.5,53.1,9.5,56.71,2.57,1.03,5.66-.5,8.04-2.13,1.82,1.12,4.74,2.56,7.19,1.53,8.6-3.61-3.51-31.4,8.06-54.31,6.08-12.03,18.55-22.44,31.7-24.92,28.24-5.34,54.24,26.78,63.96,38.78,43.33,53.5,42.46,117.87,42.53,117.86.1-.02,7.89-106.2-60.54-172.6-10.49-10.18-43.38-42.08-90.46-42.62-60.19-.69-100.66,50.53-115.88,69.79-55.79,70.61-47.33,155.87-44.21,179.26-.18-29.69,2.46-117.07,53.55-165.97,10.95-10.48,31.33-29.98,54.45-25.7Z" />
+                <path className="h-cls-white" d="M201.66,320.27c36.22.05,68.23,24.59,77.72,59.68-18.17,30.21-51.46,47.58-85.46,44.54-45.18-4.03-67.83-41.97-69.9-45.56,9.86-34.66,41.73-58.7,77.64-58.66Z" />
+                <path className="h-cls-darkred" d="M228.27,266.66c-.25-6.71-25.57-8.09-28.21-8.21-9.41-.46-30.76-.02-31.4,6.11-.57,5.36,14.68,15.25,30.11,15.51,14.65.24,29.7-8.17,29.5-13.41Z" />
+                <path className="h-cls-red" d="M189.81,117.19c15.81-32.26,26.27-44.65,35.59-53.38,2.67-2.51,6.5-5.89,8.55-4.8,2.31,1.24,1.19,7.54.69,10.25-5.13,27.46-30.97,45.64-40.03,52.01-2.56,1.8-5.51,3.6-6.5,2.74-1.14-.96.79-4.92,1.7-6.85v.03Z" />
+                <circle className="h-cls-red" cx="237.26" cy="56.64" r="10.81" transform="translate(163.92 289.28) rotate(-85.93)" />
+                <path className="h-cls-stroke" d="M216.96,62.9c-.25-1.52-2.02-13.83,6.67-22.75,6.94-7.14,20.04-11.6,30.03-4.59,9.68,6.79,11.16,20.59,5.74,29.99-5.93,10.29-17.98,11.52-19.23,11.63" />
+                <path className="h-cls-stroke" d="M206.36,66.77c-.35-2.22-2.95-20.3,9.8-33.44,10.19-10.49,29.42-17.04,44.11-6.75,14.22,9.95,16.38,30.25,8.45,44.06-8.71,15.09-26.4,16.93-28.23,17.08" />
+                <g>
+                    <ellipse className="h-cls-black" cx="142.87" cy="246.31" rx="20.15" ry="30.81" />
+                    <circle className="h-cls-white" cx="137.38" cy="233.24" r="9.32" />
+                </g>
+                <path className="h-cls-darkred" d="M103.67,185.13c-1.31-1.43,6.63-16.13,20.82-20.43,16.17-4.93,32.9,5.95,32.42,7.86-.42,1.65-13.39-4.17-30.22.57-14.59,4.11-21.88,13.24-23.02,12.03v-.03Z" />
+                <path className="h-cls-darkred" d="M236.03,176.41c-.35-1.67,14.06-10.25,28.48-6.37,16.36,4.38,24.61,22.67,23.38,23.79-1.06.98-8.74-11.49-25.01-16.36-14.74-4.38-26.52.41-26.85-1.07Z" />
+                <ellipse className="h-cls-red" cx="351.58" cy="296.06" rx="44.24" ry="27.34" transform="translate(-32.04 549.23) rotate(-73.52)" />
+                <ellipse className="h-cls-red" cx="37.72" cy="284.98" rx="27.34" ry="44.24" transform="translate(-100.69 33.03) rotate(-21.24)" />
+                <g>
+                    <ellipse className="h-cls-black" cx="252.28" cy="246.86" rx="20.15" ry="30.81" />
+                    <circle className="h-cls-white" cx="246.74" cy="234.26" r="9.32" />
+                </g>
+            </g>
+        </g>
+
+        {/* 3. Umschlag Front (Maskiert automatisch das rutschende Maskottchen) */}
+        <path className="h-cls-white-stroke" d="M372.24,529.04H16.02c-7.44,0-13.52-6.08-13.52-13.52v-202.72c0-7.44,6.08-13.52,13.52-13.52,59.37,38.29,118.74,76.59,178.11,114.88,59.37-38.29,118.74-76.59,178.11-114.88.91,0,5.69.11,9.55,3.97,2.45,2.45,3.97,5.83,3.97,9.55v202.72c0,7.44-6.08,13.52-13.52,13.52Z" />
+        <path className="h-cls-stroke" d="M194.13,414.16c-59.37,38.29-118.74,76.59-178.11,114.88" />
+        <line className="h-cls-stroke" x1="194.13" y1="414.16" x2="372.24" y2="529.04" />
+
+        {/* 4. Geschlossene Lasche (Ganz Vorne, klappt ein/aus) */}
+        <path className="h-cls-white-stroke happy-flap-closed" d="M16.02,299.28c-1.9.23-3.06.8-3.47,1.7-3.84,8.43,56.69,46.15,181.58,113.18,161.33-78.49,182-104.16,178.59-113.85-.12-.35-.29-.7-.48-1.03H16.02Z" />
+    </svg>
+);
+
+
+const SupportMascot = ({ isAnimating, id }: { isAnimating: boolean, id: string }) => (
+    <svg viewBox="40 0 356 552.55" className="w-full h-full overflow-visible">
+        {/* viewBox="40 0 356 552.55" schneidet den leeren Raum links und rechts exakt ab, sodass das Maskottchen zentriert ist! */}
+        <defs>
+            <style>{`
+                .s-cls-grad-${id} { fill: url(#support-grad-${id}); }
+                .s-cls-white { fill: #fff; }
+                .s-cls-white-stroke { fill: #fff; stroke: #eb5d63; stroke-width: 5px; stroke-miterlimit: 10; }
+                .s-cls-red { fill: #eb5d63; }
+                .s-cls-black { fill: #1e1e1c; }
+                .s-cls-darkred { fill: #8f2113; }
+                .s-cls-stroke { fill: none; stroke: #eb5d63; stroke-width: 5px; stroke-miterlimit: 10; }
+                .s-cls-beak { fill: #8f2113; stroke: #f8c9dd; stroke-miterlimit: 10; }
+
+                /* Sprech-Animation für den unteren Schnabel */
+                @keyframes talk-${id} {
+                    0%, 100% { transform: translateY(0); }
+                    20% { transform: translateY(5px); }
+                    40% { transform: translateY(1px); }
+                    60% { transform: translateY(6px); }
+                    80% { transform: translateY(2px); }
+                }
+                .anim-talk-${id} {
+                    animation: talk-${id} 0.5s infinite;
+                }
+            `}</style>
+            <linearGradient id={`support-grad-${id}`} x1="214.07" y1="400.43" x2="214.07" y2="39.98" gradientTransform="translate(0 548.87) scale(1 -1)" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#fff" />
+                <stop offset="1" stopColor="#eb5d63" />
+            </linearGradient>
+        </defs>
+
+        <path className={`s-cls-grad-${id}`} d="M368.39,328.6c3.93,24.01,14.65,89.42-27.72,136.81-40.66,45.51-102.95,43.91-126.86,43.3-21.42-.56-92.54-2.36-132.93-57.16-33.78-45.87-25.18-100.54-21.65-122.95,5.33-33.81,15.84-58.99,21.7-70.44,7.11-13.86,57.21-107.6,132.85-109.68,81.1-2.23,141.81,102.21,154.55,180.11h.05Z" />
+        <path className="s-cls-white" d="M217.25,244.23c-1.77,24.83-24.02,39.43-25.22,40.19-11.61,7.26-23.14,8.06-28.57,8.05-16.24-.02-27.97-7.35-33.26-11.33-2.12-1.59-25.13-19.2-23.03-44.74,2.16-26.36,28.94-50.21,58.74-48.08,30.4,2.16,53.39,27.2,51.34,55.92Z" />
+        <path className="s-cls-white" d="M323.75,246.53c-1.75,24.64-23.79,39.24-26.26,40.79-3.79,2.39-16.07,9.88-32.89,8.48-13.57-1.13-22.79-7.45-26.03-9.73-1.44-1.01-27.08-19.66-24.9-47.37,2.12-27.06,29.2-50.19,58.74-48.08,30.4,2.16,53.39,27.2,51.34,55.92Z" />
+        <path className="s-cls-red" d="M166.2,205.92c13.59,2.08,25.84,13.06,32.08,24.31,12.72,22.94,2.97,51.55,12.66,54.92,1.89.66,3.78.1,4.88-.34,1.76,1.49,4.14,3.02,6.18,2.35,7.68-2.53-3.39-31.63,9.07-55.12,6.03-11.37,18.07-22.35,31.7-24.92,25.92-4.9,49.22,21.85,63.96,38.78,36.63,42.06,44.29,92.65,45.79,122.39-.23-127.65-84.19-218.06-154.25-219.76-76.96-1.88-176.64,102.27-160.09,249.05.93-41.09,9.12-106.64,51.37-156.66,11.5-13.61,32.67-38.67,56.63-35Z" />
+        <ellipse className="s-cls-red" cx="361.9" cy="362.07" rx="27.34" ry="44.24" />
+        <ellipse className="s-cls-red" cx="68.12" cy="362.07" rx="27.34" ry="44.24" />
+        <ellipse className="s-cls-white" cx="220.26" cy="424.19" rx="81.58" ry="84.7" />
+        <path className="s-cls-darkred" d="M183.45,281.24c-.34,5.43,16.69,12.43,32.29,12.56,15.11.13,31.89-6.16,31.72-11.53-.17-5.44-17.76-9.79-31.19-10.12-14.21-.35-32.47,3.58-32.82,9.09Z" />
+        <ellipse className="s-cls-darkred" cx="301.82" cy="496.63" rx="40.51" ry="17.49" />
+        <ellipse className="s-cls-darkred" cx="138.68" cy="496.63" rx="40.51" ry="17.49" />
+        <path className="s-cls-red" d="M207.31,135.6c15.81-32.26,26.27-44.65,35.59-53.38,2.67-2.51,6.5-5.89,8.55-4.8,2.31,1.24,1.19,7.54.69,10.25-5.13,27.46-30.97,45.64-40.03,52.01-2.56,1.8-5.51,3.6-6.5,2.74-1.14-.96.79-4.92,1.7-6.85v.03Z" />
+        <circle className="s-cls-red" cx="254.75" cy="75.06" r="10.81" transform="translate(161.8 323.84) rotate(-85.93)" />
+        <path className="s-cls-stroke" d="M234.45,81.31c-.25-1.52-2.02-13.83,6.67-22.75,6.94-7.14,20.04-11.6,30.03-4.59,9.68,6.79,11.16,20.59,5.74,29.99-5.93,10.29-17.98,11.52-19.23,11.63" />
+        <path className="s-cls-stroke" d="M223.85,85.19c-.35-2.22-2.95-20.3,9.8-33.44,10.19-10.49,29.42-17.04,44.11-6.75,14.22,9.95,16.38,30.25,8.45,44.06-8.71,15.09-26.4,16.93-28.23,17.08" />
+        <line className="s-cls-stroke" x1="173.71" y1="413.73" x2="173.71" y2="448.78" />
+        <line className="s-cls-stroke" x1="189.9" y1="407.79" x2="189.9" y2="454.69" />
+        <line className="s-cls-stroke" x1="206.48" y1="398.73" x2="206.48" y2="468.73" />
+        <line className="s-cls-stroke" x1="223.05" y1="405.1" x2="223.05" y2="452" />
+        <line className="s-cls-stroke" x1="238.94" y1="412.38" x2="238.94" y2="447.41" />
+        <line className="s-cls-stroke" x1="255.16" y1="406.44" x2="255.16" y2="453.35" />
+        <line className="s-cls-stroke" x1="271.74" y1="399.92" x2="271.74" y2="459.87" />
+        <path className="s-cls-darkred" d="M129.22,212.38c-1.31-1.43,6.63-16.13,20.82-20.43,16.17-4.93,32.9,5.95,32.42,7.86-.42,1.65-13.39-4.17-30.22.57-14.59,4.11-21.88,13.24-23.02,12.03v-.03Z" />
+        <path className="s-cls-darkred" d="M253.96,201.99c-.35-1.67,14.06-10.25,28.48-6.37,16.36,4.38,24.61,22.67,23.38,23.79-1.06.98-8.74-11.49-25.01-16.36-14.74-4.38-26.52.41-26.85-1.07Z" />
+        <g>
+            <path className="s-cls-black" d="M164.96,223.9c10.68-.01,20.05,16.74,20.15,30.81.11,14.88-10.11,32.05-20.99,31.75-10.72-.3-19.58-17.47-19.32-31.75.25-13.95,9.31-30.8,20.15-30.81Z" />
+            <circle className="s-cls-white" cx="160.2" cy="238.32" r="8.72" />
+        </g>
+        <path className="s-cls-black" d="M268.7,227.37c10.79,0,19.99,16.78,20.15,30.81.18,15.12-10.06,32.55-20.92,32.28-10.72-.27-19.73-17.71-19.39-32.28.33-13.92,9.34-30.8,20.15-30.81Z" />
+        <circle className="s-cls-white" cx="263.94" cy="241.79" r="8.72" />
+        <path className="s-cls-white-stroke" d="M209.99,151.74c-45.52,4.25-97.68,55.99-109.67,82.01-1.6,3.48-7.39,17.15-19.65,20.93-6.28,1.93-15.53,1.7-17.99-2-10.69-16.08,54.83-120.97,145.89-127.91,104.71-7.98,191.93,117.47,177.87,143.23-3.16,5.8-13.14,8.61-20.65,7.33-17.23-2.94-24.58-28.02-31.49-42.88-21.09-45.34-79.71-84.87-124.31-80.71Z" />
+        <ellipse className="s-cls-white-stroke" cx="81.33" cy="266.73" rx="33.31" ry="54.21" />
+        <ellipse className="s-cls-white-stroke" cx="361.9" cy="266.73" rx="33.31" ry="54.21" />
+        <path className="s-cls-white-stroke" d="M389.05,239.25c-2.14-1.17-9.15,27.84-36.64,45.97-33.12,21.83-69.27,10.25-81.94,33.98-1.38,2.58-3.97,7.44-2,10.66,6.28,10.24,56.64.18,88.6-30.64,26.07-25.14,34.29-58.69,31.98-59.96Z" />
+        <ellipse className="s-cls-white-stroke" cx="263.9" cy="320.01" rx="24.96" ry="19.48" />
+
+        {/* Hier animieren wir den unteren Schnabelteil */}
+        <g className={isAnimating ? `anim-talk-${id}` : ''}>
+            <path id="Schnabel_unten" className="s-cls-beak" d="M183.37,282.06c-.7,2.12,14.33,12.42,32.29,12.56,17.49.14,32.35-9.4,31.72-11.53-.53-1.8-11.86,2.39-32.37,2.03-20.18-.35-31.06-4.8-31.63-3.06Z" />
+        </g>
     </svg>
 );
