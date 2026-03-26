@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useFriendsStore } from '../useFriendsStore';
+import { useFriendsStore, UserStatus } from '../useFriendsStore';
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -11,7 +11,8 @@ describe('useFriendsStore', () => {
         // Reset store to initial state
         useFriendsStore.setState({
             friends: [],
-            onlineUserIds: new Set<string>(),
+            userStatuses: new Map<string, UserStatus>(),
+            myStatus: 'online',
             incomingRequests: [],
             outgoingRequests: [],
             pendingInvitation: null,
@@ -25,28 +26,44 @@ describe('useFriendsStore', () => {
     it('should have initial state', () => {
         const state = useFriendsStore.getState();
         expect(state.friends).toEqual([]);
-        expect(state.onlineUserIds.size).toBe(0);
+        expect(state.userStatuses.size).toBe(0);
+        expect(state.myStatus).toBe('online');
         expect(state.isSidebarCollapsed).toBe(false);
     });
 
     describe('Online Presence', () => {
-        it('should update online list', () => {
-            const userIds = ['user1', 'user2'];
-            useFriendsStore.getState().setOnlineList(userIds);
+        it('should update online list with statuses', () => {
+            const users = [{ id: 'user1', status: 'online' }, { id: 'user2', status: 'away' }];
+            useFriendsStore.getState().setOnlineList(users);
             
             const state = useFriendsStore.getState();
-            expect(state.onlineUserIds.has('user1')).toBe(true);
-            expect(state.onlineUserIds.has('user2')).toBe(true);
-            expect(state.onlineUserIds.size).toBe(2);
+            expect(state.userStatuses.get('user1')).toBe('online');
+            expect(state.userStatuses.get('user2')).toBe('away');
+            expect(state.userStatuses.size).toBe(2);
         });
 
         it('should set user online and offline', () => {
             const store = useFriendsStore.getState();
-            store.setUserOnline('userA');
-            expect(useFriendsStore.getState().onlineUserIds.has('userA')).toBe(true);
+            store.setUserOnline('userA', 'online');
+            expect(useFriendsStore.getState().userStatuses.get('userA')).toBe('online');
             
             store.setUserOffline('userA');
-            expect(useFriendsStore.getState().onlineUserIds.has('userA')).toBe(false);
+            expect(useFriendsStore.getState().userStatuses.has('userA')).toBe(false);
+        });
+
+        it('should set user status', () => {
+            const store = useFriendsStore.getState();
+            store.setUserOnline('userB', 'online');
+            store.setUserStatus('userB', 'away');
+            expect(useFriendsStore.getState().userStatuses.get('userB')).toBe('away');
+        });
+
+        it('should set my status', () => {
+            useFriendsStore.getState().setMyStatus('away');
+            expect(useFriendsStore.getState().myStatus).toBe('away');
+            
+            useFriendsStore.getState().setMyStatus('invisible');
+            expect(useFriendsStore.getState().myStatus).toBe('invisible');
         });
     });
 
@@ -79,15 +96,15 @@ describe('useFriendsStore', () => {
         it('should remove a friend and their online status', () => {
             useFriendsStore.setState({
                 friends: [{ id: 'f1', name: 'Bob', avatarColor: 'green' }],
-                onlineUserIds: new Set(['f1', 'other'])
+                userStatuses: new Map<string, UserStatus>([['f1', 'online'], ['other', 'away']])
             });
 
             useFriendsStore.getState().removeFriendById('f1');
             
             const state = useFriendsStore.getState();
             expect(state.friends.length).toBe(0);
-            expect(state.onlineUserIds.has('f1')).toBe(false);
-            expect(state.onlineUserIds.has('other')).toBe(true);
+            expect(state.userStatuses.has('f1')).toBe(false);
+            expect(state.userStatuses.has('other')).toBe(true);
         });
 
         it('should update friend profile', () => {

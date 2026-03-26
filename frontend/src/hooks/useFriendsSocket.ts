@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { useFriendsStore, RoomInvitation, Friend, FriendRequestIncoming, OpenRoom, IncomingCall } from '@/store/useFriendsStore';
+import { useFriendsStore, UserStatus, RoomInvitation, Friend, FriendRequestIncoming, OpenRoom, IncomingCall } from '@/store/useFriendsStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 
@@ -12,9 +13,10 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
  * Connects to the backend Socket.IO server for friend-related events.
  *
  * Listens for:
- * - `friend:online`            – a friend came online
+ * - `friend:online`            – a friend came online (with status)
  * - `friend:offline`           – a friend went offline
- * - `friend:online-list`       – initial list of online friends on connect
+ * - `friend:online-list`       – initial list of online friends on connect (with statuses)
+ * - `friend:status-changed`    – a friend changed their status
  * - `friend:invite-received`   – room invitation from a friend
  * - `friend:request-received`  – new incoming friend request
  * - `friend:request-accepted`  – your outgoing request was accepted
@@ -34,6 +36,8 @@ export function useFriendsSocket(token: string | null) {
         setOnlineList,
         setUserOnline,
         setUserOffline,
+        setUserStatus,
+        setMyStatus,
         setInvitation,
         setOpenRooms,
         addIncomingRequest,
@@ -78,16 +82,26 @@ export function useFriendsSocket(token: string | null) {
             socket.emit('presence:request-sync');
         });
 
-        socket.on('friend:online-list', ({ userIds }: { userIds: string[] }) => {
-            setOnlineList(userIds);
+        socket.on('friend:online-list', ({ users }: { users: { id: string; status: string }[] }) => {
+            setOnlineList(users);
         });
 
-        socket.on('friend:online', ({ userId }: { userId: string }) => {
-            setUserOnline(userId);
+        socket.on('friend:online', ({ userId, status }: { userId: string; status?: string }) => {
+            setUserOnline(userId, (status as UserStatus) ?? 'online');
         });
 
         socket.on('friend:offline', ({ userId }: { userId: string }) => {
             setUserOffline(userId);
+        });
+
+        socket.on('friend:status-changed', ({ userId, status }: { userId: string; status: string }) => {
+            // Check if this is our own status update
+            const myUserId = useAuthStore.getState().user?.id;
+            if (userId === myUserId) {
+                setMyStatus(status as UserStatus);
+            } else {
+                setUserStatus(userId, status as UserStatus);
+            }
         });
 
         socket.on('friend:invite-received', (data: Omit<RoomInvitation, 'receivedAt'>) => {
@@ -157,7 +171,7 @@ export function useFriendsSocket(token: string | null) {
             socket.disconnect();
             socketRef.current = null;
         };
-    }, [token, setOnlineList, setUserOnline, setUserOffline, setInvitation, setOpenRooms, addIncomingRequest, removeIncomingRequest, removeOutgoingRequest, addFriend, removeFriendById, updateFriendProfile, fetchFriends, fetchRequests, setIncomingCall, clearIncomingCall, setOutgoingCall, clearOutgoingCall, router]);
+    }, [token, setOnlineList, setUserOnline, setUserOffline, setUserStatus, setMyStatus, setInvitation, setOpenRooms, addIncomingRequest, removeIncomingRequest, removeOutgoingRequest, addFriend, removeFriendById, updateFriendProfile, fetchFriends, fetchRequests, setIncomingCall, clearIncomingCall, setOutgoingCall, clearOutgoingCall, router]);
 
     const sendRoomInvite = useCallback((friendId: string, roomId: string, roomName: string) => {
         if (!socketRef.current) return;
@@ -188,11 +202,17 @@ export function useFriendsSocket(token: string | null) {
         clearIncomingCall();
     }, [clearOutgoingCall, clearIncomingCall]);
 
+    const setStatus = useCallback((status: UserStatus) => {
+        if (!socketRef.current) return;
+        socketRef.current.emit('presence:set-status', { status });
+    }, []);
+
     return {
         sendRoomInvite,
         toggleRoomOpen,
         initiateCall,
         respondToCall,
-        terminateCall
+        terminateCall,
+        setStatus
     };
 }

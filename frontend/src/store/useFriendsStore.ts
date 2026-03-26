@@ -2,6 +2,8 @@ import { create } from 'zustand';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
+export type UserStatus = 'online' | 'away' | 'invisible';
+
 export interface Friend {
     id: string;
     name: string;
@@ -52,7 +54,8 @@ export interface OutgoingCall {
 
 interface FriendsState {
     friends: Friend[];
-    onlineUserIds: Set<string>;
+    userStatuses: Map<string, UserStatus>;
+    myStatus: UserStatus;
     incomingRequests: FriendRequestIncoming[];
     outgoingRequests: FriendRequestOutgoing[];
     pendingInvitation: RoomInvitation | null;
@@ -74,9 +77,11 @@ interface FriendsState {
     removeFriend: (token: string, friendId: string) => Promise<{ error?: string }>;
 
     // Online presence (called by socket hook)
-    setOnlineList: (userIds: string[]) => void;
-    setUserOnline: (userId: string) => void;
+    setOnlineList: (users: { id: string; status: string }[]) => void;
+    setUserOnline: (userId: string, status?: UserStatus) => void;
     setUserOffline: (userId: string) => void;
+    setUserStatus: (userId: string, status: UserStatus) => void;
+    setMyStatus: (status: UserStatus) => void;
 
     // Room invitations (called by socket hook)
     setInvitation: (invitation: RoomInvitation) => void;
@@ -105,7 +110,8 @@ interface FriendsState {
 
 export const useFriendsStore = create<FriendsState>()((set, get) => ({
     friends: [],
-    onlineUserIds: new Set<string>(),
+    userStatuses: new Map<string, UserStatus>(),
+    myStatus: 'online' as UserStatus,
     incomingRequests: [],
     outgoingRequests: [],
     pendingInvitation: null,
@@ -234,19 +240,32 @@ export const useFriendsStore = create<FriendsState>()((set, get) => ({
         }
     },
 
-    setOnlineList: (userIds) => set({ onlineUserIds: new Set(userIds) }),
-    setUserOnline: (userId) =>
+    setOnlineList: (users) => set(() => {
+        const next = new Map<string, UserStatus>();
+        for (const u of users) {
+            next.set(u.id, (u.status as UserStatus) || 'online');
+        }
+        return { userStatuses: next };
+    }),
+    setUserOnline: (userId, status) =>
         set((state) => {
-            const next = new Set(state.onlineUserIds);
-            next.add(userId);
-            return { onlineUserIds: next };
+            const next = new Map(state.userStatuses);
+            next.set(userId, status ?? 'online');
+            return { userStatuses: next };
         }),
     setUserOffline: (userId) =>
         set((state) => {
-            const next = new Set(state.onlineUserIds);
+            const next = new Map(state.userStatuses);
             next.delete(userId);
-            return { onlineUserIds: next };
+            return { userStatuses: next };
         }),
+    setUserStatus: (userId, status) =>
+        set((state) => {
+            const next = new Map(state.userStatuses);
+            next.set(userId, status);
+            return { userStatuses: next };
+        }),
+    setMyStatus: (status) => set({ myStatus: status }),
 
     setInvitation: (invitation) => set({ pendingInvitation: invitation }),
     clearInvitation: () => set({ pendingInvitation: null }),
@@ -281,8 +300,8 @@ export const useFriendsStore = create<FriendsState>()((set, get) => ({
     removeFriendById: (friendId) =>
         set((state) => ({
             friends: state.friends.filter(f => f.id !== friendId),
-            onlineUserIds: (() => {
-                const next = new Set(state.onlineUserIds);
+            userStatuses: (() => {
+                const next = new Map(state.userStatuses);
                 next.delete(friendId);
                 return next;
             })(),

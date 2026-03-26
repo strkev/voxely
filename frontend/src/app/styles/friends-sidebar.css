@@ -246,6 +246,10 @@
   animation: online-pulse 2s infinite;
 }
 
+.friends-sidebar__status-dot--away {
+  background: #f59e0b;
+}
+
 @keyframes online-pulse {
 
   0%,

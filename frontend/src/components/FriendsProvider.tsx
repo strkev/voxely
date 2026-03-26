@@ -3,6 +3,7 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useFriendsSocket } from '@/hooks/useFriendsSocket';
 import { useAuthStore } from '@/store/useAuthStore';
+import type { UserStatus } from '@/store/useFriendsStore';
 
 interface FriendsContextType {
     sendRoomInvite: (friendId: string, roomId: string, roomName: string) => void;
@@ -10,6 +11,7 @@ interface FriendsContextType {
     initiateCall: (friendId: string) => void;
     respondToCall: (callerId: string, accepted: boolean) => void;
     terminateCall: (friendId: string) => void;
+    setStatus: (status: UserStatus) => void;
 }
 
 const FriendsContext = createContext<FriendsContextType | undefined>(undefined);

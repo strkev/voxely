@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import { useFriendsStore, Friend } from '@/store/useFriendsStore';
+import { useFriendsStore, Friend, UserStatus } from '@/store/useFriendsStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Search, UserPlus, X, UserMinus, Mail, ChevronLeft, Check, Lock, Unlock, Phone } from 'lucide-react';
 import { getContrastColor } from '@/lib/colors';
@@ -27,7 +27,7 @@ interface FriendsSidebarProps {
 }
 
 export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequests, onClose, onToggleOpen, onCall, inRoomUserIds }: FriendsSidebarProps) {
-    const { friends, onlineUserIds, incomingRequests, removeFriend, isSidebarCollapsed, setSidebarCollapsed } = useFriendsStore();
+    const { friends, userStatuses, incomingRequests, removeFriend, isSidebarCollapsed, setSidebarCollapsed } = useFriendsStore();
     const { token } = useAuthStore();
     const [search, setSearch] = useState('');
     const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
@@ -40,17 +40,22 @@ export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequ
         return friends.filter(f => f.name.toLowerCase().includes(q));
     }, [friends, search]);
 
-    // Sort: online friends first, then alphabetical
+    // Sort: online friends first, then away, then offline
     const sortedFriends = useMemo(() => {
+        const statusOrder = (id: string): number => {
+            const s = userStatuses.get(id);
+            if (s === 'online') return 0;
+            if (s === 'away') return 1;
+            return 2; // offline / invisible / not in map
+        };
         return [...filteredFriends].sort((a, b) => {
-            const aOnline = onlineUserIds.has(a.id);
-            const bOnline = onlineUserIds.has(b.id);
-            if (aOnline !== bOnline) return aOnline ? -1 : 1;
+            const orderDiff = statusOrder(a.id) - statusOrder(b.id);
+            if (orderDiff !== 0) return orderDiff;
             return a.name.localeCompare(b.name);
         });
-    }, [filteredFriends, onlineUserIds]);
+    }, [filteredFriends, userStatuses]);
 
-    const onlineCount = friends.filter(f => onlineUserIds.has(f.id)).length;
+    const onlineCount = friends.filter(f => userStatuses.has(f.id)).length;
 
     const handleRemoveFriend = async (friend: Friend) => {
         await removeFriend(token ?? '', friend.id);
@@ -196,7 +201,13 @@ export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequ
                     </div>
                 ) : (
                     sortedFriends.map(friend => {
-                        const isOnline = onlineUserIds.has(friend.id);
+                        const friendStatus: UserStatus | undefined = userStatuses.get(friend.id);
+                        const isOnline = !!friendStatus; // has any status = connected
+                        const dotClass = friendStatus === 'online'
+                            ? 'friends-sidebar__status-dot--online'
+                            : friendStatus === 'away'
+                                ? 'friends-sidebar__status-dot--away'
+                                : '';
                         return (
                             <div key={friend.id} className="friends-sidebar__item">
                                 {/* Avatar + status dot */}
@@ -211,8 +222,8 @@ export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequ
                                         {getInitials(friend.name)}
                                     </div>
                                     <span
-                                        className={`friends-sidebar__status-dot ${isOnline ? 'friends-sidebar__status-dot--online' : ''}`}
-                                        aria-label={isOnline ? 'Online' : 'Offline'}
+                                        className={`friends-sidebar__status-dot ${dotClass}`}
+                                        aria-label={friendStatus ?? 'Offline'}
                                     />
                                 </div>
 

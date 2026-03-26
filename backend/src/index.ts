@@ -130,6 +130,12 @@ app.use('/api/friends', friendsRouter);
 // Supports multiple tabs/windows per user
 export const onlineUsers = new Map<string, Set<string>>();
 
+// ── User status tracking ──────────────────────────────────────────────────────
+// Tracks manually-set status per user. Defaults to 'online' on connect.
+export type UserStatus = 'online' | 'away' | 'invisible';
+export const VALID_STATUSES: UserStatus[] = ['online', 'away', 'invisible'];
+export const userStatuses = new Map<string, UserStatus>();
+
 export const getOnlineFriendSockets = (friendIds: string[]): string[] => {
     const sockets: string[] = [];
     for (const fid of friendIds) {
@@ -301,6 +307,23 @@ io.on('connection', async (socket) => {
     if (!onlineUsers.has(uid)) onlineUsers.set(uid, new Set());
     onlineUsers.get(uid)!.add(socket.id);
 
+    // Default status to 'online' on first connect
+    if (isFirstSocket && !userStatuses.has(uid)) {
+        userStatuses.set(uid, 'online');
+    }
+    const myStatus = userStatuses.get(uid) ?? 'online';
+
+    /** Build the online friends list with status info, filtering invisible users */
+    const buildOnlineFriendsList = (friendIds: string[]) => {
+        return friendIds
+            .filter(fid => {
+                if (!onlineUsers.has(fid) || onlineUsers.get(fid)!.size === 0) return false;
+                const status = userStatuses.get(fid) ?? 'online';
+                return status !== 'invisible'; // hide invisible users
+            })
+            .map(fid => ({ id: fid, status: userStatuses.get(fid) ?? 'online' }));
+    };
+
     // MOVE ASYNC NOTIFICATION LOGIC TO A SEPARATE NON-BLOCKING STEP
     const initializeSocket = async () => {
         // Always send the current online list and open rooms to this socket,
@@ -308,8 +331,11 @@ io.on('connection', async (socket) => {
         // This ensures presence data is fresh after server restarts.
         try {
             const friendIds = await getFriendIds(uid);
-            const onlineFriendIds = friendIds.filter(fid => onlineUsers.has(fid) && onlineUsers.get(fid)!.size > 0);
-            socket.emit('friend:online-list', { userIds: onlineFriendIds });
+            const onlineFriends = buildOnlineFriendsList(friendIds);
+            socket.emit('friend:online-list', { users: onlineFriends });
+
+            // Also send own status back so UI stays in sync
+            socket.emit('friend:status-changed', { userId: uid, status: myStatus });
 
             const openRoomsList = await getOpenRoomsForUser(uid);
             socket.emit('friend:open-rooms-list', openRoomsList);
@@ -319,12 +345,12 @@ io.on('connection', async (socket) => {
 
         // Only notify friends when the user's first socket connects
         // (avoids spamming friends on every new tab)
-        if (isFirstSocket) {
+        if (isFirstSocket && myStatus !== 'invisible') {
             try {
                 const friendIds = await getFriendIds(uid);
                 const friendSockets = getOnlineFriendSockets(friendIds);
                 for (const sid of friendSockets) {
-                    io.to(sid).emit('friend:online', { userId: uid });
+                    io.to(sid).emit('friend:online', { userId: uid, status: myStatus });
                 }
             } catch (err) {
                 console.error('[WS] Failed to notify friends of online status:', err);
@@ -338,13 +364,56 @@ io.on('connection', async (socket) => {
     socket.on('presence:request-sync', async () => {
         try {
             const friendIds = await getFriendIds(uid);
-            const onlineFriendIds = friendIds.filter(fid => onlineUsers.has(fid) && onlineUsers.get(fid)!.size > 0);
-            socket.emit('friend:online-list', { userIds: onlineFriendIds });
+            const onlineFriends = buildOnlineFriendsList(friendIds);
+            socket.emit('friend:online-list', { users: onlineFriends });
+
+            // Resend own status
+            socket.emit('friend:status-changed', { userId: uid, status: userStatuses.get(uid) ?? 'online' });
 
             const openRoomsList = await getOpenRoomsForUser(uid);
             socket.emit('friend:open-rooms-list', openRoomsList);
         } catch (err) {
             console.error('[WS] Failed to handle presence sync request:', err);
+        }
+    });
+
+    // ── User status change ────────────────────────────────────────────────
+    socket.on('presence:set-status', async ({ status }: { status: string }) => {
+        if (!VALID_STATUSES.includes(status as UserStatus)) return;
+        const newStatus = status as UserStatus;
+        const oldStatus = userStatuses.get(uid) ?? 'online';
+        userStatuses.set(uid, newStatus);
+
+        try {
+            const friendIds = await getFriendIds(uid);
+            const friendSockets = getOnlineFriendSockets(friendIds);
+
+            if (newStatus === 'invisible' && oldStatus !== 'invisible') {
+                // Switching TO invisible: tell friends we went offline
+                for (const sid of friendSockets) {
+                    io.to(sid).emit('friend:offline', { userId: uid });
+                }
+            } else if (newStatus !== 'invisible' && oldStatus === 'invisible') {
+                // Switching FROM invisible: tell friends we came online
+                for (const sid of friendSockets) {
+                    io.to(sid).emit('friend:online', { userId: uid, status: newStatus });
+                }
+            } else if (newStatus !== 'invisible') {
+                // Status changed between online/away: broadcast update
+                for (const sid of friendSockets) {
+                    io.to(sid).emit('friend:status-changed', { userId: uid, status: newStatus });
+                }
+            }
+
+            // Confirm status to all of the user's own sockets
+            const ownSockets = onlineUsers.get(uid);
+            if (ownSockets) {
+                for (const sid of ownSockets) {
+                    io.to(sid).emit('friend:status-changed', { userId: uid, status: newStatus });
+                }
+            }
+        } catch (err) {
+            console.error('[WS] Failed to broadcast status change:', err);
         }
     });
 
@@ -762,15 +831,19 @@ io.on('connection', async (socket) => {
             userSockets.delete(socket.id);
             if (userSockets.size === 0) {
                 onlineUsers.delete(disconnectUid);
-                // Notify friends that this user went offline
-                try {
-                    const friendIds = await getFriendIds(disconnectUid);
-                    const friendSockets = getOnlineFriendSockets(friendIds);
-                    for (const sid of friendSockets) {
-                        io.to(sid).emit('friend:offline', { userId: disconnectUid });
+                const wasInvisible = userStatuses.get(disconnectUid) === 'invisible';
+                userStatuses.delete(disconnectUid);
+                // Notify friends that this user went offline (skip if was invisible)
+                if (!wasInvisible) {
+                    try {
+                        const friendIds = await getFriendIds(disconnectUid);
+                        const friendSockets = getOnlineFriendSockets(friendIds);
+                        for (const sid of friendSockets) {
+                            io.to(sid).emit('friend:offline', { userId: disconnectUid });
+                        }
+                    } catch (err) {
+                        console.error('[WS] Failed to notify friends of offline status:', err);
                     }
-                } catch (err) {
-                    console.error('[WS] Failed to notify friends of offline status:', err);
                 }
             }
         }

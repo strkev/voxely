@@ -8,7 +8,8 @@ import { useLeaveGuardStore } from '@/store/useLeaveGuardStore';
 import { ChevronDown, LogOut, LayoutDashboard, Settings, Users } from 'lucide-react';
 import { FriendRequestsModal } from '@/components/FriendRequestsModal';
 import { SettingsModal } from '@/components/SettingsModal';
-import { useFriendsStore } from '@/store/useFriendsStore';
+import { useFriendsStore, UserStatus } from '@/store/useFriendsStore';
+import { useFriends } from '@/components/FriendsProvider';
 import { getContrastColor } from '@/lib/colors';
 import Image from 'next/image';
 
@@ -23,7 +24,8 @@ export function Header() {
     const isInRoom = pathname?.startsWith('/room/');
     const [showFriendsModal, setShowFriendsModal] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
-    const { incomingRequests } = useFriendsStore();
+    const { incomingRequests, myStatus } = useFriendsStore();
+    const { setStatus } = useFriends();
     const leaveGuardActive = useLeaveGuardStore(s => s.active);
     const requestLeave = useLeaveGuardStore(s => s.requestLeave);
 
@@ -90,14 +92,27 @@ export function Header() {
                                 aria-expanded={open}
                                 data-tutorial="user-dropdown"
                             >
-                                <div
-                                    className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
-                                    style={{
-                                        backgroundColor: user?.avatarColor || '#FF5A5F',
-                                        color: getContrastColor(user?.avatarColor || '#FF5A5F')
-                                    }}
-                                >
-                                    {initials}
+                                <div className="relative">
+                                    <div
+                                        className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
+                                        style={{
+                                            backgroundColor: user?.avatarColor || '#FF5A5F',
+                                            color: getContrastColor(user?.avatarColor || '#FF5A5F')
+                                        }}
+                                    >
+                                        {initials}
+                                    </div>
+                                    <span
+                                        className={`friends-sidebar__status-dot ${myStatus === 'online' ? 'friends-sidebar__status-dot--online' : myStatus === 'away' ? 'friends-sidebar__status-dot--away' : ''} group-hover:border-gray-50`}
+                                        style={{
+                                            position: 'absolute',
+                                            bottom: 0,
+                                            right: 0,
+                                            borderWidth: '2.5px',
+                                            width: '12px',
+                                            height: '12px'
+                                        }}
+                                    />
                                 </div>
                                 <span className="text-sm font-medium text-text-main hidden sm:block max-w-[120px] truncate">
                                     {user.name}
@@ -110,21 +125,34 @@ export function Header() {
                             {/* Dropdown menu */}
                             {open && (
                                 <div className="absolute right-0 top-full mt-2 w-56 bg-surface border border-gray-100 rounded-2xl shadow-lg overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                                    {/* User info header */}
-                                    <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                                        <div className="flex items-center gap-2.5">
-                                            <div
-                                                className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
-                                                style={{
-                                                    backgroundColor: user?.avatarColor || '#FF5A5F',
-                                                    color: getContrastColor(user?.avatarColor || '#FF5A5F')
-                                                }}
-                                            >
-                                                {initials}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-semibold text-text-main truncate">{user.name}</p>
-                                            </div>
+
+
+                                    {/* Status selector */}
+                                    <div className="border-b border-gray-100">
+                                        <div className="flex flex-col">
+                                            {[
+                                                { value: 'online' as UserStatus, label: 'Online', color: '#22c55e' },
+                                                { value: 'away' as UserStatus, label: 'Away', color: '#f59e0b' },
+                                                { value: 'invisible' as UserStatus, label: 'Invisible', color: '#9ca3af' },
+                                            ].map((option) => (
+                                                <button
+                                                    key={option.value}
+                                                    onClick={() => setStatus(option.value)}
+                                                    className={`flex items-center gap-3 w-full px-4 py-2.5 text-xs font-medium transition-all duration-150 ${myStatus === option.value
+                                                        ? 'bg-gray-50 text-text-main'
+                                                        : 'text-text-muted hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    <span
+                                                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                                        style={{ backgroundColor: option.color }}
+                                                    />
+                                                    {option.label}
+                                                    {myStatus === option.value && (
+                                                        <span className="ml-auto w-1 h-1 rounded-full bg-primary" />
+                                                    )}
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
 
