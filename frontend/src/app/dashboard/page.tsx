@@ -214,8 +214,14 @@ export default function DashboardPage() {
 
                     {openRooms.length === 0 ? (
                         <div className="bg-surface border border-gray-100 rounded-2xl p-8 sm:p-10 text-center flex flex-col items-center justify-center min-h-[160px] shadow-flat">
-                            <DoorOpen className="w-8 h-8 text-text-muted opacity-30 mb-3" />
-                            <p className="text-text-muted text-sm max-w-sm">
+                            <div className="scale-[0.45] -my-20">
+                                <Mascot
+                                    state="support"
+                                    trigger="hover"
+                                    message="No active rooms yet. Why not create one?"
+                                />
+                            </div>
+                            <p className="text-text-muted text-sm max-w-sm mt-4">
                                 None of your friends have their rooms open. Wait for someone to open their space or invite them directly!
                             </p>
                         </div>

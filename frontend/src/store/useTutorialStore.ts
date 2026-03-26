@@ -3,7 +3,7 @@ import { create } from 'zustand';
 export interface TutorialStep {
     targetSelector: string;
     message: string;
-    state: 'waving' | 'typing' | 'locking' | 'friends';
+    state: 'waving' | 'typing' | 'locking' | 'friends' | 'happy' | 'support';
     title: string;
 }
 
@@ -28,7 +28,7 @@ const DASHBOARD_STEPS: TutorialStep[] = [
         targetSelector: '[data-tutorial="friends-sidebar"]',
         title: "Friends",
         message: "See your friends, their status, and call them directly.",
-        state: 'friends'
+        state: 'happy'
     },
     {
         targetSelector: '[data-tutorial="create-room"]',
@@ -58,7 +58,7 @@ const DASHBOARD_STEPS: TutorialStep[] = [
         targetSelector: '[data-tutorial="mascot-welcome"]',
         title: "All set!",
         message: "You're ready to explore. Have fun chatting!",
-        state: 'waving'
+        state: 'support'
     }
 ];
 
@@ -67,11 +67,11 @@ export const useTutorialStore = create<TutorialState>((set) => ({
     currentStep: 0,
     steps: DASHBOARD_STEPS,
     startTutorial: () => set({ isActive: true, currentStep: 0 }),
-    nextStep: () => set((state) => ({ 
-        currentStep: Math.min(state.currentStep + 1, state.steps.length - 1) 
+    nextStep: () => set((state) => ({
+        currentStep: Math.min(state.currentStep + 1, state.steps.length - 1)
     })),
-    prevStep: () => set((state) => ({ 
-        currentStep: Math.max(state.currentStep - 1, 0) 
+    prevStep: () => set((state) => ({
+        currentStep: Math.max(state.currentStep - 1, 0)
     })),
     endTutorial: () => set({ isActive: false, currentStep: 0 }),
 }));
