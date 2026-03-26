@@ -250,6 +250,11 @@
   background: #f59e0b;
 }
 
+.friends-sidebar__status-dot--invisible {
+  background: #9ca3af;
+  border-color: var(--color-surface);
+}
+
 @keyframes online-pulse {
 
   0%,

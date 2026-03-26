@@ -103,7 +103,7 @@ export function Header() {
                                         {initials}
                                     </div>
                                     <span
-                                        className={`friends-sidebar__status-dot ${myStatus === 'online' ? 'friends-sidebar__status-dot--online' : myStatus === 'away' ? 'friends-sidebar__status-dot--away' : ''} group-hover:border-gray-50`}
+                                        className={`friends-sidebar__status-dot ${myStatus === 'online' ? 'friends-sidebar__status-dot--online' : myStatus === 'away' ? 'friends-sidebar__status-dot--away' : 'friends-sidebar__status-dot--invisible'} group-hover:border-gray-50`}
                                         style={{
                                             position: 'absolute',
                                             bottom: 0,
@@ -129,7 +129,7 @@ export function Header() {
 
                                     {/* Status selector – compact segmented control */}
                                     <div className="border-b border-gray-100 px-3 py-2.5">
-                                        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+                                        <div className="flex items-center bg-gray-100 rounded-lg p-0.5 overflow-hidden">
                                             {[
                                                 { value: 'online' as UserStatus, label: 'Online', color: '#22c55e' },
                                                 { value: 'away' as UserStatus, label: 'Away', color: '#f59e0b' },
@@ -138,16 +138,16 @@ export function Header() {
                                                 <button
                                                     key={option.value}
                                                     onClick={() => setStatus(option.value)}
-                                                    className={`flex items-center justify-center gap-1.5 flex-1 px-2 py-1.5 rounded-md text-[0.68rem] font-medium transition-all duration-150 ${myStatus === option.value
+                                                    className={`flex items-center justify-center gap-1.5 w-0 flex-1 px-1 py-1.5 rounded-md text-[0.64rem] font-medium transition-all duration-150 ${myStatus === option.value
                                                         ? 'bg-surface text-text-main shadow-sm'
-                                                        : 'text-text-muted hover:text-text-main'
+                                                        : 'text-text-muted hover:text-text-main hover:bg-black/5'
                                                         }`}
                                                 >
                                                     <span
                                                         className="w-2 h-2 rounded-full flex-shrink-0"
                                                         style={{ backgroundColor: option.color }}
                                                     />
-                                                    {option.label}
+                                                    <span className="truncate">{option.label}</span>
                                                 </button>
                                             ))}
                                         </div>
