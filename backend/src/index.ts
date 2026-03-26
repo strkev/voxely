@@ -303,6 +303,22 @@ io.on('connection', async (socket) => {
 
     // MOVE ASYNC NOTIFICATION LOGIC TO A SEPARATE NON-BLOCKING STEP
     const initializeSocket = async () => {
+        // Always send the current online list and open rooms to this socket,
+        // regardless of whether it's the first socket or a reconnect.
+        // This ensures presence data is fresh after server restarts.
+        try {
+            const friendIds = await getFriendIds(uid);
+            const onlineFriendIds = friendIds.filter(fid => onlineUsers.has(fid) && onlineUsers.get(fid)!.size > 0);
+            socket.emit('friend:online-list', { userIds: onlineFriendIds });
+
+            const openRoomsList = await getOpenRoomsForUser(uid);
+            socket.emit('friend:open-rooms-list', openRoomsList);
+        } catch (err) {
+            console.error('[WS] Failed to send initial presence data:', err);
+        }
+
+        // Only notify friends when the user's first socket connects
+        // (avoids spamming friends on every new tab)
         if (isFirstSocket) {
             try {
                 const friendIds = await getFriendIds(uid);
@@ -310,18 +326,27 @@ io.on('connection', async (socket) => {
                 for (const sid of friendSockets) {
                     io.to(sid).emit('friend:online', { userId: uid });
                 }
-
-                const onlineFriendIds = friendIds.filter(fid => onlineUsers.has(fid) && onlineUsers.get(fid)!.size > 0);
-                socket.emit('friend:online-list', { userIds: onlineFriendIds });
-
-                const openRoomsList = await getOpenRoomsForUser(uid);
-                socket.emit('friend:open-rooms-list', openRoomsList);
             } catch (err) {
                 console.error('[WS] Failed to notify friends of online status:', err);
             }
         }
     };
     initializeSocket();
+
+    // ── On-demand presence resync ──────────────────────────────────────────
+    // Clients can request a fresh online list at any time (e.g. after reconnect)
+    socket.on('presence:request-sync', async () => {
+        try {
+            const friendIds = await getFriendIds(uid);
+            const onlineFriendIds = friendIds.filter(fid => onlineUsers.has(fid) && onlineUsers.get(fid)!.size > 0);
+            socket.emit('friend:online-list', { userIds: onlineFriendIds });
+
+            const openRoomsList = await getOpenRoomsForUser(uid);
+            socket.emit('friend:open-rooms-list', openRoomsList);
+        } catch (err) {
+            console.error('[WS] Failed to handle presence sync request:', err);
+        }
+    });
 
     // ── Room invitation: forward to friend's sockets ───────────────────────
     socket.on('friend:invite', async ({ friendId, roomId, roomName }: { friendId: string; roomId: string; roomName: string }) => {

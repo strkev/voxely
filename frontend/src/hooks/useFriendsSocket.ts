@@ -57,7 +57,9 @@ export function useFriendsSocket(token: string | null) {
         const socket = io(BACKEND_URL, {
             auth: { token },
             transports: ['websocket'],
-            reconnectionAttempts: 5,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 10000,
         });
 
         socketRef.current = socket;
@@ -72,6 +74,8 @@ export function useFriendsSocket(token: string | null) {
         socket.io.on('reconnect', () => {
             fetchFriends(token);
             fetchRequests(token);
+            // Request fresh presence data from server after reconnect
+            socket.emit('presence:request-sync');
         });
 
         socket.on('friend:online-list', ({ userIds }: { userIds: string[] }) => {
@@ -140,7 +144,16 @@ export function useFriendsSocket(token: string | null) {
             toast(`${friend?.name || 'User'} ended the call.`);
         });
 
+        // Periodic presence sync heartbeat (every 30s)
+        // Ensures presence data stays fresh even if events were missed
+        const presenceInterval = setInterval(() => {
+            if (socket.connected) {
+                socket.emit('presence:request-sync');
+            }
+        }, 30_000);
+
         return () => {
+            clearInterval(presenceInterval);
             socket.disconnect();
             socketRef.current = null;
         };
