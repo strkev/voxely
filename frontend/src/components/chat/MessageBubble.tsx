@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import type { ChatMessage } from '@/hooks/useChatSocket';
+import type { ChatMessage } from '@/components/room/RoomTopbar';
 import DOMPurify from 'isomorphic-dompurify';
 import { parseLinks, formatTime } from './utils';
 

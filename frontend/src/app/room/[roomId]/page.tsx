@@ -14,7 +14,6 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { ChevronUp } from 'lucide-react';
-import { useChatSocket, ChatMessage } from '@/hooks/useChatSocket';
 import { playSound } from '@/lib/sounds';
 import { FriendsSidebar } from '@/components/FriendsSidebar';
 import { RoomInviteBanner } from '@/components/RoomInviteBanner';
@@ -33,6 +32,8 @@ import { ConnectionError } from '@/components/room/ConnectionError';
 import { SecureContextWarning } from '@/components/room/SecureContextWarning';
 import { LeaveConfirmModal } from '@/components/room/LeaveConfirmModal';
 import { CustomControlBar } from '@/components/room/CustomControlBar';
+
+import { ExternalE2EEKeyProvider } from 'livekit-client';
 
 // ─── Friends Sidebar with Presence Tracking ─────────────────────────────────
 function FriendsSidebarWithPresence({
@@ -165,12 +166,36 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     // Friends state & socket
     const incomingRequests = useFriendsStore(s => s.incomingRequests);
-    const { sendRoomInvite, toggleRoomOpen, initiateCall } = useFriends();
+    const { sendRoomInvite, toggleRoomOpen, initiateCall, joinRoomSocket, leaveRoomSocket } = useFriends();
     const isDark = mounted ? (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) : (theme === 'dark');
 
+    useEffect(() => {
+        if (!mounted || !user) return;
+        joinRoomSocket(roomId, user.name || 'Anonymous');
+        return () => {
+            leaveRoomSocket(roomId);
+        };
+    }, [mounted, user, roomId, joinRoomSocket, leaveRoomSocket]);
+
     useThemeBackground(theme);
-    const { livekitToken, setLivekitToken, tokenError, setTokenError } = useLiveKitToken(roomId, user, authToken, authLoading, mounted);
+    const { livekitToken, setLivekitToken, e2eeKey, tokenError, setTokenError } = useLiveKitToken(roomId, user, authToken, authLoading, mounted);
     usePreventTabClose(!!livekitToken);
+
+    // Native LiveKit E2EE Setup
+    const keyProvider = useMemo(() => new ExternalE2EEKeyProvider(), []);
+    useEffect(() => {
+        if (e2eeKey) {
+            keyProvider.setKey(e2eeKey);
+        }
+    }, [keyProvider, e2eeKey]);
+
+    const e2eeSetup = useMemo(() => {
+        if (typeof window === 'undefined') return undefined;
+        return {
+            keyProvider,
+            worker: new Worker(new URL('../../../lib/livekit-e2ee.worker.ts', import.meta.url))
+        };
+    }, [keyProvider]);
 
     const humanReadableRoomName = useMemo(() => {
         return decodeURIComponent(roomId)
@@ -180,8 +205,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     }, [roomId]);
 
     const handleToggleOpenRoom = useCallback((isOpen: boolean) => {
+        setUiIsRoomOpen(isOpen);
         toggleRoomOpen(roomId, isOpen, humanReadableRoomName);
-    }, [toggleRoomOpen, roomId, humanReadableRoomName]);
+    }, [toggleRoomOpen, roomId, humanReadableRoomName, setUiIsRoomOpen]);
 
     const handleInviteFriend = useCallback((friendId: string) => {
         // Get human-readable room name from slug
@@ -202,6 +228,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         if (!hydrated) return undefined;
 
         return {
+            e2ee: e2eeSetup,
             videoCaptureDefaults: {
                 deviceId: videoDeviceId || undefined,
                 resolution: { width: qPreset.width, height: qPreset.height, frameRate: qPreset.frameRate },
@@ -246,21 +273,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         };
     }, [autoHideControlBar, controlBarVisible, setControlBarVisible]);
 
-    const handleNewMessage = useCallback((msg: ChatMessage) => {
-        if (!chatOpen) {
-            setUnread(u => u + 1);
-
-            // Show visual toast
-            if (msg.userId !== user?.id) {
-                handleShowToast({
-                    id: msg.id,
-                    name: msg.name,
-                    text: msg.text
-                });
-            }
-        }
-    }, [chatOpen, user?.id, setUnread, handleShowToast]);
-    
     const handleIncomingFile = useCallback((fileName: string, senderName: string) => {
         if (!chatOpen) {
             setUnread(u => u + 1);
@@ -271,36 +283,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             });
         }
     }, [chatOpen, setUnread, handleShowToast]);
-
-    // ── E2EE state (populated by RoomTopbar inside LiveKitRoom) ──────────────
-    const encryptChatRef = useRef<((plaintext: string) => Promise<string | null>) | undefined>(undefined);
-    const decryptChatRef = useRef<((ciphertext: string) => Promise<string | null>) | undefined>(undefined);
-    const [e2eeJoinTimestamp] = useState(() => new Date().toISOString());
-
-    // Stable wrappers that delegate to the ref (so useChatSocket deps don't change)
-    const encryptChatStable = useCallback(async (plaintext: string): Promise<string | null> => {
-        return encryptChatRef.current ? encryptChatRef.current(plaintext) : null;
-    }, []);
-    const decryptChatStable = useCallback(async (ciphertext: string): Promise<string | null> => {
-        return decryptChatRef.current ? decryptChatRef.current(ciphertext) : null;
-    }, []);
-
-    // Set up real-time chat socket
-    const { messages, typingUsers, sendMessage, sendTyping, connected: chatConnected, isRoomOpen: socketIsRoomOpen } = useChatSocket({
-        roomId,
-        token: authToken,
-        userName: user?.name ?? 'Anonymous',
-        onNewMessage: handleNewMessage,
-        encryptChat: encryptChatStable,
-        decryptChat: decryptChatStable,
-        joinTimestamp: e2eeJoinTimestamp,
-    });
-
-    // Sync room open status to store
-    useEffect(() => {
-        setUiIsRoomOpen(socketIsRoomOpen);
-    }, [socketIsRoomOpen, setUiIsRoomOpen]);
-
 
     useEffect(() => { setMounted(true); }, []);
     useEffect(() => {
@@ -434,16 +416,10 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     copied={copied}
                     handleToggleOpenRoom={handleToggleOpenRoom}
                     isCompact={isCompact}
-                    messages={messages}
-                    typingUsers={typingUsers}
-                    sendMessage={sendMessage}
-                    sendTyping={sendTyping}
-                    chatConnected={chatConnected}
                     isDark={isDark}
                     requestLeave={requestLeave}
-                    encryptChatRef={encryptChatRef}
-                    decryptChatRef={decryptChatRef}
                     onIncomingFileTransfer={handleIncomingFile}
+                    handleShowToast={handleShowToast}
                 />
                 <AutoStartAudio />
                 <RoomEffects />

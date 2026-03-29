@@ -47,6 +47,7 @@ export function usePreventTabClose(isActive: boolean) {
 export function useLiveKitToken(roomId: string, user: { id: string; name: string } | null | undefined, authToken: string | null, authLoading: boolean, mounted: boolean) {
     const router = useRouter();
     const [livekitToken, setLivekitToken] = useState<string>('');
+    const [e2eeKey, setE2eeKey] = useState<string>('');
     const [tokenError, setTokenError] = useState(false);
 
     useEffect(() => {
@@ -66,12 +67,15 @@ export function useLiveKitToken(roomId: string, user: { id: string; name: string
                     body: JSON.stringify({ roomName: roomId, participantName: user.name, participantId: user.id }),
                 });
                 const data = await res.json();
-                if (data.token) setLivekitToken(typeof data.token === 'string' ? data.token : data.token.token || '');
+                if (data.token) {
+                    setLivekitToken(typeof data.token === 'string' ? data.token : data.token.token || '');
+                    setE2eeKey(data.e2eeKey || '');
+                }
                 else setTokenError(true);
             } catch (err) { console.error(err); setTokenError(true); }
         };
         fetchToken();
     }, [user, roomId, router, mounted, authToken, authLoading]);
 
-    return { livekitToken, setLivekitToken, tokenError, setTokenError };
+    return { livekitToken, setLivekitToken, e2eeKey, setE2eeKey, tokenError, setTokenError };
 }

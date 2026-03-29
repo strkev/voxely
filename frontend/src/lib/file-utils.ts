@@ -32,14 +32,11 @@ export interface IncomingTransfer {
     totalChunks: number;
     receivedChunks: Map<number, Uint8Array>;
     receivedBytes: number; // cumulative byte tracking for DoS protection
-    iv: Uint8Array;
-    key: CryptoKey | null; // null until we receive MSG_FILE_KEY
     senderId: string;
     senderName: string;
     timestamp: string;
     lastActivity: number; // for timeout detection
     fileHash: Uint8Array; // SHA-256 hash for integrity verification
-    pendingChunks: Array<{ chunkIndex: number; chunkData: Uint8Array }>; // buffer chunks before key arrives
 }
 
 // ── Blocked file extensions ──────────────────────────────────────────────────
@@ -89,7 +86,6 @@ export function hasDangerousMagicNumber(data: Uint8Array): string | null {
 export const MSG_FILE_START    = 0x01;
 export const MSG_FILE_CHUNK    = 0x02;
 export const MSG_FILE_COMPLETE = 0x03;
-export const MSG_FILE_KEY      = 0x04;
 
 // ── Security helpers ─────────────────────────────────────────────────────────
 
@@ -131,57 +127,6 @@ export function generateTransferId(): string {
     return crypto.randomUUID();
 }
 
-// ── Crypto helpers ───────────────────────────────────────────────────────────
-
-export async function generateKey(): Promise<CryptoKey> {
-    return crypto.subtle.generateKey(
-        { name: 'AES-GCM', length: 256 },
-        true,
-        ['encrypt', 'decrypt'],
-    );
-}
-
-export async function exportKey(key: CryptoKey): Promise<Uint8Array> {
-    const raw = await crypto.subtle.exportKey('raw', key);
-    return new Uint8Array(raw as ArrayBuffer);
-}
-
-export async function importKey(raw: Uint8Array): Promise<CryptoKey> {
-    return crypto.subtle.importKey(
-        'raw',
-        raw.buffer as ArrayBuffer,
-        { name: 'AES-GCM', length: 256 },
-        true,
-        ['decrypt'],
-    );
-}
-
-export async function encryptData(
-    data: Uint8Array,
-    key: CryptoKey,
-    iv: Uint8Array,
-): Promise<Uint8Array> {
-    const encrypted = await crypto.subtle.encrypt(
-        { name: 'AES-GCM', iv: iv.buffer as ArrayBuffer },
-        key,
-        data.buffer as ArrayBuffer,
-    );
-    return new Uint8Array(encrypted as ArrayBuffer);
-}
-
-export async function decryptData(
-    data: Uint8Array,
-    key: CryptoKey,
-    iv: Uint8Array,
-): Promise<Uint8Array> {
-    const decrypted = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: iv.buffer as ArrayBuffer },
-        key,
-        data.buffer as ArrayBuffer,
-    );
-    return new Uint8Array(decrypted as ArrayBuffer);
-}
-
 // ── Encoding helpers ─────────────────────────────────────────────────────────
 
 export function encodeUint32(value: number): Uint8Array {
@@ -210,38 +155,20 @@ export function buildFileStartMessage(
     transferId: string,
     totalChunks: number,
     fileSize: number,
-    iv: Uint8Array,
     fileName: string,
     fileHash: Uint8Array,
 ): Uint8Array {
     const encoder = new TextEncoder();
     const idBytes = encoder.encode(transferId);
     const nameBytes = encoder.encode(fileName);
-    const msg = new Uint8Array(1 + 36 + 4 + 8 + 12 + 32 + nameBytes.length);
+    const msg = new Uint8Array(1 + 36 + 4 + 8 + 32 + nameBytes.length);
     let offset = 0;
     msg[offset++] = MSG_FILE_START;
     msg.set(idBytes, offset); offset += 36;
     msg.set(encodeUint32(totalChunks), offset); offset += 4;
     msg.set(encodeFloat64(fileSize), offset); offset += 8;
-    msg.set(iv, offset); offset += 12;
     msg.set(fileHash, offset); offset += 32;
     msg.set(nameBytes, offset);
-    return msg;
-}
-
-export function buildFileKeyMessage(
-    transferId: string,
-    keyIv: Uint8Array,
-    encryptedKey: Uint8Array,
-): Uint8Array {
-    const encoder = new TextEncoder();
-    const idBytes = encoder.encode(transferId);
-    const msg = new Uint8Array(1 + 36 + 12 + encryptedKey.length);
-    let offset = 0;
-    msg[offset++] = MSG_FILE_KEY;
-    msg.set(idBytes, offset); offset += 36;
-    msg.set(keyIv, offset); offset += 12;
-    msg.set(encryptedKey, offset);
     return msg;
 }
 

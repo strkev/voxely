@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import type { TypingUser } from '@/hooks/useChatSocket';
+import type { TypingUser } from '@/components/room/RoomTopbar';
 
 export function TypingIndicatorBubble({ typingUsers }: { typingUsers: TypingUser[] }) {
     if (typingUsers.length === 0) return null;

@@ -159,4 +159,32 @@ describe('Socket.IO Integration', () => {
         await new Promise(r => setTimeout(r, 200));
         expect(received).toBe(false);
     });
+
+    it('should broadcast room:open-status when a user opens or closes a room', async () => {
+        const roomOpen = 'room-open-' + Date.now();
+        
+        socketA.emit('chat:join', { roomId: roomOpen, name: 'User A' });
+        socketB.emit('chat:join', { roomId: roomOpen, name: 'User B' });
+
+        await new Promise(r => setTimeout(r, 100));
+
+        let bStatus: boolean | null = null;
+        socketB.on('room:open-status', ({ isOpen }: { isOpen: boolean }) => {
+            bStatus = isOpen;
+        });
+
+        // User A toggles room open
+        socketA.emit('room:set-open', { roomId: roomOpen, isOpen: true, roomName: 'Test Room' });
+
+        await new Promise(r => setTimeout(r, 200));
+        
+        expect(bStatus).toBe(true);
+
+        // User A toggles room closed
+        socketA.emit('room:set-open', { roomId: roomOpen, isOpen: false, roomName: 'Test Room' });
+
+        await new Promise(r => setTimeout(r, 200));
+
+        expect(bStatus).toBe(false);
+    });
 });

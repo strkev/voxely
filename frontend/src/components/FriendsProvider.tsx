@@ -8,6 +8,8 @@ import type { UserStatus } from '@/store/useFriendsStore';
 interface FriendsContextType {
     sendRoomInvite: (friendId: string, roomId: string, roomName: string) => void;
     toggleRoomOpen: (roomId: string, isOpen: boolean, roomName: string) => void;
+    joinRoomSocket: (roomId: string, name: string) => void;
+    leaveRoomSocket: (roomId: string) => void;
     initiateCall: (friendId: string) => void;
     respondToCall: (callerId: string, accepted: boolean) => void;
     terminateCall: (friendId: string) => void;

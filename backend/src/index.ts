@@ -160,6 +160,8 @@ export const getFriendIds = async (userId: string): Promise<string[]> => {
 export const userRooms = new Map<string, string>();
 // Map: roomId -> { roomName, isOpen }
 export const openRooms = new Map<string, { roomName: string; isOpen: boolean }>();
+// Map: roomId -> e2eeKey (32-byte base64)
+export const e2eeKeys = new Map<string, string>();
 
 export const getOpenRoomsForUser = async (userId: string) => {
     const friendIds = await getFriendIds(userId);
@@ -733,6 +735,7 @@ io.on('connection', async (socket) => {
             const room = io.sockets.adapter.rooms.get(roomId);
             if (!room || room.size === 0) {
                 openRooms.delete(roomId);
+                e2eeKeys.delete(roomId);
                 try {
                     const result = await prisma.chatMessage.deleteMany({ where: { roomId } });
                     if (result.count > 0) {

@@ -8,10 +8,7 @@ import {
     encodeFloat64,
     decodeFloat64,
     buildFileStartMessage,
-    MSG_FILE_START,
-    encryptData,
-    decryptData,
-    generateKey
+    MSG_FILE_START
 } from '../file-utils';
 
 describe('File Utils', () => {
@@ -86,29 +83,15 @@ describe('File Utils', () => {
             const transferId = '550e8400-e29b-41d4-a716-446655440000';
             const totalChunks = 10;
             const fileSize = 1024;
-            const iv = new Uint8Array(12).fill(1);
             const fileName = 'test.txt';
             const hash = new Uint8Array(32).fill(2);
 
-            const msg = buildFileStartMessage(transferId, totalChunks, fileSize, iv, fileName, hash);
+            const msg = buildFileStartMessage(transferId, totalChunks, fileSize, fileName, hash);
 
             expect(msg[0]).toBe(MSG_FILE_START);
             expect(decodeUint32(msg, 37)).toBe(totalChunks);
             expect(decodeFloat64(msg, 41)).toBe(fileSize);
         });
     });
-
-    describe('Encryption Roundtrip', () => {
-        it('should encrypt and decrypt file data correctly', async () => {
-            const key = await generateKey();
-            const iv = crypto.getRandomValues(new Uint8Array(12));
-            const plaintext = new TextEncoder().encode('This is some sensitive file content');
-
-            const ciphertext = await encryptData(plaintext, key, iv);
-            expect(ciphertext).not.toEqual(plaintext);
-
-            const decrypted = await decryptData(ciphertext, key, iv);
-            expect(new TextDecoder().decode(decrypted)).toBe('This is some sensitive file content');
-        });
-    });
 });
+

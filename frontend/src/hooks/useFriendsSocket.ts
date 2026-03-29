@@ -6,6 +6,7 @@ import { useFriendsStore, UserStatus, RoomInvitation, Friend, FriendRequestIncom
 import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import { useUIStore } from '@/store/useUIStore';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -111,6 +112,10 @@ export function useFriendsSocket(token: string | null) {
             setOpenRooms(rooms);
         });
 
+        socket.on('room:open-status', ({ isOpen }: { isOpen: boolean }) => {
+            useUIStore.getState().setIsRoomOpen(isOpen);
+        });
+
         socket.on('friend:request-received', (data: FriendRequestIncoming) => {
             addIncomingRequest(data);
         });
@@ -182,6 +187,16 @@ export function useFriendsSocket(token: string | null) {
         socketRef.current.emit('room:set-open', { roomId, isOpen, roomName });
     }, []);
 
+    const joinRoomSocket = useCallback((roomId: string, name: string) => {
+        if (!socketRef.current) return;
+        socketRef.current.emit('chat:join', { roomId, name });
+    }, []);
+
+    const leaveRoomSocket = useCallback((roomId: string) => {
+        if (!socketRef.current) return;
+        socketRef.current.emit('chat:leave', { roomId });
+    }, []);
+
     const initiateCall = useCallback((friendId: string) => {
         if (!socketRef.current) return;
         setOutgoingCall({ recipientId: friendId, roomId: null });
@@ -209,6 +224,8 @@ export function useFriendsSocket(token: string | null) {
     return {
         sendRoomInvite,
         toggleRoomOpen,
+        joinRoomSocket,
+        leaveRoomSocket,
         initiateCall,
         respondToCall,
         terminateCall,

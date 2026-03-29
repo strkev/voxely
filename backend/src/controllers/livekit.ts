@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import sanitize from 'sanitize-html';
 import { createLiveKitToken } from '../services/livekit';
+import { e2eeKeys } from '../index';
+import crypto from 'crypto';
 
 /** Strip all HTML and limit length. */
 const cleanInput = (val: unknown, maxLen: number): string =>
@@ -44,10 +46,17 @@ export const generateToken = async (req: Request, res: Response): Promise<void> 
             }
         }
 
+        let e2eeKey = e2eeKeys.get(safeRoomName);
+        if (!e2eeKey) {
+            e2eeKey = crypto.randomBytes(32).toString('base64');
+            e2eeKeys.set(safeRoomName, e2eeKey);
+        }
+
         const token = await createLiveKitToken(safeRoomName, safeName, participantId);
-        res.json({ token });
+        res.json({ token, e2eeKey });
     } catch (error) {
         console.error('Error generating LiveKit token:', error);
         res.status(500).json({ error: 'Internal server error while generating token' });
     }
 };
+

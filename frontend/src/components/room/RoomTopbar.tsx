@@ -1,17 +1,29 @@
 "use client";
 
-import React, { useCallback, useEffect, type MutableRefObject } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Users, Check, Link2, Unlock, Lock, LogOut, ImageIcon } from 'lucide-react';
-import { useLocalParticipant } from '@livekit/components-react';
+import { useLocalParticipant, useChat, useConnectionState } from '@livekit/components-react';
+import { ConnectionState } from 'livekit-client';
 import { ChatSidebar } from '@/components/ChatSidebar';
-import { ChatMessage, TypingUser } from '@/hooks/useChatSocket';
 import { useFileTransfer } from '@/hooks/useFileTransfer';
-import { useE2EEKeyManager } from '@/hooks/useE2EEKeyManager';
 import { User } from '@/store/useAuthStore';
 import { FriendRequestIncoming } from '@/store/useFriendsStore';
 
 import { useUIStore } from '@/store/useUIStore';
-import { SecurityCheckOverlay } from './SecurityCheckOverlay';
+
+export interface ChatMessage {
+    id: string;
+    text: string;
+    userId: string;
+    name: string;
+    timestamp: string; // ISO string
+    fileTransfer?: Record<string, unknown>; // Avoid circular dependency with useFileTransfer
+}
+
+export interface TypingUser {
+    userId: string;
+    name: string;
+}
 
 interface RoomTopbarProps {
     roomId: string;
@@ -21,17 +33,10 @@ interface RoomTopbarProps {
     copied: boolean;
     handleToggleOpenRoom: (open: boolean) => void;
     isCompact: boolean;
-    messages: ChatMessage[];
-    typingUsers: TypingUser[];
-    sendMessage: (text: string) => void;
-    sendTyping: (isTyping: boolean) => void;
-    chatConnected: boolean;
     isDark: boolean;
     requestLeave: (target: string) => void;
-    // E2EE callback refs — populated by this component once ECDH keys are ready
-    encryptChatRef?: MutableRefObject<((plaintext: string) => Promise<string | null>) | undefined>;
-    decryptChatRef?: MutableRefObject<((ciphertext: string) => Promise<string | null>) | undefined>;
     onIncomingFileTransfer?: (fileName: string, senderName: string) => void;
+    handleShowToast: (msg: { id?: string, name: string, text: string }) => void;
 }
 
 function LocalCameraAwareQuickAction({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -58,16 +63,10 @@ export function RoomTopbar({
     copied,
     handleToggleOpenRoom,
     isCompact,
-    messages,
-    typingUsers,
-    sendMessage,
-    sendTyping,
-    chatConnected,
     isDark,
     requestLeave,
-    encryptChatRef,
-    decryptChatRef,
     onIncomingFileTransfer,
+    handleShowToast,
 }: RoomTopbarProps) {
     const setFriendsSidebarOpen = useUIStore(s => s.setFriendsSidebarOpen);
     const setShowSettings = useUIStore(s => s.setShowSettings);
@@ -84,22 +83,50 @@ export function RoomTopbar({
         if (unread > 0) setUnread(0);
     }, [unread, setUnread]);
 
-    // E2EE key manager (ECDH key exchange via dedicated data channel)
-    const e2ee = useE2EEKeyManager(user?.id ?? '');
+    // Native LiveKit Chat
+    const { send, chatMessages } = useChat();
+    const connectionState = useConnectionState();
+    const chatConnected = connectionState === ConnectionState.Connected;
 
-    // Populate the parent's E2EE refs once the key manager is ready
+    const messages = React.useMemo<ChatMessage[]>(() => {
+        return chatMessages.map((m) => ({
+            id: m.id,
+            text: m.message,
+            timestamp: new Date(m.timestamp).toISOString(),
+            userId: m.from?.identity ?? 'unknown',
+            name: m.from?.name ?? 'Unknown',
+        }));
+    }, [chatMessages]);
+
+    const sendMessage = useCallback((text: string) => {
+        send(text).catch(console.error);
+    }, [send]);
+
+    const lastNotifiedMsgIdRef = React.useRef<string | null>(null);
+
     useEffect(() => {
-        if (encryptChatRef) encryptChatRef.current = e2ee.encryptChat;
-        if (decryptChatRef) decryptChatRef.current = e2ee.decryptChat;
-    }, [e2ee.encryptChat, e2ee.decryptChat, encryptChatRef, decryptChatRef]);
+        if (messages.length > 0) {
+            const lastMsg = messages[messages.length - 1];
+            
+            // Only process if it's a message from someone else and we haven't processed it yet
+            if (lastMsg.userId !== user?.id && lastNotifiedMsgIdRef.current !== lastMsg.id) {
+                lastNotifiedMsgIdRef.current = lastMsg.id;
+                
+                if (!chatOpen) {
+                    setUnread(u => u + 1);
+                    handleShowToast({
+                        id: lastMsg.id,
+                        name: lastMsg.name,
+                        text: lastMsg.text
+                    });
+                }
+            }
+        }
+    }, [messages, chatOpen, user?.id, setUnread, handleShowToast]);
 
-    // File transfer via LiveKit data channel (hook needs to be inside LiveKitRoom)
+
+    // File transfer via LiveKit data channel
     const { transfers, sendFile, maxFileSize } = useFileTransfer({
-        e2ee: {
-            encryptFileKeyForPeer: e2ee.encryptFileKeyForPeer,
-            decryptFileKeyFromPeer: e2ee.decryptFileKeyFromPeer,
-            getPeerIds: e2ee.getPeerIds,
-        },
         onIncomingTransfer: (t) => {
             if (onIncomingFileTransfer) onIncomingFileTransfer(t.fileName, t.senderName);
         }
@@ -111,7 +138,6 @@ export function RoomTopbar({
 
     return (
         <>
-            <SecurityCheckOverlay isReady={e2ee.isReady} />
             <div className="absolute top-4 left-0 right-0 z-40 flex items-center px-3 sm:px-4 gap-2 sm:gap-3 overflow-visible py-2 -my-2 flex-wrap sm:flex-nowrap">
             {/* Friends toggle button */}
             <button
@@ -162,9 +188,9 @@ export function RoomTopbar({
                 roomId={roomId}
                 currentUserId={user?.id ?? ''}
                 messages={messages}
-                typingUsers={typingUsers}
+                typingUsers={[]} // Currently disabled for LiveKit native chat
                 sendMessage={sendMessage}
-                sendTyping={sendTyping}
+                sendTyping={() => {}} // Disabled
                 connected={chatConnected}
                 isOpen={chatOpen}
                 onToggle={() => setChatOpen(o => !o)}
