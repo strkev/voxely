@@ -288,7 +288,7 @@ export function ChatSidebar({
                                                 fileSize: msg.fileTransfer.fileSize as number,
                                                 blobUrl: msg.fileTransfer.blobUrl as string | undefined,
                                                 progress: msg.fileTransfer.progress as number,
-                                                status: msg.fileTransfer.status as any,
+                                                status: msg.fileTransfer.status as FileTransferInfo['status'],
                                                 error: msg.fileTransfer.error as string | undefined,
                                                 senderId: msg.userId,
                                                 senderName: msg.name,
