@@ -188,7 +188,7 @@ export function ChatInput({
             {/* File size hint */}
             {onSendFile && (
                 <p className="text-[10px] text-text-muted dark:text-gray-500 mt-1 px-1 flex items-center gap-1">
-                    Files up to {Math.round(maxFileSize / (1024 * 1024))} MB • E2E encrypted
+                    Files up to {Math.round(maxFileSize / (1024 * 1024))} MB
                 </p>
             )}
         </div>

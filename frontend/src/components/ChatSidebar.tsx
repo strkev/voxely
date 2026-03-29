@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { MessageSquare, ChevronRight, ChevronDown } from 'lucide-react';
+import { MessageSquare, ChevronRight, ChevronDown, ShieldCheck, ShieldAlert } from 'lucide-react';
 import type { FileTransferInfo } from '@/lib/file-utils';
 import { ChatMessage, TypingUser } from '@/components/room/RoomTopbar';
 import { Mascot } from '@/components/voxy';
@@ -58,11 +58,11 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
     const [mounted, setMounted] = useState(false);
 
-    useEffect(() => { 
+    useEffect(() => {
         const t = setTimeout(() => setMounted(true), 0);
         return () => clearTimeout(t);
     }, []);
-    
+
     const bottomRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const [isAtBottom, setIsAtBottom] = useState(true);
@@ -211,122 +211,129 @@ export function ChatSidebar({
                         {/* Drag Handle */}
                         <div
                             className="hidden sm:block absolute top-0 left-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 z-[60] transition-colors -ml-1.5"
-                    onMouseDown={(e) => {
-                        e.preventDefault();
-                        setIsResizing(true);
-                    }}
-                />
-                {/* Header */}
-                <div className={`
+                            onMouseDown={(e) => {
+                                e.preventDefault();
+                                setIsResizing(true);
+                            }}
+                        />
+                        {/* Header */}
+                        <div className={`
                     flex items-center justify-between px-4 py-3 border-b shrink-0
                     ${isDark ? 'border-white/5 bg-[#121212]' : 'border-gray-200 bg-white'}
                 `}>
-                    <div className="flex items-center gap-2">
-                        <MessageSquare className="w-4 h-4 text-primary" />
-                        <span className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-text-main'}`}>Room Chat</span>
-                        {/* Connection indicator */}
-                        <span className={`flex h-1.5 w-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`} />
-                    </div>
-                    <button
-                        onClick={onToggle}
-                        aria-label="Close chat"
-                        className={`p-1 rounded-lg text-text-muted transition-colors ${
-                            isDark ? 'hover:bg-white/5 hover:text-white' : 'hover:bg-gray-100 hover:text-text-main'
-                        }`}
-                    >
-                        <ChevronRight className="w-4 h-4" />
-                    </button>
-                </div>
-
-                {/* Messages */}
-                <div
-                    ref={messagesContainerRef}
-                    onScroll={handleScroll}
-                    className="flex-1 overflow-y-auto px-3 py-4 space-y-3 scroll-smooth relative"
-                >
-                    {!connected ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center text-text-muted">
-                            <div className="h-40 flex items-center justify-center">
-                                <Mascot 
-                                    state="locking" 
-                                    trigger="always" 
-                                    message="Connecting to secure chat..."
-                                    className="scale-[0.5]"
-                                />
+                            <div className="flex items-center gap-2">
+                                <MessageSquare className="w-4 h-4 text-primary" />
+                                <span className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-text-main'}`}>Room Chat</span>
+                                {/* Connection indicator */}
+                                {connected ? (
+                                    <span title="e2e encryption active" className="flex items-center justify-center">
+                                        <ShieldCheck className="w-4 h-4 text-green-500 hover:text-green-600 transition-colors" />
+                                    </span>
+                                ) : (
+                                    <span title="Chat encryption starting or failed" className="flex items-center justify-center">
+                                        <ShieldAlert className="w-4 h-4 text-red-500 hover:text-red-600 transition-colors" />
+                                    </span>
+                                )}
                             </div>
-                            <p className="text-sm font-medium">Connecting...</p>
-                            <p className="text-xs opacity-60">Establishing a secure connection.</p>
+                            <button
+                                onClick={onToggle}
+                                aria-label="Close chat"
+                                className={`p-1 rounded-lg text-text-muted transition-colors ${isDark ? 'hover:bg-white/5 hover:text-white' : 'hover:bg-gray-100 hover:text-text-main'
+                                    }`}
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
                         </div>
-                    ) : mergedMessages.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center text-text-muted">
-                            <div className="h-40 flex items-center justify-center">
-                                <Mascot 
-                                    state="typing" 
-                                    trigger="always" 
-                                    message="No messages yet. Why not say hello?"
-                                    className="scale-[0.5]"
-                                />
-                            </div>
-                            <p className="text-sm font-medium">No messages yet</p>
-                            <p className="text-xs opacity-60">Be the first to say something!</p>
-                        </div>
-                    ) : (
-                        mergedMessages.map(msg => (
-                            msg.fileTransfer ? (
-                                <FileBubble
-                                    key={msg.id}
-                                    transfer={{
-                                        transferId: msg.fileTransfer.transferId,
-                                        fileName: msg.fileTransfer.fileName,
-                                        fileSize: msg.fileTransfer.fileSize,
-                                        blobUrl: msg.fileTransfer.blobUrl,
-                                        progress: msg.fileTransfer.progress,
-                                        status: msg.fileTransfer.status,
-                                        error: msg.fileTransfer.error,
-                                        senderId: msg.userId,
-                                        senderName: msg.name,
-                                        timestamp: msg.timestamp,
-                                    }}
-                                    isOwn={msg.userId === currentUserId}
-                                    isDark={isDark}
-                                />
-                            ) : (
-                                <MessageBubble
-                                    key={msg.id}
-                                    msg={msg}
-                                    isOwn={msg.userId === currentUserId}
-                                    currentUserId={currentUserId}
-                                />
-                            )
-                        ))
-                    )}
-                    
-                    {/* Typing Indicator */}
-                    <TypingIndicatorBubble typingUsers={typingUsers} />
 
-                    <div ref={bottomRef} />
-
-                    {/* Scroll to bottom button */}
-                    {!isAtBottom && messages.length > 0 && (
-                        <button
-                            onClick={scrollToBottom}
-                            aria-label="Scroll to latest messages"
-                            className="sticky bottom-2 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-primary text-white shadow-lg flex items-center justify-center hover:bg-[#E0484D] transition-colors z-10"
+                        {/* Messages */}
+                        <div
+                            ref={messagesContainerRef}
+                            onScroll={handleScroll}
+                            className="flex-1 overflow-y-auto px-3 py-4 space-y-3 scroll-smooth relative"
                         >
-                            <ChevronDown className="w-4 h-4" />
-                        </button>
-                    )}
-                </div>
+                            {!connected ? (
+                                <div className="h-full flex flex-col items-center justify-center text-center text-text-muted">
+                                    <div className="h-40 flex items-center justify-center">
+                                        <Mascot
+                                            state="locking"
+                                            trigger="always"
+                                            message="Connecting to secure chat..."
+                                            className="scale-[0.5]"
+                                        />
+                                    </div>
+                                    <p className="text-sm font-medium">Connecting...</p>
+                                    <p className="text-xs opacity-60">Establishing a secure connection.</p>
+                                </div>
+                            ) : mergedMessages.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-center text-text-muted">
+                                    <div className="h-40 flex items-center justify-center">
+                                        <Mascot
+                                            state="typing"
+                                            trigger="always"
+                                            message="No messages yet. Why not say hello?"
+                                            className="scale-[0.5]"
+                                        />
+                                    </div>
+                                    <p className="text-sm font-medium">No messages yet</p>
+                                    <p className="text-xs opacity-60">Be the first to say something!</p>
+                                </div>
+                            ) : (
+                                mergedMessages.map(msg => (
+                                    msg.fileTransfer ? (
+                                        <FileBubble
+                                            key={msg.id}
+                                            transfer={{
+                                                transferId: msg.fileTransfer.transferId as string,
+                                                fileName: msg.fileTransfer.fileName as string,
+                                                fileSize: msg.fileTransfer.fileSize as number,
+                                                blobUrl: msg.fileTransfer.blobUrl as string | undefined,
+                                                progress: msg.fileTransfer.progress as number,
+                                                status: msg.fileTransfer.status as any,
+                                                error: msg.fileTransfer.error as string | undefined,
+                                                senderId: msg.userId,
+                                                senderName: msg.name,
+                                                timestamp: msg.timestamp,
+                                            }}
+                                            isOwn={msg.userId === currentUserId}
+                                            isDark={isDark}
+                                        />
+                                    ) : (
+                                        <MessageBubble
+                                            key={msg.id}
+                                            msg={msg}
+                                            isOwn={msg.userId === currentUserId}
+                                            currentUserId={currentUserId}
+                                        />
+                                    )
+                                ))
+                            )}
 
-                {/* Input area — extracted component */}
-                <ChatInput
-                    connected={connected}
-                    isDark={isDark}
-                    sendMessage={sendMessage}
-                    sendTyping={sendTyping}
-                    onSendFile={onSendFile}
-                    maxFileSize={maxFileSize}
-                />
+                            {/* Typing Indicator */}
+                            <TypingIndicatorBubble typingUsers={typingUsers} />
+
+                            <div ref={bottomRef} />
+
+                            {/* Scroll to bottom button */}
+                            {!isAtBottom && messages.length > 0 && (
+                                <button
+                                    onClick={scrollToBottom}
+                                    aria-label="Scroll to latest messages"
+                                    className="sticky bottom-2 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-primary text-white shadow-lg flex items-center justify-center hover:bg-[#E0484D] transition-colors z-10"
+                                >
+                                    <ChevronDown className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Input area — extracted component */}
+                        <ChatInput
+                            connected={connected}
+                            isDark={isDark}
+                            sendMessage={sendMessage}
+                            sendTyping={sendTyping}
+                            onSendFile={onSendFile}
+                            maxFileSize={maxFileSize}
+                        />
                     </div>
                 </>,
                 document.body
