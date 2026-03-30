@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useRef, useState, useCallback, KeyboardEvent } from 'react';
+import React, { useRef, useState, useCallback, KeyboardEvent, ClipboardEvent } from 'react';
 import { Send, Paperclip } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { isBlockedFileType } from '@/lib/file-utils';
 
 interface ChatInputProps {
@@ -59,25 +60,64 @@ export function ChatInput({
     };
 
     const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const val = e.target.value;
-        if (val.length <= 500) {
-            setDraft(val);
-            resizeTextarea(e.target);
+        let val = e.target.value;
+        if (val.length > 500) {
+            val = val.slice(0, 500);
+            toast.error('Message limit is 500 characters', { id: 'chat-limit' });
+        }
+        
+        setDraft(val);
+        resizeTextarea(e.target);
 
-            if (sendTyping) {
-                if (val.length > 0) {
-                    sendTyping(true);
+        if (sendTyping) {
+            if (val.length > 0) {
+                sendTyping(true);
 
-                    // Stop typing indicator after 3 seconds of inactivity
-                    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-                    typingTimeoutRef.current = setTimeout(() => {
-                        sendTyping(false);
-                    }, 3000);
-                } else {
+                // Stop typing indicator after 3 seconds of inactivity
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = setTimeout(() => {
                     sendTyping(false);
-                    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                }, 3000);
+            } else {
+                sendTyping(false);
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            }
+        }
+    };
+
+    const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+        const items = e.clipboardData.items;
+        
+        // Check for files (images etc)
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1 || items[i].kind === 'file') {
+                const file = items[i].getAsFile();
+                if (file && onSendFile) {
+                    e.preventDefault();
+                    
+                    if (file.size > maxFileSize) {
+                        toast.error(`File too large (max ${Math.round(maxFileSize / (1024 * 1024))} MB)`);
+                        return;
+                    }
+                    
+                    if (isBlockedFileType(file.name)) {
+                        toast.error('This file type is not allowed');
+                        return;
+                    }
+
+                    onSendFile(file);
+                    return;
                 }
             }
+        }
+
+        // Default behavior for text pasting is handled by onChange, 
+        // but we can intercept here to provide better feedback if truncated
+        const pastedText = e.clipboardData.getData('text');
+        if (draft.length + pastedText.length > 500) {
+            // We don't preventDefault here, handleTextareaChange will handle truncation
+            // but we can show the toast early for better responsiveness
+            toast.error('Message truncated to 500 characters', { id: 'chat-limit' });
         }
     };
 
@@ -155,6 +195,7 @@ export function ChatInput({
                     value={draft}
                     onChange={handleTextareaChange}
                     onKeyDown={handleKeyDown}
+                    onPaste={handlePaste}
                     placeholder={connected ? 'Send a message…' : 'Connecting…'}
                     disabled={!connected}
                     className="
