@@ -34,7 +34,4 @@ dist/
 .next/
 out/
 build/
-docker-compose.yml
-stop-dev.sh
-start-dev.sh
 livekit.yaml

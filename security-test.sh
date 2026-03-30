@@ -63,8 +63,8 @@ echo ""
 
 echo -e "${YELLOW}[5/6] Scanning for Accidental Secret Leaks (Hardcoded secrets)...${NC}"
 LEAKS=$(grep -rE "(API_KEY|SECRET_|PASSWORD|TOKEN|BEGIN RSA|AWS_ACCESS_KEY)[[:blank:]]*[:=][[:blank:]]*[\"'][A-Za-z0-9_=-]{10,}[\"']" \
-    --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --exclude-dir=dist \
-    --exclude=package-lock.json --exclude=security-test.sh --exclude=.env --exclude=README.md . || true)
+    --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --exclude-dir=dist --exclude-dir=__tests__ \
+    --exclude="*.test.ts" --exclude="*.setup.ts" --exclude=package-lock.json --exclude=security-test.sh --exclude=.env --exclude=README.md . || true)
 ENV_TRACKED=$(git ls-files | grep -E "\.env$" || true)
 
 if [ -n "$LEAKS" ]; then

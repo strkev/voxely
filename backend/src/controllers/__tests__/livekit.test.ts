@@ -15,7 +15,7 @@ vi.mock('../../services/livekit', () => ({
 }));
 
 describe('LiveKit Controller', () => {
-    let mockReq: Partial<Request>;
+    let mockReq: any;
     let mockRes: Partial<Response>;
 
     beforeEach(() => {
@@ -30,7 +30,7 @@ describe('LiveKit Controller', () => {
             },
             user: {
                 userId: 'user-123'
-            } as any
+            }
         };
 
         mockRes = {
@@ -77,7 +77,7 @@ describe('LiveKit Controller', () => {
 
         // Player 1 joins
         await generateToken(mockReq as Request, mockRes as Response);
-        const player1Response = vi.mocked(mockRes.json).mock.calls[0][0];
+        const player1Response = vi.mocked(mockRes.json!).mock.calls[0]![0];
         const sharedKey = player1Response.e2eeKey;
 
         // Reset response mock
@@ -88,7 +88,7 @@ describe('LiveKit Controller', () => {
         mockReq.user = { userId: 'user-456' } as any;
         await generateToken(mockReq as Request, mockRes as Response);
 
-        const player2Response = vi.mocked(mockRes.json).mock.calls[0][0];
+        const player2Response = vi.mocked(mockRes.json!).mock.calls[0]![0];
 
         expect(player2Response.e2eeKey).toBe(sharedKey);
         expect(e2eeKeys.get('test-room')).toBe(sharedKey);
