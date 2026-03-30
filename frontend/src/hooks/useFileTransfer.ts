@@ -24,7 +24,8 @@ import {
     buildFileStartMessage,
     buildFileChunkMessage,
     buildFileCompleteMessage,
-    generateTransferId
+    generateTransferId,
+    MAX_MEMORY_FILES
 } from '@/lib/file-utils';
 
 export interface UseFileTransferOptions {
@@ -38,6 +39,7 @@ export function useFileTransfer(options?: UseFileTransferOptions) {
     const [transfers, setTransfers] = useState<Map<string, FileTransferInfo>>(new Map());
     const incomingRef = useRef<Map<string, IncomingTransfer>>(new Map());
     const timeoutTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+    const completedQueueRef = useRef<string[]>([]);
 
     const updateTransfer = useCallback((id: string, update: Partial<FileTransferInfo>) => {
         setTransfers(prev => {
@@ -93,6 +95,29 @@ export function useFileTransfer(options?: UseFileTransferOptions) {
     // Helper to add URLs for tracking
     const trackUrl = useCallback((url: string) => {
         createdUrlsRef.current.add(url);
+    }, []);
+
+    // ── Eviction Logic ───────────────────────────────────────────────────────
+    const evictOldestTransfer = useCallback(() => {
+        if (completedQueueRef.current.length < MAX_MEMORY_FILES) return;
+
+        const oldestId = completedQueueRef.current.shift();
+        if (!oldestId) return;
+
+        setTransfers(prev => {
+            const next = new Map(prev);
+            const existing = next.get(oldestId);
+            if (existing && existing.blobUrl) {
+                try {
+                    URL.revokeObjectURL(existing.blobUrl);
+                    createdUrlsRef.current.delete(existing.blobUrl);
+                } catch (e) {
+                    console.error('[FileTransfer] Failed to revoke evicted URL:', e);
+                }
+                next.set(oldestId, { ...existing, status: 'evicted', blobUrl: undefined });
+            }
+            return next;
+        });
     }, []);
 
     // ── Assemble a completed transfer ────────────────────────────
@@ -156,6 +181,11 @@ export function useFileTransfer(options?: UseFileTransferOptions) {
             });
             const blobUrl = URL.createObjectURL(blob);
             trackUrl(blobUrl);
+
+            // Manage memory (FIFO)
+            evictOldestTransfer();
+            completedQueueRef.current.push(transferId);
+
             updateTransfer(transferId, {
                 status: 'complete',
                 progress: 100,
@@ -170,7 +200,7 @@ export function useFileTransfer(options?: UseFileTransferOptions) {
             });
             incomingRef.current.delete(transferId);
         });
-    }, [updateTransfer, trackUrl]);
+    }, [updateTransfer, trackUrl, evictOldestTransfer]);
 
     // ── Handle incoming data channel messages ────────────────────────────────
     const handleMessage = useCallback((msg: ReceivedDataMessage) => {
@@ -445,6 +475,10 @@ export function useFileTransfer(options?: UseFileTransferOptions) {
                 const localBlobUrl = URL.createObjectURL(localBlob);
                 trackUrl(localBlobUrl);
 
+                // Manage memory (FIFO)
+                evictOldestTransfer();
+                completedQueueRef.current.push(transferId);
+
                 updateTransfer(transferId, {
                     status: 'complete',
                     progress: 100,
@@ -458,7 +492,7 @@ export function useFileTransfer(options?: UseFileTransferOptions) {
                 });
             }
         },
-        [send, updateTransfer, trackUrl],
+        [send, updateTransfer, trackUrl, evictOldestTransfer],
     );
 
     return {

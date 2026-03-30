@@ -9,9 +9,10 @@ export const CHUNK_SIZE = 60 * 1024; // 60 KB per chunk (safe for WebRTC)
 export const MAX_INCOMING_TRANSFERS = 4; // total concurrent incoming transfers
 export const MAX_INCOMING_PER_SENDER = 2; // concurrent incoming transfers per sender
 export const TRANSFER_TIMEOUT_MS = 60_000; // 60 seconds timeout for stale transfers
+export const MAX_MEMORY_FILES = 10; // FIFO limit for active blob URLs
 
 // ── Types ────────────────────────────────────────────────────────────────────
-export type FileTransferStatus = 'sending' | 'receiving' | 'complete' | 'error';
+export type FileTransferStatus = 'sending' | 'receiving' | 'complete' | 'error' | 'evicted';
 
 export interface FileTransferInfo {
     transferId: string;

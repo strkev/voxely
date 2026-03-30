@@ -38,3 +38,9 @@ export function formatFileSize(bytes: number): string {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+// ── Image detection ───────────────────────────────────────────────────────────
+export function isImageFile(fileName: string): boolean {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    return !!ext && ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext);
+}
