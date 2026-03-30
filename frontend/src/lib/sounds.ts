@@ -81,51 +81,77 @@ function playSequence(tones: ToneParams[], volume: number, gap = 0.08) {
     });
 }
 
+function playChord(tones: ToneParams[], volume: number, stagger = 0) {
+    const ac = getSharedAudioContext();
+    const startTime = ac.currentTime;
+
+    tones.forEach((params, i) => {
+        const t = startTime + (i * stagger);
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+
+        osc.type = params.type;
+        osc.frequency.setValueAtTime(params.frequency, t);
+
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(params.volume * volume, t + params.attack);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + params.duration - params.decay);
+
+        osc.connect(gain);
+        gain.connect(ac.destination);
+        osc.start(t);
+        osc.stop(t + params.duration);
+    });
+}
+
 // ─── Sound definitions ────────────────────────────────────────────────────────
 
 const SOUNDS: Record<SoundName, (vol: number) => void> = {
-    join: (vol) => playSequence([
-        { frequency: 440, type: 'sine', duration: 0.12, attack: 0.01, decay: 0.02, volume: 0.35 },
-        { frequency: 550, type: 'sine', duration: 0.12, attack: 0.01, decay: 0.02, volume: 0.35 },
-        { frequency: 660, type: 'sine', duration: 0.18, attack: 0.01, decay: 0.04, volume: 0.4 },
+    // A warm, slightly staggered major triad (A Major 7 feel)
+    join: (vol) => playChord([
+        { frequency: 440.00, type: 'sine', duration: 0.8, attack: 0.1, decay: 0.2, volume: 0.25 },  // A4
+        { frequency: 554.37, type: 'sine', duration: 0.8, attack: 0.15, decay: 0.2, volume: 0.2 },  // C#5
+        { frequency: 659.25, type: 'sine', duration: 0.8, attack: 0.2, decay: 0.2, volume: 0.15 },  // E5
     ], vol, 0.04),
 
-    leave: (vol) => playSequence([
-        { frequency: 660, type: 'sine', duration: 0.12, attack: 0.01, decay: 0.02, volume: 0.35 },
-        { frequency: 550, type: 'sine', duration: 0.12, attack: 0.01, decay: 0.02, volume: 0.35 },
-        { frequency: 440, type: 'sine', duration: 0.18, attack: 0.01, decay: 0.04, volume: 0.3 },
-    ], vol, 0.04),
+    // A soft, fading singular tone
+    leave: (vol) => playTone(
+        { frequency: 329.63, type: 'sine', duration: 0.6, attack: 0.05, decay: 0.3, volume: 0.2 },  // E4
+        vol
+    ),
 
     mute: (vol) => playTone(
-        { frequency: 300, type: 'sine', duration: 0.14, attack: 0.005, decay: 0.04, volume: 0.3 },
+        { frequency: 280, type: 'sine', duration: 0.12, attack: 0.005, decay: 0.04, volume: 0.2 },
         vol
     ),
 
     unmute: (vol) => playTone(
-        { frequency: 480, type: 'sine', duration: 0.14, attack: 0.005, decay: 0.04, volume: 0.3 },
+        { frequency: 460, type: 'sine', duration: 0.12, attack: 0.005, decay: 0.04, volume: 0.2 },
         vol
     ),
 
+    // Mechanical "Click-Clack" but elegant
     cameraOn: (vol) => playSequence([
-        { frequency: 520, type: 'triangle', duration: 0.1, attack: 0.01, decay: 0.02, volume: 0.3 },
-        { frequency: 700, type: 'triangle', duration: 0.14, attack: 0.01, decay: 0.04, volume: 0.3 },
-    ], vol, 0.04),
+        { frequency: 880, type: 'sine', duration: 0.04, attack: 0.001, decay: 0.01, volume: 0.15 },
+        { frequency: 587, type: 'sine', duration: 0.15, attack: 0.01, decay: 0.05, volume: 0.25 },
+    ], vol, 0.02),
 
     cameraOff: (vol) => playSequence([
-        { frequency: 700, type: 'triangle', duration: 0.1, attack: 0.01, decay: 0.02, volume: 0.3 },
-        { frequency: 400, type: 'triangle', duration: 0.14, attack: 0.01, decay: 0.04, volume: 0.25 },
-    ], vol, 0.04),
+        { frequency: 587, type: 'sine', duration: 0.04, attack: 0.001, decay: 0.01, volume: 0.15 },
+        { frequency: 293.66, type: 'sine', duration: 0.15, attack: 0.01, decay: 0.05, volume: 0.25 },
+    ], vol, 0.02),
 
-    screenShareOn: (vol) => playSequence([
-        { frequency: 440, type: 'sine', duration: 0.1, attack: 0.01, decay: 0.02, volume: 0.25 },
-        { frequency: 660, type: 'sine', duration: 0.1, attack: 0.01, decay: 0.02, volume: 0.25 },
-        { frequency: 880, type: 'sine', duration: 0.16, attack: 0.01, decay: 0.05, volume: 0.3 },
+    // Techy, shimmering rise
+    screenShareOn: (vol) => playChord([
+        { frequency: 880, type: 'sine', duration: 0.4, attack: 0.05, decay: 0.1, volume: 0.1 },
+        { frequency: 1174.66, type: 'sine', duration: 0.4, attack: 0.1, decay: 0.1, volume: 0.1 },
+        { frequency: 1760, type: 'sine', duration: 0.4, attack: 0.15, decay: 0.1, volume: 0.05 },
     ], vol, 0.03),
 
     screenShareOff: (vol) => playSequence([
-        { frequency: 880, type: 'sine', duration: 0.1, attack: 0.01, decay: 0.02, volume: 0.25 },
-        { frequency: 440, type: 'sine', duration: 0.16, attack: 0.01, decay: 0.05, volume: 0.2 },
-    ], vol, 0.03),
+        { frequency: 1174.66, type: 'sine', duration: 0.08, attack: 0.01, decay: 0.02, volume: 0.1 },
+        { frequency: 440, type: 'sine', duration: 0.2, attack: 0.01, decay: 0.1, volume: 0.15 },
+    ], vol, 0.02),
 
     call: (vol) => playSequence([
         { frequency: 400, type: 'sine', duration: 0.1, attack: 0.01, decay: 0.02, volume: 0.35 },
