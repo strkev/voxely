@@ -44,11 +44,14 @@ export default function SettingsPage() {
 
     useEffect(() => { setMounted(true); }, []);
     useEffect(() => {
+        if (mounted && !user) {
+            router.push('/login?redirect=' + encodeURIComponent(window.location.pathname));
+        }
         if (user) {
             setEditName(user.name);
             setEditColor(user.avatarColor || '#FF5A5F');
         }
-    }, [user]);
+    }, [user, mounted, router]);
 
     if (!mounted || !user) return null;
 

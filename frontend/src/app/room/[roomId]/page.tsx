@@ -386,6 +386,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         );
     }
 
+    if (!user) return null;
+
     if (isSecureContext === false) {
         return <SecureContextWarning />;
     }

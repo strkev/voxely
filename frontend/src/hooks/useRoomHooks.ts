@@ -53,8 +53,11 @@ export function useLiveKitToken(roomId: string, user: { id: string; name: string
     useEffect(() => {
         if (!mounted) return;
         if (authLoading) return; // Wait for auth check to complete
-        if (!user) { router.push('/login?redirect=' + encodeURIComponent(window.location.pathname)); return; }
-        
+        if (!user) {
+            router.push('/login?redirect=' + encodeURIComponent(window.location.pathname));
+            return;
+        }
+
         const fetchToken = async () => {
             setTokenError(false);
             try {
