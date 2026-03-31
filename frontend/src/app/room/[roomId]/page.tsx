@@ -32,8 +32,9 @@ import { ConnectionError } from '@/components/room/ConnectionError';
 import { SecureContextWarning } from '@/components/room/SecureContextWarning';
 import { LeaveConfirmModal } from '@/components/room/LeaveConfirmModal';
 import { CustomControlBar } from '@/components/room/CustomControlBar';
+import { SecurityCheckOverlay } from '@/components/room/SecurityCheckOverlay';
 
-import { ExternalE2EEKeyProvider } from 'livekit-client';
+import { ExternalE2EEKeyProvider, Room } from 'livekit-client';
 
 // ─── Friends Sidebar with Presence Tracking ─────────────────────────────────
 function FriendsSidebarWithPresence({
@@ -183,6 +184,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     // Native LiveKit E2EE Setup
     const keyProvider = useMemo(() => new ExternalE2EEKeyProvider(), []);
+    const workerRef = useRef<Worker | null>(null);
+
     useEffect(() => {
         if (e2eeKey) {
             keyProvider.setKey(e2eeKey);
@@ -191,11 +194,29 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     const e2eeSetup = useMemo(() => {
         if (typeof window === 'undefined') return undefined;
-        return {
-            keyProvider,
-            worker: new Worker(new URL('../../../lib/livekit-e2ee.worker.ts', import.meta.url))
-        };
+        if (!workerRef.current) {
+            workerRef.current = new Worker(
+                new URL('../../../lib/livekit-e2ee.worker.ts', import.meta.url)
+            );
+        }
+        return { keyProvider, worker: workerRef.current };
     }, [keyProvider]);
+
+    // Cleanup: terminate the E2EE worker on unmount
+    useEffect(() => {
+        return () => {
+            workerRef.current?.terminate();
+            workerRef.current = null;
+        };
+    }, []);
+
+    // Enable E2EE on the room once the key is set
+    const roomRef = useRef<Room | null>(null);
+    useEffect(() => {
+        if (roomRef.current && e2eeKey) {
+            roomRef.current.setE2EEEnabled(true);
+        }
+    }, [e2eeKey]);
 
     const humanReadableRoomName = useMemo(() => {
         return decodeURIComponent(roomId)
@@ -220,15 +241,15 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     const [copied, setCopied] = useState(false);
     const controlBarTimerRef = useRef<NodeJS.Timeout | null>(null);
-    // roomOptions is intentionally stable — device IDs are only initial defaults.
+    // Room instance is intentionally stable — device IDs are only initial defaults.
     // LiveKitDeviceSync handles live switching via room.switchActiveDevice().
-    // We only re-memoize once hydration is complete to capture initial user settings.
+    // We only create once hydration is complete to capture initial user settings.
     const qPreset = VIDEO_PRESETS[videoQuality];
-    const roomOptions = useMemo(() => {
-        if (!hydrated) return undefined;
+    const room = useMemo(() => {
+        if (!hydrated || !e2eeSetup) return undefined;
 
-        return {
-            e2ee: e2eeSetup,
+        const r = new Room({
+            encryption: e2eeSetup,
             videoCaptureDefaults: {
                 deviceId: videoDeviceId || undefined,
                 resolution: { width: qPreset.width, height: qPreset.height, frameRate: qPreset.frameRate },
@@ -248,7 +269,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                 },
                 screenShareSimulcastLayers: [],
             },
-        };
+        });
+        roomRef.current = r;
+        return r;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [hydrated]);
 
@@ -400,14 +423,14 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             style={{ paddingRight: mounted && chatOpen && window.innerWidth >= 640 ? `${chatSidebarWidth}px` : '0px' }}
         >
             <LiveKitRoom
+                room={room}
                 video={false}
                 audio={false}
-                token={livekitToken}
+                token={livekitToken && e2eeKey ? livekitToken : undefined}
                 serverUrl={serverUrl}
                 data-lk-theme="default"
                 style={{ height: '100%', width: '100%', background: 'transparent', position: 'relative' }}
                 onDisconnected={() => router.push('/dashboard')}
-                options={roomOptions}
             >
                 {/* Top bar */}
                 <RoomTopbar
@@ -424,6 +447,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
                     handleShowToast={handleShowToast}
                 />
                 <AutoStartAudio />
+                <SecurityCheckOverlay />
                 <RoomEffects />
                 <VideoConferenceView />
                 <RoomAudioRenderer />
