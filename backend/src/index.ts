@@ -162,6 +162,8 @@ export const userRooms = new Map<string, string>();
 export const openRooms = new Map<string, { roomName: string; isOpen: boolean }>();
 // Map: roomId -> e2eeKey (32-byte base64)
 export const e2eeKeys = new Map<string, string>();
+// Map: roomId -> Set<userId> (Tracks users invited to a room to allow them access)
+export const invitedUsers = new Map<string, Set<string>>();
 
 export const getOpenRoomsForUser = async (userId: string) => {
     const friendIds = await getFriendIds(userId);
@@ -438,6 +440,11 @@ io.on('connection', async (socket) => {
         const socketRoom = io.sockets.adapter.rooms.get(roomId);
         const participantCount = socketRoom ? socketRoom.size : 1;
 
+        if (!invitedUsers.has(roomId)) {
+            invitedUsers.set(roomId, new Set());
+        }
+        invitedUsers.get(roomId)!.add(friendId);
+
         const friendSocketIds = onlineUsers.get(friendId);
         if (friendSocketIds) {
             for (const sid of friendSocketIds) {
@@ -575,14 +582,18 @@ io.on('connection', async (socket) => {
     socket.on('chat:join', async ({ roomId, name }: { roomId: string; name?: string }) => {
         if (typeof roomId !== 'string' || !ROOM_ID_RE.test(roomId)) return;
 
-        // Security Check: If it's a private call room, verify the user is an intended participant
+        // Security Check: If it's a private call room, verify the user is an intended participant, invited, or the room is open
         if (roomId.startsWith('call-')) {
             const parts = roomId.split('-');
             if (parts.length >= 3) {
                 const target1 = parts[1];
                 const target2 = parts[2];
                 const shortUid = uid.slice(0, 8);
-                if (target1 !== shortUid && target2 !== shortUid) {
+                
+                const isOpen = openRooms.get(roomId)?.isOpen === true;
+                const isInvited = invitedUsers.get(roomId)?.has(uid) === true;
+                
+                if (target1 !== shortUid && target2 !== shortUid && !isOpen && !isInvited) {
                     socket.emit('chat:error', { message: 'Unauthorized: You cannot join this private call' });
                     return;
                 }
@@ -736,6 +747,7 @@ io.on('connection', async (socket) => {
             if (!room || room.size === 0) {
                 openRooms.delete(roomId);
                 e2eeKeys.delete(roomId);
+                invitedUsers.delete(roomId);
                 try {
                     const result = await prisma.chatMessage.deleteMany({ where: { roomId } });
                     if (result.count > 0) {

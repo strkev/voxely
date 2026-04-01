@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import sanitize from 'sanitize-html';
 import { createLiveKitToken } from '../services/livekit';
-import { e2eeKeys } from '../index';
+import { e2eeKeys, openRooms, invitedUsers } from '../index';
 import crypto from 'crypto';
 
 /** Strip all HTML and limit length. */
@@ -39,7 +39,11 @@ export const generateToken = async (req: Request, res: Response): Promise<void> 
                 const target1 = parts[1];
                 const target2 = parts[2];
                 const shortUid = participantId.slice(0, 8);
-                if (target1 !== shortUid && target2 !== shortUid) {
+                
+                const isOpen = openRooms.get(safeRoomName)?.isOpen === true;
+                const isInvited = invitedUsers.get(safeRoomName)?.has(participantId) === true;
+                
+                if (target1 !== shortUid && target2 !== shortUid && !isOpen && !isInvited) {
                     res.status(403).json({ error: 'Unauthorized to join this private call' });
                     return;
                 }
