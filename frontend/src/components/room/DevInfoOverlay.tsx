@@ -71,8 +71,8 @@ export function DevInfoOverlay() {
             if (lastStatsRef.current) {
                 const elapsedSeconds = (now - lastStatsRef.current.time) / 1000;
                 if (elapsedSeconds > 0) {
-                    const sentDiff = totalSent - lastStatsRef.current.sent;
-                    const receivedDiff = totalReceived - lastStatsRef.current.received;
+                    const sentDiff = Math.max(0, totalSent - lastStatsRef.current.sent);
+                    const receivedDiff = Math.max(0, totalReceived - lastStatsRef.current.received);
 
                     const sentBitrate = Math.round((sentDiff * 8) / (elapsedSeconds * 1000));
                     const receivedBitrate = Math.round((receivedDiff * 8) / (elapsedSeconds * 1000));
