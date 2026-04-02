@@ -116,6 +116,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     const audioDeviceId = useSettingsStore(s => s.audioDeviceId);
     const videoDeviceId = useSettingsStore(s => s.videoDeviceId);
     const hydrated = useSettingsStore(s => s.hydrated);
+    const joinUnmuted = useSettingsStore(s => s.joinUnmuted);
     const setControlBarVisible = useSettingsStore(s => s.setControlBarVisible);
 
     // UI Store access
@@ -425,7 +426,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
             <LiveKitRoom
                 room={room}
                 video={false}
-                audio={false}
+                audio={joinUnmuted}
                 token={livekitToken && e2eeKey ? livekitToken : undefined}
                 serverUrl={serverUrl}
                 data-lk-theme="default"

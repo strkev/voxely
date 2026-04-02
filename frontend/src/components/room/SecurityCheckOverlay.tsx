@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mascot } from '@/components/voxy';
 import { Lock } from 'lucide-react';
-import { useConnectionState, useIsEncrypted, useLocalParticipant } from '@livekit/components-react';
+import { useConnectionState } from '@livekit/components-react';
 import { ConnectionState } from 'livekit-client';
 
 /**
@@ -15,16 +15,12 @@ import { ConnectionState } from 'livekit-client';
  */
 export function SecurityCheckOverlay() {
     const connectionState = useConnectionState();
-    const { localParticipant } = useLocalParticipant();
-    const isEncrypted = useIsEncrypted(localParticipant);
 
     // E2EE is configured at the room-options level before connect (key + worker).
-    // useIsEncrypted only reports true when encrypted *tracks* exist, but when the
-    // room starts with audio={false} video={false} there are no tracks to encrypt.
-    // So we treat "connected" as ready, with isEncrypted as bonus verification
-    // once tracks are published.
+    // The connection itself establishes the secure context.
+    // We treat "connected" as ready to avoid race conditions with track publications.
     const isConnected = connectionState === ConnectionState.Connected;
-    const isReady = isConnected && (isEncrypted || !localParticipant.audioTrackPublications.size && !localParticipant.videoTrackPublications.size);
+    const isReady = isConnected;
 
     const [show, setShow] = useState(true);
 

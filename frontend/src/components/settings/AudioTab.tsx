@@ -5,6 +5,7 @@ import { useSettingsStore, type NoiseSuppressionMode } from '@/store/useSettings
 import { SettingsOptionButton } from '@/components/ui/SettingsOptionButton';
 import { SettingsSlider } from '@/components/ui/SettingsSlider';
 import { SettingsSelect } from '@/components/ui/SettingsSelect';
+import { SettingsToggle } from '@/components/ui/SettingsToggle';
 import {
     Mic, Volume2, Volume2 as Volume2Icon, AlertCircle, Loader2,
 } from 'lucide-react';
@@ -257,9 +258,9 @@ export function AudioTab({
 
     const {
         noiseSuppressionMode, microphoneGain,
-        audioDeviceId, audioOutputDeviceId,
+        audioDeviceId, audioOutputDeviceId, joinUnmuted,
         setNoiseSuppressionMode, setMicrophoneGain,
-        setAudioDeviceId, setAudioOutputDeviceId,
+        setAudioDeviceId, setAudioOutputDeviceId, setJoinUnmuted,
     } = useSettingsStore();
 
     return (
@@ -332,6 +333,15 @@ export function AudioTab({
                                 value: d.deviceId,
                                 label: d.label || `Microphone ${d.deviceId.slice(0, 5)}...`
                             }))}
+                        />
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                        <SettingsToggle
+                            label="Join Unmuted"
+                            description="Automatically enable your microphone when joining a room"
+                            value={joinUnmuted}
+                            onChange={() => setJoinUnmuted(!joinUnmuted)}
                         />
                     </div>
 

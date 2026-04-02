@@ -40,6 +40,7 @@ interface SettingsState {
     blurRadius: number;
     theme: 'light' | 'dark' | 'system';
     microphoneGain: number;
+    joinUnmuted: boolean;
     audioDeviceId: string | null;
     videoDeviceId: string | null;
     audioOutputDeviceId: string | null;
@@ -61,6 +62,7 @@ interface SettingsState {
     setBlurRadius: (v: number) => void;
     setTheme: (v: 'light' | 'dark' | 'system') => void;
     setMicrophoneGain: (v: number) => void;
+    setJoinUnmuted: (v: boolean) => void;
     setAudioDeviceId: (v: string | null) => void;
     setVideoDeviceId: (v: string | null) => void;
     setAudioOutputDeviceId: (v: string | null) => void;
@@ -85,6 +87,7 @@ export const useSettingsStore = create<SettingsState>()(
             blurRadius: 10,
             theme: 'system',
             microphoneGain: 1.0,
+            joinUnmuted: false,
             audioDeviceId: null,
             videoDeviceId: null,
             audioOutputDeviceId: null,
@@ -106,6 +109,7 @@ export const useSettingsStore = create<SettingsState>()(
             setBlurRadius: (v) => set({ blurRadius: v }),
             setTheme: (v) => set({ theme: v }),
             setMicrophoneGain: (v) => set({ microphoneGain: Math.max(0, Math.min(5, v)) }),
+            setJoinUnmuted: (v) => set({ joinUnmuted: v }),
             setAudioDeviceId: (v) => set({ audioDeviceId: v }),
             setVideoDeviceId: (v) => set({ videoDeviceId: v }),
             setAudioOutputDeviceId: (v) => set({ audioOutputDeviceId: v }),
