@@ -339,7 +339,7 @@ export function AudioTab({
                     <div className="space-y-3 pt-2">
                         <SettingsToggle
                             label="Join Unmuted"
-                            description="Automatically enable your microphone when joining a room"
+                            description="Enable your microphone when joining a room"
                             value={joinUnmuted}
                             onChange={() => setJoinUnmuted(!joinUnmuted)}
                         />
