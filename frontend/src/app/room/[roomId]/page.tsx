@@ -142,6 +142,9 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     // Custom Toast implementation using react-hot-toast for top-center design
     const handleShowToast = useCallback((msg: { id?: string, name: string, text: string }) => {
+        // Remove all current toasts so only the newest one is visible instantly
+        toast.remove();
+        
         toast.custom((t) => (
             <div
                 className={`${t.visible ? 'animate-in slide-in-from-top-4 fade-in' : 'animate-out fade-out zoom-out-95'
@@ -281,9 +284,14 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     useEffect(() => {
         setControlBarVisible(true);
         activateGuard();
-        return () => { deactivateGuard(); };
+        // Reset unread count when entering a room to clear any previous notifications
+        setUnread(0);
+        return () => { 
+            deactivateGuard(); 
+            setUnread(0); // Also clear on leave
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [roomId]);
 
     // Auto-hide control bar after 4s of inactivity
     useEffect(() => {

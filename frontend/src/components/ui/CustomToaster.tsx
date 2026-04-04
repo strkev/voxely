@@ -4,10 +4,10 @@ import { useEffect } from 'react';
 import toast, { Toaster, useToasterStore } from 'react-hot-toast';
 
 /**
- * Custom Toaster component that limits the number of simultaneously visible toasts to 3.
+ * Custom Toaster component that limits the number of simultaneously visible toasts to 1.
  * It also applies a short 1500ms default duration.
  */
-const TOAST_LIMIT = 3;
+const TOAST_LIMIT = 1;
 
 export function CustomToaster() {
     const { toasts } = useToasterStore();
@@ -17,9 +17,9 @@ export function CustomToaster() {
         const visibleToasts = toasts.filter((t) => t.visible);
         
         if (visibleToasts.length > TOAST_LIMIT) {
-            // Dismiss the oldest visible toasts that exceed the limit
+            // Remove the oldest visible toasts that exceed the limit immediately
             const toastsToDismiss = visibleToasts.slice(0, visibleToasts.length - TOAST_LIMIT);
-            toastsToDismiss.forEach((t) => toast.dismiss(t.id));
+            toastsToDismiss.forEach((t) => toast.remove(t.id));
         }
     }, [toasts]);
 

@@ -607,11 +607,8 @@ io.on('connection', async (socket) => {
         socket.data.roomId = roomId;
         socket.join(roomId);
 
-        const currentRoomId = userRooms.get(uid);
-        if (currentRoomId !== roomId) {
-            userRooms.set(uid, roomId);
-            await broadcastOpenRoomsToFriends([uid]);
-        }
+        userRooms.set(uid, roomId);
+        await broadcastOpenRoomsToFriends([uid]);
         console.log(`[WS] ${socket.data.name} joined room ${roomId}`);
 
         const currentOpenStatus = openRooms.get(roomId)?.isOpen ?? false;
@@ -812,10 +809,15 @@ io.on('connection', async (socket) => {
         }
 
         const room = io.sockets.adapter.rooms.get(roomId);
+        const participantUids = new Set<string>();
+        participantUids.add(userId);
         if (room) {
-            const participantUids = Array.from(room).map(sid => io.sockets.sockets.get(sid)?.data.userId as string).filter(Boolean);
-            await broadcastOpenRoomsToFriends(participantUids);
+            for (const sid of room) {
+                const pUid = io.sockets.sockets.get(sid)?.data.userId;
+                if (pUid) participantUids.add(pUid);
+            }
         }
+        await broadcastOpenRoomsToFriends(Array.from(participantUids));
 
         io.to(roomId).emit('room:open-status', { isOpen });
     });
