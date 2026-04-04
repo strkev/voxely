@@ -217,8 +217,22 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     // Enable E2EE on the room once the key is set
     const roomRef = useRef<Room | null>(null);
     useEffect(() => {
-        if (roomRef.current && e2eeKey) {
-            roomRef.current.setE2EEEnabled(true);
+        const r = roomRef.current;
+        if (r && e2eeKey && !r.isE2EEEnabled) {
+            try {
+                // Call setE2EEEnabled and catch errors gracefully.
+                // We ignore 'participant not found' because LiveKit handles re-sync automatically.
+                r.setE2EEEnabled(true).catch(err => {
+                    if (err instanceof Error && err.message.includes('participant not found')) {
+                        // This is a known race condition during connection/disconnection, ignore it
+                        return;
+                    }
+                    console.error('[E2EE] Async error enabling encryption:', err);
+                });
+            } catch (err) {
+                // Synchronous error catch (unlikely for this method but safe for defensive coding)
+                console.error('[E2EE] Synchronous error enabling encryption:', err);
+            }
         }
     }, [e2eeKey]);
 
