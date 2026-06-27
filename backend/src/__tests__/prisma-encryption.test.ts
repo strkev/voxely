@@ -41,7 +41,6 @@ describe('Prisma Field Encryption', () => {
 
     afterAll(async () => {
         // Optional Cleanup
-        // await prisma.$disconnect();
     });
 
     it('should transparently encrypt and decrypt ChatMessage.text', async () => {

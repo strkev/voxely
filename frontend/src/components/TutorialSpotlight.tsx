@@ -144,7 +144,6 @@ export function TutorialSpotlight() {
 
                         if (!inHole) {
                             // Optionally end tutorial on outside click
-                            // endTutorial();
                         }
                     }
                 }}
