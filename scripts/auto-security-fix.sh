@@ -27,18 +27,20 @@ fi
 
 # 1. Frontend Production Vulnerability Fix
 if [ -d "$PROJECT_ROOT/frontend" ]; then
-  log "Checking Frontend production dependencies..."
+  log "Checking Frontend dependencies..."
   cd "$PROJECT_ROOT/frontend"
-  npm audit fix --only=prod --legacy-peer-deps || true
+  npm install --legacy-peer-deps || true
+  npm audit fix --legacy-peer-deps || true
   log "Building Frontend..."
   npm run build
 fi
 
 # 2. Backend Production Vulnerability Fix
 if [ -d "$PROJECT_ROOT/backend" ]; then
-  log "Checking Backend production dependencies..."
+  log "Checking Backend dependencies..."
   cd "$PROJECT_ROOT/backend"
-  npm audit fix --only=prod --legacy-peer-deps || true
+  npm install --legacy-peer-deps || true
+  npm audit fix --legacy-peer-deps || true
   log "Generating Prisma Client & Building Backend..."
   npm run db:generate || true
   npm run build
