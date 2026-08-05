@@ -25,21 +25,21 @@ if [ -d ".git" ]; then
   git pull origin main || true
 fi
 
-# 1. Frontend Production Vulnerability Fix
+# 1. Frontend Dependencies & Build
 if [ -d "$PROJECT_ROOT/frontend" ]; then
   log "Checking Frontend dependencies..."
   cd "$PROJECT_ROOT/frontend"
-  npm install --legacy-peer-deps || true
+  NODE_ENV=development npm install --include=dev --legacy-peer-deps || true
   npm audit fix --legacy-peer-deps || true
   log "Building Frontend..."
   npm run build
 fi
 
-# 2. Backend Production Vulnerability Fix
+# 2. Backend Dependencies & Build
 if [ -d "$PROJECT_ROOT/backend" ]; then
   log "Checking Backend dependencies..."
   cd "$PROJECT_ROOT/backend"
-  npm install --legacy-peer-deps || true
+  NODE_ENV=development npm install --include=dev --legacy-peer-deps || true
   npm audit fix --legacy-peer-deps || true
   log "Generating Prisma Client & Building Backend..."
   npm run db:generate || true
