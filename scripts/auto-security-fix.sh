@@ -32,6 +32,7 @@ if [ -d "$PROJECT_ROOT/frontend" ]; then
   NODE_ENV=development npm install --include=dev --legacy-peer-deps || true
   npm audit fix --legacy-peer-deps || true
   log "Building Frontend..."
+  rm -rf .next
   npm run build
 fi
 
@@ -42,6 +43,7 @@ if [ -d "$PROJECT_ROOT/backend" ]; then
   NODE_ENV=development npm install --include=dev --legacy-peer-deps || true
   npm audit fix --legacy-peer-deps || true
   log "Generating Prisma Client & Building Backend..."
+  rm -rf dist
   npm run db:generate || true
   npm run build
 fi
