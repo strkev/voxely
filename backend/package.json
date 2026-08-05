@@ -10,7 +10,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^6.19.2",
+    "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^6.19.2",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
