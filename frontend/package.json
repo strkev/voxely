@@ -38,14 +38,13 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/browser": "^4.1.10",
-    "eslint": "^10",
+    "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "jsdom": "^30.0.1",
     "typescript": "~5.9.3",
     "vitest": "^4.1.10"
   },
   "overrides": {
-    "brace-expansion": "^2.0.1",
     "postcss": "^8.5.10"
   }
 }
