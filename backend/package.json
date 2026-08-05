@@ -24,7 +24,7 @@
     "pg": "^8.22.0",
     "prisma": "^6.19.2",
     "prisma-field-encryption": "^1.6.0",
-    "redis": "^5.11.0",
+    "redis": "^6.2.0",
     "sanitize-html": "^2.17.6",
     "socket.io": "^4.8.3"
   },
