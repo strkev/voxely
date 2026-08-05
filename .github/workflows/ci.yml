@@ -20,7 +20,7 @@ jobs:
       with:
         node-version: 20.x
     - name: Install dependencies
-      run: npm install
+      run: npm install --legacy-peer-deps
     - name: Lint
       run: npm run lint
     - name: Build
@@ -39,7 +39,7 @@ jobs:
       with:
         node-version: 20.x
     - name: Install dependencies
-      run: npm install
+      run: npm install --legacy-peer-deps
     - name: Generate Prisma Client
       run: npm run db:generate
     - name: Build

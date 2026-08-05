@@ -22,7 +22,7 @@ cd "$PROJECT_ROOT"
 if [ -d "$PROJECT_ROOT/frontend" ]; then
   log "Checking Frontend production dependencies..."
   cd "$PROJECT_ROOT/frontend"
-  npm audit fix --only=prod || true
+  npm audit fix --only=prod --legacy-peer-deps || true
   log "Building Frontend..."
   npm run build
 fi
@@ -31,7 +31,7 @@ fi
 if [ -d "$PROJECT_ROOT/backend" ]; then
   log "Checking Backend production dependencies..."
   cd "$PROJECT_ROOT/backend"
-  npm audit fix --only=prod || true
+  npm audit fix --only=prod --legacy-peer-deps || true
   log "Generating Prisma Client & Building Backend..."
   npm run db:generate || true
   npm run build
