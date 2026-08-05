@@ -1,10 +1,9 @@
 #!/bin/bash
 # ==============================================================================
-# Automated NPM Security Audit & Production Auto-Fix Script
+# Automated Production Update & Service Reload Script
 # ==============================================================================
-# Suitable for cron execution on production server.
-# Example Crontab entry (Runs weekly on Sunday at 03:00 AM):
-# 0 3 * * 0 /bin/bash /path/to/discord-airbnb-clone/scripts/auto-security-fix.sh >> /var/log/npm-security-auto-fix.log 2>&1
+# Pulls tested main branch updates (audited & merged by GitHub Dependabot),
+# builds production artifacts, and safely reloads application services.
 # ==============================================================================
 
 set -e
@@ -15,43 +14,38 @@ log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
-log "=== Starting Production Automated Security Fix ==="
+log "=== Starting Production Service Update ==="
 cd "$PROJECT_ROOT"
 
-# 0. Sync clean Git state from origin/main to avoid conflict on future pulls
+# 1. Sync clean Git state from origin/main
 if [ -d ".git" ]; then
   log "Syncing clean main branch from Git remote..."
   git checkout . || true
   git pull origin main || true
 fi
 
-# 1. Frontend Dependencies & Build
+# 2. Frontend Build
 if [ -d "$PROJECT_ROOT/frontend" ]; then
-  log "Checking Frontend dependencies..."
+  log "Installing Frontend dependencies..."
   cd "$PROJECT_ROOT/frontend"
-  export NODE_ENV=development
-  npm install --include=dev --legacy-peer-deps || true
-  npm install @tailwindcss/postcss tailwindcss --save --legacy-peer-deps || true
-  npm audit fix --legacy-peer-deps || true
+  npm install --legacy-peer-deps
   log "Building Frontend..."
   rm -rf .next
   npm run build
 fi
 
-# 2. Backend Dependencies & Build
+# 3. Backend Build
 if [ -d "$PROJECT_ROOT/backend" ]; then
-  log "Checking Backend dependencies..."
+  log "Installing Backend dependencies..."
   cd "$PROJECT_ROOT/backend"
-  export NODE_ENV=development
-  npm install --include=dev --legacy-peer-deps || true
-  npm audit fix --legacy-peer-deps || true
+  npm install --legacy-peer-deps
   log "Generating Prisma Client & Building Backend..."
   rm -rf dist
-  npm run db:generate || true
+  npm run db:generate
   npm run build
 fi
 
-# 3. Reload Application Process (PM2 / Docker / Systemd)
+# 4. Reload Application Services (PM2 / Docker / Systemd)
 cd "$PROJECT_ROOT"
 log "Reloading application services..."
 if command -v pm2 &> /dev/null; then
@@ -61,7 +55,7 @@ elif [ -f "docker-compose.yml" ] && command -v docker &> /dev/null; then
 elif systemctl is-active --quiet backend 2>/dev/null; then
   systemctl reload backend || systemctl restart backend
 else
-  log "Notice: Security updates compiled & built successfully. (No running PM2/Docker/systemctl found to restart)."
+  log "Notice: Application built successfully."
 fi
 
-log "=== Production Automated Security Fix Completed Successfully ==="
+log "=== Production Service Update Completed Successfully ==="
