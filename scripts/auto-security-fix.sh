@@ -18,6 +18,13 @@ log() {
 log "=== Starting Production Automated Security Fix ==="
 cd "$PROJECT_ROOT"
 
+# 0. Sync clean Git state from origin/main to avoid conflict on future pulls
+if [ -d ".git" ]; then
+  log "Syncing clean main branch from Git remote..."
+  git checkout . || true
+  git pull origin main || true
+fi
+
 # 1. Frontend Production Vulnerability Fix
 if [ -d "$PROJECT_ROOT/frontend" ]; then
   log "Checking Frontend production dependencies..."
