@@ -29,7 +29,9 @@ fi
 if [ -d "$PROJECT_ROOT/frontend" ]; then
   log "Checking Frontend dependencies..."
   cd "$PROJECT_ROOT/frontend"
-  NODE_ENV=development npm install --include=dev --legacy-peer-deps || true
+  export NODE_ENV=development
+  npm install --include=dev --legacy-peer-deps || true
+  npm install @tailwindcss/postcss tailwindcss --save --legacy-peer-deps || true
   npm audit fix --legacy-peer-deps || true
   log "Building Frontend..."
   rm -rf .next
@@ -40,7 +42,8 @@ fi
 if [ -d "$PROJECT_ROOT/backend" ]; then
   log "Checking Backend dependencies..."
   cd "$PROJECT_ROOT/backend"
-  NODE_ENV=development npm install --include=dev --legacy-peer-deps || true
+  export NODE_ENV=development
+  npm install --include=dev --legacy-peer-deps || true
   npm audit fix --legacy-peer-deps || true
   log "Generating Prisma Client & Building Backend..."
   rm -rf dist
