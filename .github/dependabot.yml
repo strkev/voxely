@@ -5,9 +5,6 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "security"
     commit-message:
       prefix: "fix(deps-frontend)"
 
@@ -16,8 +13,6 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "security"
     commit-message:
       prefix: "fix(deps-backend)"
+
