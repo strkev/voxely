@@ -17,7 +17,7 @@
     "@shiguredo/rnnoise-wasm": "^2025.1.5",
     "clsx": "^2.1.1",
     "framer-motion": "^12.36.0",
-    "isomorphic-dompurify": "^3.0.0",
+    "isomorphic-dompurify": "^3.21.0",
     "livekit-client": "^2.17.2",
     "lucide-react": "^0.575.0",
     "next": "^16.2.0",
