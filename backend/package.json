@@ -35,7 +35,7 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.1.2",
-    "@types/pg": "^8.20.4",
+    "@types/pg": "^8.21.0",
     "@types/sanitize-html": "^2.16.1",
     "@types/socket.io-client": "^3.0.0",
     "@types/supertest": "^7.2.1",
