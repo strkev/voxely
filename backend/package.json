@@ -5,6 +5,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "start": "node dist/index.js",
     "build": "tsc",
+    "test": "vitest run",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio"
@@ -22,13 +23,13 @@
     "jsonwebtoken": "^9.0.3",
     "livekit-server-sdk": "^2.17.0",
     "pg": "^8.22.0",
-    "prisma": "~6.19.2",
     "prisma-field-encryption": "^1.6.0",
     "redis": "^6.2.0",
     "sanitize-html": "^2.17.6",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
+    "prisma": "~6.19.2",
     "@types/bcryptjs": "^3.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
