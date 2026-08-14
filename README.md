@@ -1,288 +1,289 @@
 # Voxely
 
-Sichere, Echtzeit-Voice/Video/Chat-Plattform mit minimalistischem UI und PWA-Support.
+Sichere Echtzeit-Kommunikationsplattform für Audio, Video und Text mit integrierter Ende-zu-Ende-Verschlüsselung und Progressive-Web-App-Unterstützung (PWA).
 
-> Detaillierte Architektur- und Tech-Stack-Dokumentation → [ARCHITECTURE.md](./ARCHITECTURE.md)
-
----
-
-## Features
-
-- 🔒 **Sicherheit:** Ende-zu-Ende verschlüsselte Felder (Prisma Field Encryption), JWT-Blacklisting via Redis, XSS-Schutz.
-- ⚡ **Qualität & Compliance:** Integriertes Security-Audit-System zur Überprüfung von Abhängigkeiten und Code-Qualität.
-- 📱 **PWA:** Installierbar als App auf Desktop und Mobile mit Offline-Caching.
-- 🤖 **Interaktive Hilfe:** Voxy – ein smarter Maskottchen-Guide, der dich durch die App begleitet und Features erklärt.
-- 🎙️ **Echtzeit-Kommunikation:** Hochwertige Video- und Audio-Streams via LiveKit (WebRTC).
-- 💬 **Echtzeit-Chat:** Instant-Messaging mit Socket.IO.
-- 🎨 **Modernes UI:** Minimalistisches Design mit Tailwind CSS 4 und Framer Motion Animationen.
+Detaillierte Architektur- und Schnittstellendokumentation: [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ---
 
-## Voraussetzungen
+## Funktionsübersicht
 
-Stelle sicher, dass folgende Dienste installiert und verfügbar sind:
+* **Sicherheit und Datenschutz:** Authentifizierung über JWT mit Redis-basiertem Token-Blacklisting beim Logout, Feldverschlüsselung auf Datenbankebene via Prisma Field Encryption, automatisches HTML-Sanitizing gegen XSS und API-Rate-Limiting.
+* **Echtzeit-Medien:** Hochperformantes WebRTC-Streaming für Audio-, Video- und Bildschirmübertragung über LiveKit mit KI-gestützter Rauschunterdrückung (RNNoise) und virtuellen Hintergründen.
+* **Echtzeit-Messaging:** Raumbezogene Chat-Kommunikation und Präsenzanzeige über Socket.IO.
+* **Progressive Web App (PWA):** Vollständige Desktop- und Mobilgeräte-Installierbarkeit mit Offline-Caching über Service Worker.
+* **Benutzerführung & Onboarding:** Integriertes interaktives Tutorial-System ("Voxy") zur geführten Vorstellung der Plattformfunktionen.
+* **Moderne Benutzeroberfläche:** Responsives, minimalistisches Design auf Basis von Next.js, Tailwind CSS v4 und Framer Motion.
 
-| Dienst | Benötigte Version | Hinweis |
+---
+
+## Systemvoraussetzungen
+
+| Komponente | Version | Zweck |
 |---|---|---|
-| **Node.js** | ≥ 18 (empf. 20+) | `node -v` zum Prüfen |
-| **npm** | ≥ 9 | Kommt mit Node.js mit |
-| **PostgreSQL** | ≥ 14 | Muss laufen (z.B. via Docker oder lokal) |
-| **Redis** | ≥ 7 | Optional, aber empfohlen (JWT-Blacklisting) |
-| **LiveKit Server** | ≥ 1.5 | Muss laufen für Video/Audio |
+| **Node.js** | >= 20.x (LTS empfohlen) | Laufzeitumgebung für Frontend und Backend |
+| **npm** | >= 10.x | Paketverwaltung |
+| **PostgreSQL** | >= 14 | Relationale Datenbank für Benutzer, Räume und Nachrichten |
+| **Redis** | >= 7 | In-Memory-Speicher für JWT-Blacklisting und Session-Invalidierung |
+| **LiveKit Server** | >= 1.5 | WebRTC-SFU-Server für Audio- und Video-Streaming |
 
 ---
 
-## 🚀 Automatisches Setup (empfohlen)
+## Bereitstellung
 
-Für Linux-Server gibt es ein interaktives Setup-Script, das alles automatisch einrichtet:
+### Option A: Automatisierte Einrichtung (Empfohlen)
+
+Für Linux- und macOS-Umgebungen steht ein interaktives Einrichtungsskript zur Verfügung, welches Systemprüfungen, Containerbereitstellung, Secret-Generierung und Build-Prozesse bündelt:
 
 ```bash
 chmod +x setup.sh
 ./setup.sh
 ```
 
-Das Script macht folgendes:
-- ✅ Prüft Voraussetzungen (Node.js, Docker)
-- ✅ Startet PostgreSQL, Redis und LiveKit via Docker (optional)
-- ✅ Fragt alle Konfigurationswerte interaktiv ab
-- ✅ Generiert sichere Secrets automatisch (JWT, Admin, Prisma Encryption)
-- ✅ Erstellt `.env`-Dateien (bestehende werden gesichert)
-- ✅ Installiert Dependencies und baut beide Apps
-- ✅ Richtet PM2 ein (optional, für Produktionsbetrieb)
-
-> **Hinweis:** Bestehende `.env`-Dateien werden automatisch als `.env.backup.<timestamp>` gesichert.
+Das Skript führt folgende Schritte automatisiert durch:
+1. Validierung der installierten Werkzeuge (Node.js, Docker).
+2. Optionale Bereitstellung von PostgreSQL, Redis und LiveKit über Docker.
+3. Sichere Zufallsgenerierung aller kryptografischen Schlüssel (JWT, Admin-Secret, Field Encryption Key).
+4. Erstellung der Konfigurationsdateien (`.env` und `.env.local`) inklusive automatischer Sicherung bestehender Dateien.
+5. Installation aller Abhängigkeiten und Kompilierung von Frontend und Backend.
+6. Optionale Einrichtung des PM2-Prozessmanagers für den Hintergrundbetrieb.
 
 ---
 
-## Schnellstart (Manuelle Einrichtung)
+### Option B: Manuelle Einrichtung
 
-### 1. Repository klonen
+#### 1. Repository klonen
 
 ```bash
-git clone <repo-url-hier-einfuegen>
+git clone https://github.com/strkev/voxely.git
 cd voxely
 ```
 
-### 2. PostgreSQL starten
+#### 2. Infrastruktur-Dienste starten
+
+Beispielhafte Initialisierung via Docker:
 
 ```bash
-# Beispiel mit Docker:
-docker run -d --name postgres \
+# PostgreSQL
+docker run -d --name voxely-postgres \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=voxely \
   -p 127.0.0.1:5432:5432 \
   -v voxely-postgres-data:/var/lib/postgresql/data \
   postgres:16
-```
 
-### 3. Redis starten (optional, empfohlen)
+# Redis
+docker run -d --name voxely-redis \
+  -p 127.0.0.1:6379:6379 \
+  redis:7-alpine
 
-```bash
-# Beispiel mit Docker:
-docker run -d --name redis -p 127.0.0.1:6379:6379 redis:7-alpine
-```
-
-### 4. LiveKit Server starten
-
-```bash
-# Beispiel mit Docker:
-docker run -d --name livekit \
+# LiveKit Server (Entwicklungsmodus)
+docker run -d --name voxely-livekit \
   -p 7880:7880 \
   -p 7881:7881 \
   -p 7882:7882/udp \
-  -e LIVEKIT_KEYS="mein_eigener_api_key_4455: mein_super_geheimes_livekit_passwort_das_lang_genug_ist_8923" \
+  -e LIVEKIT_KEYS="voxely_dev_key: voxely_dev_secret_key_with_sufficient_entropy_12345" \
   livekit/livekit-server \
   --dev
 ```
 
-> Die `LIVEKIT_KEYS` müssen mit `LIVEKIT_API_KEY` und `LIVEKIT_API_SECRET` in der Backend-`.env` übereinstimmen!
-
-### 5. Backend einrichten
+#### 3. Backend konfigurieren und starten
 
 ```bash
 cd backend
 npm install
 ```
 
-Erstelle/bearbeite die `.env`-Datei:
+Erstellen Sie eine `.env`-Datei im Verzeichnis `backend/`:
 
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/voxely?schema=public"
-JWT_SECRET="ein-sicherer-geheimschluessel-hier-aendern"
+JWT_SECRET="ein-sicherer-mindestens-32-zeichen-langer-schluessel"
 PORT=4000
-LIVEKIT_API_KEY="mein_eigener_api_key_4455"
-LIVEKIT_API_SECRET="mein_super_geheimes_livekit_passwort_das_lang_genug_ist_8923"
+LIVEKIT_API_KEY="voxely_dev_key"
+LIVEKIT_API_SECRET="voxely_dev_secret_key_with_sufficient_entropy_12345"
 LIVEKIT_WS_URL="ws://localhost:7880"
 ALLOWED_ORIGINS="http://localhost:3000"
-INVITE_CODES="mein-invite-code"
-ADMIN_SECRET="mein-admin-secret"
+INVITE_CODES="standard-einladungscode"
+ADMIN_SECRET="ein-sicheres-admin-passwort"
+PRISMA_FIELD_ENCRYPTION_KEY="k3:ein-32-byte-base64-schluessel"
 ```
 
-Datenbank synchronisieren und Server starten:
+Datenbankschema synchronisieren und Entwicklungsserver ausführen:
 
 ```bash
-npx prisma generate     # Prisma-Client generieren
-npx prisma db push      # Schema zur Datenbank pushen
-npm run dev              # Server starten (Port 4000)
+npm run db:generate     # Prisma Client generieren
+npm run db:push         # Schema auf Datenbank anwenden
+npm run dev             # Backend-Dienst auf Port 4000 starten
 ```
 
-### 6. Frontend einrichten
+#### 4. Frontend konfigurieren und starten
 
 ```bash
 cd ../frontend
 npm install
 ```
 
-Erstelle/bearbeite die `.env.local`-Datei:
+Erstellen Sie eine `.env.local`-Datei im Verzeichnis `frontend/`:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000
 NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:7880
 ```
 
-Frontend starten:
+Entwicklungsserver starten:
 
 ```bash
-npm run dev              # Next.js Dev-Server (Port 3000)
+npm run dev             # Next.js Server auf Port 3000 starten
 ```
 
-### 7. App öffnen
-
-Öffne [http://localhost:3000](http://localhost:3000) im Browser.
-
-### 8. Hilfesystem & Tutorial
-Voxely verfügt über ein interaktives Tutorial auf dem Dashboard. Klicke auf den **Tutorial starten** Button (oben rechts), um eine geführte Tour durch die Funktionen zu erhalten. Das Maskottchen **Voxy** erklärt dir dabei die wichtigsten Bereiche.
+Die Anwendung ist anschließend unter [http://localhost:3000](http://localhost:3000) erreichbar.
 
 ---
 
-## Zugriff von anderen Geräten im LAN
+## Konfigurationsreferenz
 
-Damit andere Geräte im gleichen Netzwerk (z.B. Handy, zweiter PC) auf die App zugreifen können:
+### Backend (`backend/.env`)
 
-1. **IP herausfinden** (macOS):
-   ```bash
-   ipconfig getifaddr en0
-   ```
+| Variable | Beschreibung | Pflicht |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL-Verbindungs-URI | Ja |
+| `JWT_SECRET` | Kryptografischer Schlüssel zur Signierung von JSON Web Tokens | Ja |
+| `PORT` | HTTP-Port des Express-Servers (Standard: `4000`) | Nein |
+| `LIVEKIT_API_KEY` | API-Key zur Kommunikation mit dem LiveKit-Server | Ja |
+| `LIVEKIT_API_SECRET` | Shared Secret zur Token-Generierung für LiveKit-Räume | Ja |
+| `LIVEKIT_WS_URL` | WebSocket-Adresse des LiveKit-Servers | Ja |
+| `ALLOWED_ORIGINS` | Kommagetrennte Liste erlaubter CORS-Ursprünge | Ja |
+| `INVITE_CODES` | Kommagetrennte Liste gültiger Registrierungscodes | Nein |
+| `ADMIN_SECRET` | Authentifizierungsschlüssel für administrative API-Endpunkte | Ja |
+| `REDIS_URL` | Verbindungs-URI für Redis (Standard: `redis://localhost:6379`) | Nein |
+| `PRISMA_FIELD_ENCRYPTION_KEY` | Schlüssel zur transparenten Verschlüsselung von Chat-Inhalten | Nein |
 
-2. **Backend `.env`** anpassen – eigene IP zu `ALLOWED_ORIGINS` hinzufügen:
-   ```env
-   ALLOWED_ORIGINS="http://localhost:3000,http://DEINE-IP:3000"
-   ```
+### Frontend (`frontend/.env.local`)
 
-3. **Frontend `.env.local`** anpassen:
-   ```env
-   NEXT_PUBLIC_API_URL=http://DEINE-IP:4000
-   NEXT_PUBLIC_LIVEKIT_URL=ws://DEINE-IP:7880
-   ```
-
-4. **LiveKit** muss ebenfalls auf der richtigen IP erreichbar sein.
-
-5. Von anderen Geräten: `http://DEINE-IP:3000` im Browser öffnen.
+| Variable | Beschreibung | Pflicht |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | URL des Backend-API-Servers | Ja |
+| `NEXT_PUBLIC_LIVEKIT_URL` | Öffentliche WebSocket-URL des LiveKit-Servers | Ja |
 
 ---
 
-## Serverbetrieb (Produktion)
+## Zugriff im lokalen Netzwerk (LAN)
 
-### ⚠️ Sicherheits-Checkliste
+Für den geräteübergreifenden Zugriff innerhalb des lokalen Netzwerks:
 
-Bevor die App auf einem Server deployed wird, **müssen** folgende Punkte beachtet werden:
+1. Lokale IP-Adresse des Host-Systems ermitteln (z. B. `192.168.1.100`).
+2. In `backend/.env` den Parameter `ALLOWED_ORIGINS` erweitern:
+   ```env
+   ALLOWED_ORIGINS="http://localhost:3000,http://192.168.1.100:3000"
+   ```
+3. In `frontend/.env.local` die Host-IP hinterlegen:
+   ```env
+   NEXT_PUBLIC_API_URL=http://192.168.1.100:4000
+   NEXT_PUBLIC_LIVEKIT_URL=ws://192.168.1.100:7880
+   ```
+4. Der Zugriff erfolgt netzwerkweit über `http://192.168.1.100:3000`.
 
-- [ ] **`JWT_SECRET` ändern** – Der Default-Wert ist unsicher. Verwende einen langen, zufälligen String (mind. 32 Zeichen).
-- [ ] **`ADMIN_SECRET` ändern** – Eigenes, starkes Geheimnis setzen.
-- [ ] **`INVITE_CODES` ändern** – Eigene Einladungscodes setzen oder entfernen für offene Registrierung.
-- [ ] **`ALLOWED_ORIGINS` einschränken** – Nur die tatsächliche Domain des Frontends erlauben (z.B. `https://meine-domain.de`).
-- [ ] **HTTPS aktivieren** – WebRTC (Kamera/Mikrofon) funktioniert nur über HTTPS oder localhost. Verwende einen Reverse-Proxy wie Nginx oder Caddy mit SSL-Zertifikat.
-- [ ] **Redis bereitstellen** – Für JWT-Blacklisting (Logout-Absicherung) ist Redis erforderlich.
-- [ ] **LiveKit über TLS** – In Produktion `wss://` statt `ws://` verwenden.
-- [ ] **Firewall konfigurieren** – Nur benötigte Ports öffnen (22 SSH, 80 HTTP, 443 HTTPS, 7443 LiveKit WSS, 7882/udp LiveKit Media). **PostgreSQL (5432) und Redis (6379) dürfen NICHT von außen erreichbar sein!** Docker-Container immer mit `127.0.0.1:PORT:PORT` starten.
+> [!NOTE]
+> WebRTC-Funktionen (Zugriff auf Kamera und Mikrofon) setzen in modernen Webbrowsern aus Sicherheitsgründen entweder eine `localhost`-Verbindung oder ein valides HTTPS-Zertifikat voraus.
 
-### Build für Produktion
+---
+
+## Produktionsbetrieb und Sicherheit
+
+### Sicherheitsrichtlinien (Hardening)
+
+Vor dem produktiven Einsatz sind folgende Sicherheitsmaßnahmen zwingend umzusetzen:
+
+* **Geheimschlüssel erneuern:** Standardwerte für `JWT_SECRET`, `ADMIN_SECRET`, `LIVEKIT_API_SECRET` und `PRISMA_FIELD_ENCRYPTION_KEY` durch kryptografisch sichere Zufallswerte (mindestens 32 Bytes / 256 Bit Entropie) ersetzen.
+* **CORS-Einschränkung:** `ALLOWED_ORIGINS` ausschließlich auf die produktive FQDN (z. B. `https://voxely.example.com`) beschränken.
+* **Vollständige TLS-Terminierung:** HTTPS für Web- und API-Verkehr sowie WSS (`wss://`) für LiveKit und Socket.IO konfigurieren.
+* **Netzwerkisolation:** Datenbankports (PostgreSQL 5432, Redis 6379) dürfen nicht öffentlich exponiert werden. Container und Dienste ausschließlich an `127.0.0.1` binden.
+* **Firewall-Regeln:** Ausschließlich Port 80 (HTTP), Port 443 (HTTPS), Port 7443 (LiveKit TLS Signal) sowie Port 7882/udp (LiveKit WebRTC Media) extern freigeben.
+
+### Produktions-Build
 
 ```bash
-# Backend
+# Backend kompilieren und starten
 cd backend
-npm run build            # Kompiliert TypeScript nach dist/
-npm run start            # Startet den kompilierten Server
+npm run build
+npm run start
 
-# Frontend
+# Frontend kompilieren und starten
 cd ../frontend
-npm run build            # Erstellt optimierten Build
-npm run start            # Startet Next.js Produktionsserver (Port 3000)
+npm run build
+npm run start
 ```
 
-### Empfohlener Stack für Server
-
-| Komponente | Empfehlung |
-|---|---|
-| **Reverse Proxy** | Nginx oder Caddy (SSL-Terminierung, Proxy zu Node/Next) |
-| **SSL** | Let's Encrypt (kostenlos, automatisch mit Caddy) |
-| **Process Manager** | PM2 oder systemd für den Backend-Prozess |
-| **Datenbank** | Managed PostgreSQL (z.B. Supabase, Neon) oder selbst gehostet |
-| **Redis** | Managed Redis oder selbst gehostet |
-| **LiveKit** | [LiveKit Cloud](https://livekit.io/cloud) oder selbst gehostet |
-
-### Beispiel: Nginx Reverse Proxy Config
+### Beispiel: Nginx Reverse-Proxy-Konfiguration
 
 ```nginx
 server {
-    listen 443 ssl;
-    server_name meine-domain.de;
+    listen 443 ssl http2;
+    server_name voxely.example.com;
 
-    ssl_certificate     /etc/letsencrypt/live/meine-domain.de/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/meine-domain.de/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/voxely.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/voxely.example.com/privkey.pem;
 
     # Frontend (Next.js)
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
     }
 
-    # Backend API + WebSocket
+    # Backend REST-API
     location /api/ {
-        proxy_pass http://localhost:4000;
+        proxy_pass http://127.0.0.1:4000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Socket.IO
+    # Socket.IO WebSocket
     location /socket.io/ {
-        proxy_pass http://localhost:4000;
+        proxy_pass http://127.0.0.1:4000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 }
 ```
 
 ---
 
-## Nützliche Befehle
+## Qualitätssicherung und Tests
 
 ```bash
-# Prisma Studio (grafischer DB-Browser)
-cd backend && npx prisma studio
-
-# Admin: Alle Benutzer anzeigen
-curl -H "x-admin-secret: DEIN_ADMIN_SECRET" http://localhost:4000/api/admin/users
-
-# Health-Check
-curl http://localhost:4000/health
-
-# Security & Quality Audit (Frontend & Backend)
-chmod +x security-test.sh
+# Umfassendes Sicherheits- und Qualitäts-Audit (Linting, TypeScript, Secret-Scans, Tests)
 ./security-test.sh
+
+# Frontend-Tests ausführen (Vitest)
+cd frontend && npm run test
+
+# Frontend-Linter ausführen
+cd frontend && npm run lint
+
+# Backend-Tests ausführen
+cd backend && npm run test
+
+# Datenbank-Schema grafisch einsehen (Prisma Studio)
+cd backend && npm run db:studio
 ```
 
 ---
 
 ## Lizenz
 
-Privates Projekt.
+Proprietäres Projekt. Alle Rechte vorbehalten.
