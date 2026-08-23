@@ -145,11 +145,7 @@ cd ../frontend
 npm install
 ```
 
-Erstellen Sie eine `.env.local`-Datei im Verzeichnis `frontend/`.
-
-> [!IMPORTANT]
-> Variablen mit dem Präfix `NEXT_PUBLIC_` werden von Next.js beim Build in den JavaScript-Code für den Browser des Benutzers eingebunden.
-> Auf einem Server darf hier **nicht** `localhost` stehen, sondern die tatsächliche öffentliche Domain (z. B. `https://voxely.example.com`), da die API sonst vom Browser des Besuchers nicht erreicht werden kann.
+Erstellen Sie eine `.env.local`-Datei im Verzeichnis `frontend/`:
 
 *Für lokale Entwicklung (`localhost`):*
 ```env
