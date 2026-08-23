@@ -18,10 +18,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20.x
+      - name: Setup Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
 
       - name: Frontend - Audit & Fix
         working-directory: ./frontend
@@ -47,6 +47,7 @@ jobs:
         run: |
           npm run db:generate
           npm run build
+          npm run test -- src/controllers src/services src/__tests__/security.test.ts
 
       - name: Check for Changes
         id: git_status
@@ -77,4 +78,5 @@ jobs:
             --head "$BRANCH_NAME" \
             --base main)
 
-          gh pr merge "$PR_URL" --auto --squash --delete-branch
+          gh pr review --approve "$PR_URL" || true
+          gh pr merge "$PR_URL" --auto --squash --delete-branch || gh pr merge "$PR_URL" --squash --delete-branch

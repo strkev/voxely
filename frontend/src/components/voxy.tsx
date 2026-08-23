@@ -100,7 +100,6 @@ export const Mascot: React.FC<MascotProps> = ({
     // Reset interaction state when tutorial ends to prevent stuck bubbles
     useEffect(() => {
         if (!isTutorial && portalContainer) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
             setIsClicked(false);
         }
     }, [isTutorial, portalContainer]);
