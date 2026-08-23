@@ -97,6 +97,7 @@ npm install
 
 Erstellen Sie eine `.env`-Datei im Verzeichnis `backend/`:
 
+*Für lokale Entwicklung (`localhost`):*
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/voxely?schema=public"
 JWT_SECRET="ein-sicherer-mindestens-32-zeichen-langer-schluessel"
@@ -110,12 +111,31 @@ ADMIN_SECRET="ein-sicheres-admin-passwort"
 PRISMA_FIELD_ENCRYPTION_KEY="k3:ein-32-byte-base64-schluessel"
 ```
 
-Datenbankschema synchronisieren und Entwicklungsserver ausführen:
+*Für Produktivbetrieb (Eigene Domain):*
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/voxely?schema=public"
+JWT_SECRET="echter-kryptografisch-starker-zufallsschluessel"
+PORT=4000
+LIVEKIT_API_KEY="voxely_prod_key"
+LIVEKIT_API_SECRET="voxely_prod_secret_mit_hoher_entropie"
+LIVEKIT_WS_URL="ws://localhost:7880"
+ALLOWED_ORIGINS="https://voxely.example.com"
+INVITE_CODES="ihr-einladungscode"
+ADMIN_SECRET="ein-sehr-sicheres-admin-passwort"
+PRISMA_FIELD_ENCRYPTION_KEY="k3:ihr-32-byte-base64-schluessel"
+```
+
+Datenbankschema synchronisieren und Backend starten:
 
 ```bash
 npm run db:generate     # Prisma Client generieren
 npm run db:push         # Schema auf Datenbank anwenden
-npm run dev             # Backend-Dienst auf Port 4000 starten
+
+# Für Entwicklung:
+npm run dev             # Backend-Dev-Server auf Port 4000
+
+# Für Produktion:
+npm run build && npm run start
 ```
 
 #### 4. Frontend konfigurieren und starten
@@ -125,20 +145,38 @@ cd ../frontend
 npm install
 ```
 
-Erstellen Sie eine `.env.local`-Datei im Verzeichnis `frontend/`:
+Erstellen Sie eine `.env.local`-Datei im Verzeichnis `frontend/`.
 
+> [!IMPORTANT]
+> Variablen mit dem Präfix `NEXT_PUBLIC_` werden von Next.js beim Build in den JavaScript-Code für den Browser des Benutzers eingebunden.
+> Auf einem Server darf hier **nicht** `localhost` stehen, sondern die tatsächliche öffentliche Domain (z. B. `https://voxely.example.com`), da die API sonst vom Browser des Besuchers nicht erreicht werden kann.
+
+*Für lokale Entwicklung (`localhost`):*
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000
 NEXT_PUBLIC_LIVEKIT_URL=ws://localhost:7880
 ```
 
-Entwicklungsserver starten:
-
-```bash
-npm run dev             # Next.js Server auf Port 3000 starten
+*Für Produktivbetrieb (Eigene Domain mit HTTPS/WSS über Reverse Proxy):*
+```env
+NEXT_PUBLIC_API_URL=https://voxely.example.com
+NEXT_PUBLIC_LIVEKIT_URL=wss://voxely.example.com
 ```
 
-Die Anwendung ist anschließend unter [http://localhost:3000](http://localhost:3000) erreichbar.
+Frontend starten:
+
+```bash
+# Für Entwicklung:
+npm run dev             # Next.js Dev-Server auf Port 3000
+
+# Für Produktion:
+npm run build           # Optimierten Produktions-Build erstellen
+npm run start           # Produktions-Server starten
+```
+
+Die Anwendung ist anschließend erreichbar:
+* Lokal unter [http://localhost:3000](http://localhost:3000)
+* Im Produktivbetrieb unter Ihrer konfigurierten Domain (z. B. `https://voxely.example.com`)
 
 ---
 
