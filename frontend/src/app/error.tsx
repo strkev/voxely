@@ -4,10 +4,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, RotateCcw, Home } from "lucide-react";
 
-/**
- * Next.js App Router error boundary.
- * Catches runtime errors in routes under /app and shows a friendly fallback UI.
- */
 export default function GlobalError({
     error,
     reset,

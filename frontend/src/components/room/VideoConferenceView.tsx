@@ -44,9 +44,6 @@ export function VideoConferenceView() {
     if (spotlightTrack) {
         const spotKey = `${spotlightTrack.participant?.identity ?? ''}-${spotlightTrack.source ?? ''}`;
         
-        // IMPORTANT: The spotlightTrack in state might be a stale placeholder. 
-        // We must always find the freshest track reference from the live tracks array 
-        // so that VideoTrack can auto-attach when the camera is turned on.
         const currentSpotlight = tracks.find(
             t => trackKey(t, -1) === spotKey
         ) || spotlightTrack;
@@ -92,7 +89,6 @@ export function VideoConferenceView() {
 
     // ── GRID MODE ───────────────────────────────────────────────────────────
     const count = tracks.length;
-    // Mobile: 1 col for 1 track, 2 cols otherwise. Desktop: existing logic.
     const gridCols =
         count <= 1 ? 'grid-cols-1' :
             count <= 4 ? 'grid-cols-1 sm:grid-cols-2' :

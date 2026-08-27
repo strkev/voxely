@@ -16,16 +16,10 @@ import { ConnectionState } from 'livekit-client';
 export function SecurityCheckOverlay() {
     const connectionState = useConnectionState();
 
-    // E2EE is configured at the room-options level before connect (key + worker).
-    // The connection itself establishes the secure context.
-    // We treat "connected" as ready to avoid race conditions with track publications.
     const isConnected = connectionState === ConnectionState.Connected;
     const isReady = isConnected;
 
     const [show, setShow] = useState(true);
-
-    // Once ready, keep overlay visible briefly so the user sees the "100%" bar,
-    // then fade out gracefully.
     useEffect(() => {
         if (isReady) {
             const timer = setTimeout(() => {

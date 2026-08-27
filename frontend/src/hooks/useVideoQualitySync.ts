@@ -22,14 +22,12 @@ export function useVideoQualitySync() {
         const localP = room.localParticipant;
         const qPreset = VIDEO_PRESETS[videoQuality];
 
-        // Update any published camera tracks
         const cameraPubs = Array.from(localP.videoTrackPublications.values()).filter(
             p => p.source === Track.Source.Camera && p.track
         );
 
         for (const pub of cameraPubs) {
             if (!pub.track) continue;
-            // Restart the camera track with new constraints
             pub.track.restartTrack({
                 width: qPreset.width,
                 height: qPreset.height,
@@ -38,7 +36,6 @@ export function useVideoQualitySync() {
         }
     }, [room, videoQuality]);
 
-    // Track screen share setting changes for next screen share
     useEffect(() => {
         prevScreenResRef.current = screenShareResolution;
     }, [screenShareResolution]);

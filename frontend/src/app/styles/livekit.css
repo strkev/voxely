@@ -1,13 +1,11 @@
 /* ── LiveKit Custom Overrides ─────────────────────────────────────────────── */
 
-/* Hide the 'Start Audio' button — started programmatically on join */
 .lk-audio-conference-stage,
 .lk-start-audio-button,
 [class*="lk-audio"]>button:only-child {
   display: none !important;
 }
 
-/* Kill the blue ring on the room container — outline/border from LiveKit's default theme */
 [data-lk-theme] {
   outline: none !important;
 }
@@ -49,7 +47,6 @@
   border: none !important;
 }
 
-/* Participant tiles: no border/outline except the speaking shadow below */
 .lk-participant-tile:focus,
 .lk-participant-tile:focus-visible {
   outline: none !important;
@@ -71,7 +68,6 @@
   box-sizing: border-box !important;
 }
 
-/* Ensure the video element fits without cropping */
 .lk-participant-tile video {
   width: 100% !important;
   height: 100% !important;
@@ -80,18 +76,15 @@
   transition: opacity 0.3s ease;
 }
 
-/* Hide the video element completely when muted so the background avatar shows through */
 .lk-custom-tile-wrapper.is-muted video {
   opacity: 0 !important;
 }
 
-/* Screen share: same contain behavior with pure black bg */
 .lk-screen-share-tile .lk-participant-tile video {
   object-fit: contain !important;
   background: #000;
 }
 
-/* Kill the default blue speaking border on ::after pseudo-element */
 .lk-participant-tile::after {
   border-color: transparent !important;
   border-width: 0px !important;

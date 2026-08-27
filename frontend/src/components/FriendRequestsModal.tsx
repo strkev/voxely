@@ -21,7 +21,7 @@ export function FriendRequestsModal({ onClose }: FriendRequestsModalProps) {
     const { token } = useAuthStore();
     const { incomingRequests, outgoingRequests, sendRequest, acceptRequest, declineRequest } = useFriendsStore();
 
-    const handleSend = async (e: React.FormEvent) => {
+    const handleSend = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!username.trim() || !token) return;
 

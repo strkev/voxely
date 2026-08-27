@@ -77,8 +77,7 @@ export function FriendsSidebar({ currentRoomId, isRoomOpen, onInvite, onOpenRequ
             });
         }, 2000);
     };
-
-    // Handle collapse: if onClose is provided (overlay mode), fully dismiss
+    
     const handleCollapse = () => {
         if (onClose) {
             onClose();

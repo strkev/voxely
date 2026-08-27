@@ -12,14 +12,12 @@ export const IncomingCallModal: React.FC = () => {
     const { soundVolume, soundsEnabled } = useSettingsStore();
     const { incomingCall, outgoingCall, clearOutgoingCall } = useFriendsStore();
     const { respondToCall, terminateCall } = useFriends();
-    
-    // For the pulse animation like in-room
 
     // Play ringing sound
     useEffect(() => {
         if (!soundsEnabled || (!incomingCall && !outgoingCall)) return;
 
-        // Try to resume context if suspended (browser requirement)
+        // Try to resume context if suspended
         const ac = typeof window !== 'undefined' ? (window as unknown as { AudioContext: typeof AudioContext; webkitAudioContext: typeof AudioContext }).AudioContext || (window as unknown as { AudioContext: typeof AudioContext; webkitAudioContext: typeof AudioContext }).webkitAudioContext : null;
         if (ac) {
             import('@/lib/sounds').then(({ getSharedAudioContext }) => {

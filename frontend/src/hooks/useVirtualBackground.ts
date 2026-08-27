@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useRoomContext } from '@livekit/components-react';
 import { Track, LocalTrackPublication } from 'livekit-client';
+import type { BackgroundProcessorWrapper } from '@livekit/track-processors';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
 export function useVirtualBackground() {
@@ -11,15 +12,13 @@ export function useVirtualBackground() {
     const bgImage = useSettingsStore(s => s.virtualBackgroundImage);
     const blurRadius = useSettingsStore(s => s.blurRadius);
     
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const processorRef = useRef<any>(null);
+    const processorRef = useRef<BackgroundProcessorWrapper | null>(null);
     const lastTrackSidRef = useRef<string | undefined>(undefined);
 
     useEffect(() => {
         const localP = room.localParticipant;
 
         const applyBackground = async () => {
-            // Find the published camera track
             const camPub = Array.from(localP.videoTrackPublications.values()).find(
                 (p) => p.source === Track.Source.Camera && p.track
             );
@@ -33,7 +32,6 @@ export function useVirtualBackground() {
                 return;
             }
 
-            // DIMENSION CHECK: Wait for track resolution to be known (means frames are flowing)
             if (!camTrack.dimensions) {
                 console.log('[VirtualBackground] Waiting for track dimensions...');
                 setTimeout(applyBackground, 300);
@@ -41,7 +39,6 @@ export function useVirtualBackground() {
             }
 
             try {
-                // If the track SID changed, we MUST recreate the processor to avoid WebGL context issues
                 if (lastTrackSidRef.current !== camTrack.sid) {
                     console.log('[VirtualBackground] Track changed. Recreating processor for:', camTrack.sid);
 
@@ -63,7 +60,6 @@ export function useVirtualBackground() {
 
                 if (!processorRef.current) return;
 
-                // Switch to the correct mode
                 if (bgOption === 'none') {
                     await processorRef.current.switchTo({ mode: 'disabled' });
                 } else if (bgOption === 'blur') {
@@ -73,7 +69,6 @@ export function useVirtualBackground() {
                 }
             } catch (err) {
                 console.error('[VirtualBackground] Failed to apply:', err);
-                // Reset on error so we try again next time
                 lastTrackSidRef.current = undefined;
             }
         };
@@ -82,8 +77,6 @@ export function useVirtualBackground() {
 
         const handleTrackPublished = (pub: LocalTrackPublication) => {
             if (pub.source === Track.Source.Camera) {
-                // Larger delay to let the track fully initialize and avoid "no video frame" error
-                // Especially important during quality switches where the underlying stream changes
                 setTimeout(applyBackground, 1200);
             }
         };
@@ -95,7 +88,6 @@ export function useVirtualBackground() {
         };
     }, [room, bgOption, bgImage, blurRadius]);
 
-    // Final cleanup when component unmounts
     useEffect(() => {
         return () => {
             if (processorRef.current) {

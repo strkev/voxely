@@ -6,7 +6,6 @@ import { Track } from 'livekit-client';
 import { Mic, MicOff, Video, VideoOff, MonitorUp, MonitorOff, ChevronDown, Check } from 'lucide-react';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
-// --- Hilfskomponente für das Dropdown-Menü der Geräteauswahl ---
 function DeviceMenu({ 
     kind, 
     onClose,
@@ -66,13 +65,10 @@ export function CustomControlBar({ isDark }: { isDark: boolean }) {
     const [openMenu, setOpenMenu] = useState<'mic' | 'cam' | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // LiveKit Hooks für das Ein-/Ausschalten der Tracks
     const { toggle: toggleMic, enabled: isMicEnabled } = useTrackToggle({ source: Track.Source.Microphone });
     const { toggle: toggleCam, enabled: isCamEnabled } = useTrackToggle({ source: Track.Source.Camera });
     const { toggle: toggleScreen, enabled: isScreenShareEnabled } = useTrackToggle({ source: Track.Source.ScreenShare });
 
-
-    // Schließt das Menü, wenn man außerhalb klickt
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -86,7 +82,7 @@ export function CustomControlBar({ isDark }: { isDark: boolean }) {
     return (
         <div 
             ref={containerRef}
-            // Äußerer Container (Die Pill-Form)
+            // Äußerer Container
             className={`flex items-center gap-3 p-2 rounded-full backdrop-blur-md shadow-lg transition-colors duration-300 ${isDark ? 'bg-[#1A1A1A]/90' : 'bg-[#F2F2F2]/90'}`}
         >
             

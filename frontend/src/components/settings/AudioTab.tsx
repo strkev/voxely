@@ -251,7 +251,6 @@ export function AudioTab({
 }: AudioTabProps) {
     const isOutputSupported = (() => {
         if (typeof HTMLMediaElement === 'undefined' || !('setSinkId' in HTMLMediaElement.prototype)) return false;
-        // LiveKit rule: Safari/iOS based browsers don't support output switching reliably
         const isSafariBased = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent) || /iPhone|iPad|iPod/i.test(navigator.userAgent);
         return !isSafariBased;
     })();

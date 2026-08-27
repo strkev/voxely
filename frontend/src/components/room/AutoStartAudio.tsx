@@ -19,7 +19,6 @@ export function AutoStartAudio() {
 
         room.on(RoomEvent.AudioPlaybackStatusChanged, handleAudioStatusChanged);
 
-        // Initial check/start
         room.startAudio().then(() => {
             setIsAudioAllowed(true);
         }).catch(() => {
@@ -51,7 +50,6 @@ export function AutoStartAudio() {
             }
         };
 
-        // pointerdown is better than mousedown/touchstart as it handles both without double-firing
         const events = ['pointerdown', 'keydown'];
         events.forEach(e => window.addEventListener(e, handleInteraction, { capture: true }));
 

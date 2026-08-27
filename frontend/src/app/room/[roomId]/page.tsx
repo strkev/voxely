@@ -221,16 +221,14 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
         if (r && e2eeKey && !r.isE2EEEnabled) {
             try {
                 // Call setE2EEEnabled and catch errors gracefully.
-                // We ignore 'participant not found' because LiveKit handles re-sync automatically.
+                // ignore 'participant not found' because LiveKit handles re-sync automatically.
                 r.setE2EEEnabled(true).catch(err => {
                     if (err instanceof Error && err.message.includes('participant not found')) {
-                        // This is a known race condition during connection/disconnection, ignore it
                         return;
                     }
                     console.error('[E2EE] Async error enabling encryption:', err);
                 });
             } catch (err) {
-                // Synchronous error catch (unlikely for this method but safe for defensive coding)
                 console.error('[E2EE] Synchronous error enabling encryption:', err);
             }
         }
@@ -249,7 +247,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     }, [toggleRoomOpen, roomId, humanReadableRoomName, setUiIsRoomOpen]);
 
     const handleInviteFriend = useCallback((friendId: string) => {
-        // Get human-readable room name from slug
         sendRoomInvite(friendId, roomId, humanReadableRoomName);
     }, [sendRoomInvite, roomId, humanReadableRoomName]);
 
@@ -259,9 +256,6 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
     const [copied, setCopied] = useState(false);
     const controlBarTimerRef = useRef<NodeJS.Timeout | null>(null);
-    // Room instance is intentionally stable — device IDs are only initial defaults.
-    // LiveKitDeviceSync handles live switching via room.switchActiveDevice().
-    // We only create once hydration is complete to capture initial user settings.
     const qPreset = VIDEO_PRESETS[videoQuality];
     const room = useMemo(() => {
         if (!hydrated || !e2eeSetup) return undefined;
@@ -294,15 +288,13 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     }, [hydrated]);
 
 
-    // Ensure control bar is always visible on mount + activate leave guard
     useEffect(() => {
         setControlBarVisible(true);
         activateGuard();
-        // Reset unread count when entering a room to clear any previous notifications
         setUnread(0);
         return () => { 
             deactivateGuard(); 
-            setUnread(0); // Also clear on leave
+            setUnread(0);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [roomId]);
@@ -386,9 +378,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
 
 
 
-    // Confirm leave: navigate to the pending target from the global store
     const handleConfirmLeave = useCallback(() => {
-        // Play leave sound before closing
         if (soundsEnabled) {
             playSound('leave', soundVolume);
         }

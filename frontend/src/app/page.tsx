@@ -23,12 +23,11 @@ export default function Home() {
     }
   }, [mounted, user, router]);
 
-  // Avoid hydration mismatch — render nothing auth-specific until mounted
   if (!mounted) return null;
 
   /* ── LOGGED IN ───────────────────────────────────────────────── */
   if (user) {
-    return null; // The useEffect will handle the redirect to dashboard
+    return null;
   }
 
   /* ── LOGGED OUT ──────────────────────────────────────────────── */

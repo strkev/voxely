@@ -25,10 +25,7 @@ export function ThemeProvider() {
                 applyTheme(mediaQuery.matches ? 'dark' : 'light');
             };
 
-            // Initial apply
             handleChange();
-
-            // Listen for changes
             mediaQuery.addEventListener('change', handleChange);
             return () => mediaQuery.removeEventListener('change', handleChange);
         } else {

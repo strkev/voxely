@@ -60,7 +60,7 @@ export default function SettingsPage() {
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
-    const handleProfileUpdate = async (e: React.FormEvent) => {
+    const handleProfileUpdate = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         setProfileLoading(true);
         setProfileError('');

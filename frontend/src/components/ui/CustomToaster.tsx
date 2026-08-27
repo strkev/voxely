@@ -13,11 +13,9 @@ export function CustomToaster() {
     const { toasts } = useToasterStore();
 
     useEffect(() => {
-        // Find visible toasts that exceed the limit
         const visibleToasts = toasts.filter((t) => t.visible);
         
         if (visibleToasts.length > TOAST_LIMIT) {
-            // Remove the oldest visible toasts that exceed the limit immediately
             const toastsToDismiss = visibleToasts.slice(0, visibleToasts.length - TOAST_LIMIT);
             toastsToDismiss.forEach((t) => toast.remove(t.id));
         }

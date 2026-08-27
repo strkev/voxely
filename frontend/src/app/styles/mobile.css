@@ -1,5 +1,4 @@
 /* ── Mobile-specific overrides (≤ 640px) ─────────────────────────────────────── */
-/* These rules ONLY affect small screens. Desktop/tablet layout is untouched.    */
 @media (max-width: 640px) {
 
   /* Friends sidebar: slide-in overlay on mobile */

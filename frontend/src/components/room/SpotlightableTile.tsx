@@ -57,7 +57,6 @@ export function SpotlightableTile({
     const setParticipantVolume = useSettingsStore(s => s.setParticipantVolume);
     const volumeKey = `${trackRef?.participant?.identity ?? ''}-${trackRef?.source ?? ''}`;
 
-    // Source of truth from store
     const volume = participantVolumes[volumeKey] ?? 100;
 
     const hiddenTracks = useSettingsStore(s => s.hiddenTracks);
@@ -69,13 +68,11 @@ export function SpotlightableTile({
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [showVolumeModal, setShowVolumeModal] = useState(false);
 
-    // Sync volume via LiveKit's built-in setVolume (0-1 range)
     useEffect(() => {
         const participant = trackRef?.participant;
         if (!participant || participant.isLocal) return;
 
         const targetVol = (isLocallyMuted || !isWatching) ? 0 : (volume / 100);
-        // If this is a screen share tile, we only want to control the screen share audio
         const targetSource = isScreenShare ? Track.Source.ScreenShareAudio : Track.Source.Microphone;
 
         const sync = () => {
@@ -83,7 +80,6 @@ export function SpotlightableTile({
             pubs.forEach(pub => {
                 const track = pub.track;
                 if (!track || pub.source !== targetSource) return;
-                // Use LiveKit internal volume control if it's a remote audio track
                 if (track.kind === Track.Kind.Audio && track instanceof RemoteAudioTrack) {
                     track.setVolume(targetVol);
                 }
@@ -129,7 +125,7 @@ export function SpotlightableTile({
         pub.setSubscribed(isWatching);
     }, [isWatching, trackRef?.publication]);
 
-    // Get color for other participants from metadata (fallback)
+    // Get color for other participants from metadata
     try {
         if (trackRef?.participant?.metadata) {
             const meta = JSON.parse(trackRef.participant.metadata);
@@ -137,7 +133,7 @@ export function SpotlightableTile({
         }
     } catch { /* ignore */ }
 
-    // Color from friends store overrides metadata (for real-time updates)
+    // Color from friends store overrides metadata
     if (!trackRef?.participant?.isLocal && trackRef?.participant?.identity) {
         const friend = friends.find(f => f.id === trackRef.participant!.identity);
         if (friend?.avatarColor) {
@@ -145,7 +141,7 @@ export function SpotlightableTile({
         }
     }
 
-    // Own color directly from AuthStore (updates immediately)
+    // Own color directly from AuthStore
     if (trackRef?.participant?.isLocal && localUser?.avatarColor) {
         userColor = localUser.avatarColor;
     }
@@ -159,8 +155,6 @@ export function SpotlightableTile({
                 '--user-color': userColor
             } as React.CSSProperties}
         >
-            {/* HINTERGRUND-AVATAR: Liegt unter dem Video (z-0). 
-                Wird als Fallback gerendert. */}
             {(isCameraTrack || !isWatching) && (
                 <div className={`absolute inset-0 flex items-center justify-center z-0 rounded-[16px] overflow-hidden ${isDark ? 'bg-[#111]' : 'bg-app-surface'} ${isFullScreen ? 'rounded-none' : ''}`}>
                     <div
@@ -190,7 +184,7 @@ export function SpotlightableTile({
                 </div>
             )}
 
-            {/* LIVEKIT TILE: Wird in z-10 gewrappt. */}
+            {/* LIVEKIT TILE. */}
             {isWatching && (
                 <div className={`relative w-full h-full z-10 lk-custom-tile-wrapper ${isTrackMuted && !isScreenShare ? 'is-muted' : ''} ${isFullScreen ? 'flex items-center justify-center w-full max-w-full max-h-full' : ''}`}>
                     <ParticipantTile trackRef={trackRef} />

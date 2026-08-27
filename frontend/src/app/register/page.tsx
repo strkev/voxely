@@ -37,7 +37,7 @@ function RegisterForm() {
     const redirectTo = getSafeRedirect(searchParams.get('redirect'));
     const setAuth = useAuthStore((state) => state.setAuth);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         setLoading(true);
         setError('');
@@ -52,7 +52,7 @@ function RegisterForm() {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',  // allows the server to set httpOnly auth_token cookie
+                credentials: 'include',
                 body: JSON.stringify({ name, password, inviteCode })
             });
 

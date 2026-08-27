@@ -39,7 +39,7 @@ export default function AdminPage() {
         }
     }, [apiUrl]);
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         fetchUsers(secret);
     };
@@ -82,7 +82,6 @@ export default function AdminPage() {
         }
     };
 
-    // Re-fetch users periodically while authenticated
     useEffect(() => {
         if (!authenticated) return;
         const interval = setInterval(() => fetchUsers(secret), 30000);
@@ -248,8 +247,6 @@ export default function AdminPage() {
                     <Download className="w-3 h-3 inline mr-1" /> Data Export (Art. 15) · <Trash2 className="w-3 h-3 inline mr-1" /> Deletion (Art. 17)
                 </p>
             </div>
-
-            {/* Delete all confirmation modal — if needed in the future */}
         </div>
     );
 }

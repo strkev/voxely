@@ -32,12 +32,10 @@ export function VolumeModal({
         const rect = sliderRef.current.getBoundingClientRect();
         const height = rect.height;
         const y = clientY - rect.top;
-        // Invert Y because 0% is bottom, 100% is top
         let percentage = 100 - (y / height) * 100;
         percentage = Math.max(0, Math.min(100, Math.round(percentage)));
         setLocalDragVolume(percentage);
         
-        // Throttle store updates to ~30fps for performance
         const now = Date.now();
         if (now - lastUpdateRef.current > 32) {
             onVolumeChange(percentage);

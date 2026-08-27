@@ -5,7 +5,7 @@ import { AlertCircle, RotateCcw } from "lucide-react";
 
 /**
  * Next.js root-level error boundary.
- * Catches errors in the root layout itself. Must include <html> + <body>.
+ * Catches errors in the root layout itself.
  */
 export default function RootError({
     error,

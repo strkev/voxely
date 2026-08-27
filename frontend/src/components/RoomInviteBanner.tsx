@@ -19,7 +19,7 @@ export function RoomInviteBanner() {
             // Auto-dismiss after 30 seconds
             const timer = setTimeout(() => {
                 setVisible(false);
-                setTimeout(clearInvitation, 300); // Wait for exit animation
+                setTimeout(clearInvitation, 300);
             }, AUTO_DISMISS_MS);
 
             return () => {

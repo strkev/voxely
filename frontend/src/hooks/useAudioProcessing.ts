@@ -74,8 +74,6 @@ export function useAudioProcessing() {
             if (wasApplied && (mode !== appliedModeRef.current || gain !== appliedGainRef.current)) {
                 console.log('[AudioProcessing] Settings changed, restoring original track and tearing down');
                 
-                // CRITICAL: We MUST replace the dead processed track back with the original track in LiveKit
-                // so the user has sound while we set up the new processor.
                 if (originalTrackRef.current && micPub?.track) {
                     try {
                         await micPub.track.replaceTrack(originalTrackRef.current);
@@ -130,7 +128,6 @@ export function useAudioProcessing() {
                     console.error('[AudioProcessing] Failed to apply:', err);
                 }
             } else if (!wantsApply && currentTrackId !== processedTrackIdRef.current) {
-                // If we don't apply anything, just track the current hardware ID
                 processedTrackIdRef.current = currentTrackId;
             }
         };
@@ -144,7 +141,7 @@ export function useAudioProcessing() {
         };
 
         localP.on('localTrackPublished', handleTrackPublished);
-        localP.on('trackSubscribed', handleTrackPublished); // Sometimes useful for sync
+        localP.on('trackSubscribed', handleTrackPublished); 
         
         return () => {
             localP.off('localTrackPublished', handleTrackPublished);

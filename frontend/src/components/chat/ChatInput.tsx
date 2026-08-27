@@ -72,8 +72,6 @@ export function ChatInput({
         if (sendTyping) {
             if (val.length > 0) {
                 sendTyping(true);
-
-                // Stop typing indicator after 3 seconds of inactivity
                 if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
                 typingTimeoutRef.current = setTimeout(() => {
                     sendTyping(false);
@@ -88,7 +86,6 @@ export function ChatInput({
     const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
         const items = e.clipboardData.items;
         
-        // Check for files (images etc)
         for (let i = 0; i < items.length; i++) {
             if (items[i].type.indexOf('image') !== -1 || items[i].kind === 'file') {
                 const file = items[i].getAsFile();
@@ -111,12 +108,8 @@ export function ChatInput({
             }
         }
 
-        // Default behavior for text pasting is handled by onChange, 
-        // but we can intercept here to provide better feedback if truncated
         const pastedText = e.clipboardData.getData('text');
         if (draft.length + pastedText.length > 500) {
-            // We don't preventDefault here, handleTextareaChange will handle truncation
-            // but we can show the toast early for better responsiveness
             toast.error('Message truncated to 500 characters', { id: 'chat-limit' });
         }
     };
@@ -131,7 +124,6 @@ export function ChatInput({
             return;
         }
 
-        // Security: block dangerous file types
         if (isBlockedFileType(file.name)) {
             alert('This file type is not allowed for security reasons.');
             e.target.value = '';
@@ -141,7 +133,7 @@ export function ChatInput({
         if (onSendFile) {
             onSendFile(file);
         }
-        e.target.value = ''; // reset so same file can be re-selected
+        e.target.value = '';
     }, [maxFileSize, onSendFile]);
 
     // Cleanup typing timeout on unmount

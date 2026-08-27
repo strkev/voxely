@@ -11,13 +11,10 @@ export function TutorialSpotlight() {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        // Use a minor delay to avoid the 'setState synchronously within an effect' warning
-        // which can happen during hydration or rapid state changes.
         const timer = setTimeout(() => setMounted(true), 0);
         return () => clearTimeout(timer);
     }, []);
 
-    // Auto-end tutorial if screen becomes too small
     useEffect(() => {
         if (!isActive) return;
 
@@ -48,7 +45,6 @@ export function TutorialSpotlight() {
 
         updateRect();
 
-        // Use a small timeout to ensure layout has settled
         const timeoutId = setTimeout(updateRect, 100);
 
         window.addEventListener('resize', updateRect);
@@ -63,7 +59,6 @@ export function TutorialSpotlight() {
 
     if (!isActive || !mounted) return null;
 
-    // Don't show on small screens (mobile)
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
         return null;
     }

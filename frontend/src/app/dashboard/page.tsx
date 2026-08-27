@@ -29,7 +29,6 @@ export default function DashboardPage() {
     const { isActive, currentStep, steps, nextStep, prevStep, endTutorial } = useTutorialStore();
     const currentTutorialStep = steps[currentStep];
 
-    // Use friends context for online presence & invitations (connected via global provider)
     const { initiateCall } = useFriends();
 
     useEffect(() => {
@@ -50,7 +49,6 @@ export default function DashboardPage() {
         }
     }, [isActive, currentStep, steps, setSidebarCollapsed]);
 
-    // Don't render until mounted and auth check is done
     if (!mounted || isLoading) return (
         <div className="flex-1 flex items-center justify-center">
             <div className="w-8 h-8 border-3 border-gray-200 border-t-primary rounded-full animate-spin" />
@@ -58,16 +56,15 @@ export default function DashboardPage() {
     );
     if (!user) return null;
 
-    const handleCreateRoom = (e: React.FormEvent) => {
+    const handleCreateRoom = (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        // Generate a random room slug without requiring user input
-        const randomNumbers = Math.floor(10000 + Math.random() * 90000); // 5 digit number
+        const randomNumbers = Math.floor(10000 + Math.random() * 90000);
         const slug = `room-${randomNumbers}`;
         router.push(`/room/${slug}`);
     };
 
-    const handleJoinRoom = (e: React.FormEvent) => {
+    const handleJoinRoom = (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!joinRoomId.trim()) return;
         router.push(`/room/${joinRoomId.trim()}`);
