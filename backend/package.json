@@ -41,7 +41,7 @@
     "@types/socket.io-client": "^3.0.0",
     "@types/supertest": "^7.2.1",
     "socket.io-client": "^4.8.4",
-    "supertest": "^7.3.0",
+    "supertest": "^7.3.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "~5.9.3",
     "vitest": "^4.1.11"
