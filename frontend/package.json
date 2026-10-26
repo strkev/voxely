@@ -17,7 +17,7 @@
     "@shiguredo/rnnoise-wasm": "^2025.1.5",
     "@tailwindcss/postcss": "^4",
     "clsx": "^2.1.1",
-    "framer-motion": "^13.5.0",
+    "framer-motion": "^14.6.0",
     "isomorphic-dompurify": "^3.23.0",
     "livekit-client": "^2.23.0",
     "lucide-react": "^1.61.0",
